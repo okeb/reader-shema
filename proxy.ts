@@ -1,45 +1,34 @@
 import createMiddleware from 'next-intl/middleware';
 import { routing } from '@/i18n/routing';
 import { NextRequest, NextResponse } from 'next/server';
-
-// Routes protégées (backend/compte-sync) — vide pour l'instant.
-// TODO(spec 22): ajouter le gating d'authentification quand le backend lands.
-const protectedRoutes: string[] = [];
-
-// Routes d'auth (interdites si connecté) — vide pour l'instant.
-const authRoutes: string[] = [];
-
-function isAuthenticated(_request: NextRequest): boolean {
-  // TODO(spec 22): vérifier les cookies d'auth (whatpass-auth / session).
-  return false;
-}
-
-function authMiddleware(request: NextRequest): NextResponse | null {
-  const { pathname } = request.nextUrl;
-  const authenticated = isAuthenticated(request);
-
-  const locale = pathname.split('/')[1];
-  const pathWithoutLocale = pathname.replace(`/${locale}`, '') || '/';
-
-  if (authenticated && authRoutes.some((r) => pathWithoutLocale.startsWith(r))) {
-    return NextResponse.redirect(new URL(`/${locale}/accueil`, request.url));
-  }
-
-  if (
-    !authenticated &&
-    protectedRoutes.some((r) => pathWithoutLocale.startsWith(r))
-  ) {
-    return NextResponse.redirect(new URL(`/${locale}/accueil`, request.url));
-  }
-
-  return null;
-}
+import { auth, isAuthConfigured } from '@/lib/auth/server';
 
 const intlMiddleware = createMiddleware(routing);
 
-export default function middleware(request: NextRequest) {
-  const authResponse = authMiddleware(request);
-  if (authResponse) return authResponse;
+// Routes protégées par auth (spec 22) : `/account` (gestion compte) et `/admin` (phase 3).
+// Aucune ne correspond à une page du lecteur — la lecture reste ouverte (jamais une porte).
+// Le compte se présente via une modal juste-à-temps aux points de sauvegarde, jamais à l'entrée.
+const protectedRoutes = ['/account', '/admin'];
+
+// Middleware Neon (uniquement si provisionné). loginUrl = racine → l'utilisateur non authentifié
+// est renvoyé vers l'accueil (lecture), pas vers une page de login (le sign-in est une modal).
+const neonAuthMiddleware = isAuthConfigured ? auth!.middleware({ loginUrl: '/' }) : null;
+
+function pathWithoutLocale(pathname: string): string {
+  const locale = pathname.split('/')[1];
+  return pathname.replace(`/${locale}`, '') || '/';
+}
+
+export default async function middleware(request: NextRequest): Promise<NextResponse> {
+  const path = pathWithoutLocale(request.nextUrl.pathname);
+
+  if (neonAuthMiddleware && protectedRoutes.some((r) => path.startsWith(r))) {
+    const authResponse = await neonAuthMiddleware(request);
+    // On honore uniquement la redirection (non authentifié) ; sinon on retombe sur next-intl.
+    if (authResponse && authResponse.status >= 300 && authResponse.status < 400) {
+      return authResponse;
+    }
+  }
 
   return intlMiddleware(request);
 }
@@ -49,7 +38,8 @@ export const config = {
   // `public/doodle/**` (animations `.riv`) doivent être servis tels quels, sans être réécrits par
   // next-intl en `/${locale}/data/…` ou `/${locale}/doodle/…` (ce qui 404).
   // `sitemap.xml` (et tout `.xml`) exclu : next-intl réécrirait `/sitemap.xml` → `/${locale}/sitemap.xml`
-  // (404). Servi tel quel par `app/sitemap.ts`.
+  // (404). Servi tel quel par `app/sitemap.ts`. `api` exclu : les routes `app/api/*` (auth, sync) se
+  // gèrent elles-mêmes (handler Neon + auth.getSession() dans les routes sync).
   matcher: [
     '/((?!api|_next/static|_next/image|favicon.ico|robots.txt|data|doodle|.*\\.(?:js|css|png|jpg|jpeg|gif|svg|ico|webp|woff|woff2|ttf|eot|map|riv|xml)$).*)',
   ],
