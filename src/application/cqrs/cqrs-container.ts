@@ -1,5 +1,6 @@
 import { cqrsBus } from './cqrs-bus';
 import type { IBibleRepository } from '@/src/domain/repositories/bible.repository';
+import type { ISyncRepository } from '@/src/domain/repositories/sync.repository';
 import {
   GetChapterQueryHandler,
   GetReferencesQueryHandler,
@@ -8,9 +9,15 @@ import {
   GetStrongOccurrencesQueryHandler,
   GetBookInfoQueryHandler,
 } from '@/src/application/handlers/bible/handlers';
+import {
+  PullAllSyncQueryHandler,
+  PullSyncQueryHandler,
+  PushSyncCommandHandler,
+  DeleteAccountCommandHandler,
+} from '@/src/application/handlers/sync/handlers';
 
 /**
- * Configurateur CQRS — branche les 6 query handlers sur le bus.
+ * Configurateur CQRS — branche les 6 query handlers Bible sur le bus.
  * Miroir de `whatpass_web/src/application/cqrs/cqrs-container.ts`, sans les commandes auth
  * (TODO spec 22 : compte-sync).
  *
@@ -27,4 +34,21 @@ export function configureCQRS(repository: IBibleRepository): string[] {
     cqrsBus.registerQueryHandler('GetBookInfo', new GetBookInfoQueryHandler(repository));
   }
   return cqrsBus.getRegisteredQueries();
+}
+
+/**
+ * Branche les handlers de sync (queries pull + commands push/delete) sur le bus — spec 22.
+ * Utilise le registre `commandHandlers` jusqu'ici inutilisé, à la manière préparée pour le
+ * compte-sync. Idempotent (HMR / re-config à chaud).
+ *
+ * @returns la liste des command types enregistrés.
+ */
+export function configureSync(repository: ISyncRepository): string[] {
+  if (!cqrsBus.hasQueryHandler('PullAllSync')) {
+    cqrsBus.registerQueryHandler('PullAllSync', new PullAllSyncQueryHandler(repository));
+    cqrsBus.registerQueryHandler('PullSync', new PullSyncQueryHandler(repository));
+    cqrsBus.registerCommandHandler('PushSync', new PushSyncCommandHandler(repository));
+    cqrsBus.registerCommandHandler('DeleteAccount', new DeleteAccountCommandHandler(repository));
+  }
+  return cqrsBus.getRegisteredCommands();
 }
