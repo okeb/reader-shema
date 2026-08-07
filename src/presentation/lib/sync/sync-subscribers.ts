@@ -2,6 +2,9 @@
 
 import { useFavorites } from '@/src/presentation/stores/favorites.store';
 import { useReadingPosition } from '@/src/presentation/stores/reading-position.store';
+import { useBookmarks } from '@/src/presentation/stores/bookmarks.store';
+import { useAnnotations } from '@/src/presentation/stores/annotations.store';
+import { useReaderPreferences } from '@/src/presentation/stores/reader-preferences.store';
 import { notifyLocalChange } from './sync-engine';
 
 /**
@@ -12,7 +15,12 @@ import { notifyLocalChange } from './sync-engine';
  * chaque action de store — un seul point de branchement par store.
  *
  * `subscribe(listener)` fournit `(state, prevState)` (pas de `subscribeWithSelector`) ;
- * on compare la slice concernée pour ne se déclencher que sur mutation réelle.
+ * on compare la slice concernée pour ne se déclencher que sur mutation réelle, et on
+ * ignore l'événement d'hydratation initiale (`prev.hydrated === false`) pour ne pas
+ * déclencher un push redondant à chaque chargement.
+ *
+ * Les kinds opt-in (readerPrefs) sont enfilés sans condition ici : `notifyLocalChange`
+ * les ignore tant que l'opt-in réglages n'est pas activé.
  *
  * `attachSyncSubscribers()` est idempotent et renvoie un détacheur (tests / démontage).
  */
@@ -25,8 +33,6 @@ export function attachSyncSubscribers(): () => void {
   }
   attached = true;
 
-  // On ignore l'événement d'hydratation initiale (`prev.hydrated === false`) pour
-  // ne pas déclencher un push redondant à chaque chargement de page.
   const unsubFavorites = useFavorites.subscribe((s, prev) => {
     if (prev.hydrated && s.favorites !== prev.favorites) {
       notifyLocalChange('favorites');
@@ -39,9 +45,30 @@ export function attachSyncSubscribers(): () => void {
     }
   });
 
+  const unsubBookmarks = useBookmarks.subscribe((s, prev) => {
+    if (!prev.hydrated) return;
+    if (s.groups !== prev.groups) notifyLocalChange('bookmarkGroups');
+    if (s.bookmarks !== prev.bookmarks) notifyLocalChange('bookmarks');
+  });
+
+  const unsubAnnotations = useAnnotations.subscribe((s, prev) => {
+    if (!prev.hydrated) return;
+    if (s.notes !== prev.notes) notifyLocalChange('notes');
+    if (s.highlights !== prev.highlights) notifyLocalChange('highlights');
+  });
+
+  const unsubReaderPrefs = useReaderPreferences.subscribe((s, prev) => {
+    if (prev.hydrated && s !== prev) {
+      notifyLocalChange('readerPrefs');
+    }
+  });
+
   return () => {
     unsubFavorites();
     unsubPosition();
+    unsubBookmarks();
+    unsubAnnotations();
+    unsubReaderPrefs();
     attached = false;
   };
 }

@@ -5,6 +5,8 @@ import { Icon } from '@iconify/react';
 import { cn } from '@/lib/utils';
 import { FloatingMenu } from '@/src/presentation/components/molecules/m-floating-menu';
 import { useReaderPreferences } from '@/src/presentation/stores/reader-preferences.store';
+import { useAccount } from '@/src/presentation/stores/account.store';
+import { useAccountAvailability } from '@/src/presentation/components/organisms/o-account-provider';
 import {
   FONT_OPTIONS,
   BOOK_FONT_OPTIONS,
@@ -79,6 +81,10 @@ function Seg<T extends string | number>({
  */
 export function ReadingSettings({ showLayout = true }: { showLayout?: boolean }) {
   const prefs = useReaderPreferences();
+  const { authEnabled } = useAccountAvailability();
+  const syncEnabled = useAccount((s) => s.syncEnabled);
+  const settingsSyncOptIn = useAccount((s) => s.settingsSyncOptIn);
+  const setSettingsSyncOptIn = useAccount((s) => s.setSettingsSyncOptIn);
 
   // Brouillon local du champ taille (validé au blur / Entrée), comme l'ancien FontSwitcher.
   const [draft, setDraft] = useState(String(prefs.fontSize));
@@ -251,6 +257,40 @@ export function ReadingSettings({ showLayout = true }: { showLayout?: boolean })
               />
             </span>
           </button>
+
+          {/* Opt-in sync des réglages (spec 22 §4.2) — visible uniquement si le compte est
+              disponible ET la sync active. Par défaut non : l'utilisateur garde ses réglages
+              par appareil sauf choix contraire. */}
+          {authEnabled && syncEnabled && (
+            <>
+              <div className="mx-2 my-1 h-px bg-border" />
+              <button
+                type="button"
+                role="switch"
+                aria-checked={settingsSyncOptIn}
+                onClick={() => setSettingsSyncOptIn(!settingsSyncOptIn)}
+                className="flex w-full items-center justify-between rounded-md px-2 py-2 text-left text-[12px] transition-colors hover:bg-accent"
+              >
+                <span className="flex items-center gap-2">
+                  <Icon icon="hugeicons:cloud-sync" className="h-4 w-4 text-foreground" />
+                  Synchroniser mes réglages
+                </span>
+                <span
+                  className={cn(
+                    'relative h-4 w-7 rounded-full transition-colors',
+                    settingsSyncOptIn ? 'bg-primary' : 'bg-input',
+                  )}
+                >
+                  <span
+                    className={cn(
+                      'absolute top-0.5 h-3 w-3 rounded-full bg-white transition-all',
+                      settingsSyncOptIn ? 'left-[14px]' : 'left-0.5',
+                    )}
+                  />
+                </span>
+              </button>
+            </>
+          )}
         </div>
       )}
     </FloatingMenu>

@@ -14,6 +14,7 @@ import { encryptBlob, decryptBlob } from '@/src/infrastructure/crypto/crypto.ser
 import { useCryptoSession } from '@/src/presentation/stores/crypto-session.store';
 import { useSyncMeta } from '@/src/presentation/stores/sync-meta.store';
 import { useSyncQueue } from '@/src/presentation/stores/sync-queue.store';
+import { useAccount } from '@/src/presentation/stores/account.store';
 import { syncAdapters } from './sync-adapters';
 
 /**
@@ -46,11 +47,18 @@ function isOnline(): boolean {
   return typeof navigator === 'undefined' || navigator.onLine;
 }
 
+/** Un kind opt-in (réglages) n'est actif que si l'utilisateur a opté pour la sync des réglages. */
+function isKindActive(kind: SyncKind): boolean {
+  const adapter = syncAdapters[kind];
+  if (!adapter) return false;
+  if (adapter.optIn) return useAccount.getState().settingsSyncOptIn;
+  return true;
+}
+
 /** Sera appelé par `sync-subscribers` quand un store syncé mute. */
 export function notifyLocalChange(kind: SyncKind): void {
   if (suppress) return; // hydratation depuis le cloud → pas d'écho-push
-  const adapter = syncAdapters[kind];
-  if (!adapter) return;
+  if (!isKindActive(kind)) return;
   useSyncMeta.getState().bump(kind);
   useSyncQueue.getState().enqueue(kind);
   scheduleFlush();
@@ -68,7 +76,7 @@ function scheduleFlush(): void {
 
 async function pushKind(kind: SyncKind): Promise<void> {
   const adapter = syncAdapters[kind];
-  if (!adapter) return;
+  if (!adapter || !isKindActive(kind)) return;
   const masterKey = useCryptoSession.getState().masterKey;
   if (!masterKey) return; // verrouillé : on garde en file, on réessaiera au déblocage
 
@@ -136,7 +144,7 @@ export async function pullAndMerge(): Promise<void> {
       const kind = kindStr as SyncKind;
       const adapter = syncAdapters[kind];
       const remote = remoteMap[kind];
-      if (!adapter || !remote) continue;
+      if (!adapter || !remote || !isKindActive(kind)) continue;
 
       const localTs = useSyncMeta.getState().get(kind);
       if (remote.updatedAt > localTs) {
@@ -199,7 +207,7 @@ export async function migrate(): Promise<void> {
   for (const kindStr of Object.keys(syncAdapters)) {
     const kind = kindStr as SyncKind;
     const adapter = syncAdapters[kind];
-    if (!adapter) continue;
+    if (!adapter || !isKindActive(kind)) continue;
     if (meta.get(kind) === 0 && adapter.hasLocal()) {
       queue.enqueue(kind);
     }
