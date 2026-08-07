@@ -6,6 +6,12 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/).
 
 ## [Unreleased]
 
+### Processus
+
+- **Convention de travail Git Flow** : ajout de `AGENT.md` gouvernant le modèle de branches
+  (`master` / `develop` / `feature` / `release` / `hotfix`), la boucle de travail, les releases
+  taggées et la mise à jour du `CHANGELOG.md`.
+
 Refonte complète de l'application selon les conventions du projet de référence `whatpass_web` (Next.js 16, React 19, `src/` Clean Architecture + CQRS + DI, next-intl, Zustand+persist+immer, shadcn/ui). L'ancien dossier `shema_project_bible_site` reste intact comme référence ; ce nouveau dossier `reader_shema` reprend toute la valeur domainielle (29 questions quiz, cross-refs 66 fichiers, OG, specs, BYM) dans une architecture testable et internationalisable.
 
 ### Architecture
