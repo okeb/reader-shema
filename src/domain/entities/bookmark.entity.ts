@@ -13,6 +13,11 @@ export interface BookmarkGroup {
   /** Couleur du groupe (hex) — reprise par le soulignement ondulé. */
   color: string;
   createdAt: number;
+  /**
+   * Dernière modification (renommage, changement de couleur) — spec 22 §4.2 (phase 2).
+   * Préparatoire au LWW « par entité » ; migré depuis `createdAt` pour les groupes antérieurs.
+   */
+  updatedAt: number;
 }
 
 export interface BookmarkVerse {
@@ -29,7 +34,9 @@ export interface BookmarkVerse {
   chapter: number;
   verse: number;
   createdAt: number;
+  /** Dernière modification (déplacement entre groupes) — spec 22 §4.2 (phase 2). */
+  updatedAt: number;
 }
 
-/** Données d'un signet sans `groupId`/`createdAt` (remplis à l'ajout). */
-export type BookmarkInput = Omit<BookmarkVerse, 'groupId' | 'createdAt'>;
+/** Données d'un signet sans `groupId`/`createdAt`/`updatedAt` (remplis à l'ajout). */
+export type BookmarkInput = Omit<BookmarkVerse, 'groupId' | 'createdAt' | 'updatedAt'>;

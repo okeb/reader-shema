@@ -30,6 +30,15 @@ function isValidFavorite(x: unknown): x is FavoriteVerse {
   );
 }
 
+/**
+ * Migre un favori vers le format spec 22 §4.2 (phase 2) : ajoute `updatedAt` manquant
+ * en reprenant `createdAt` (miroir de `migrateNotes`). Les favoris déjà migrés sont
+ * laissés intacts. Idempotent.
+ */
+function migrateFavorite(f: FavoriteVerse): FavoriteVerse {
+  return { ...f, updatedAt: f.updatedAt ?? f.createdAt };
+}
+
 /** Génère un horodatage stable côté client (Date.now après hydratation). */
 function now(): number {
   return typeof Date !== 'undefined' ? Date.now() : 0;
@@ -44,7 +53,8 @@ export const useFavorites = create<FavoritesState>()(
       add: (item) =>
         set((s) => {
           if (s.favorites.some((f) => f.id === item.id)) return;
-          s.favorites.push({ ...item, createdAt: now() });
+          const ts = now();
+          s.favorites.push({ ...item, createdAt: ts, updatedAt: ts });
         }),
 
       remove: (id) =>
@@ -56,7 +66,10 @@ export const useFavorites = create<FavoritesState>()(
         set((s) => {
           const idx = s.favorites.findIndex((f) => f.id === item.id);
           if (idx >= 0) s.favorites.splice(idx, 1);
-          else s.favorites.push({ ...item, createdAt: now() });
+          else {
+            const ts = now();
+            s.favorites.push({ ...item, createdAt: ts, updatedAt: ts });
+          }
         }),
 
       clear: () =>
@@ -72,7 +85,7 @@ export const useFavorites = create<FavoritesState>()(
       partialize: (s) => s.favorites,
       onRehydrateStorage: () => (state) => {
         if (state) {
-          state.favorites = state.favorites.filter(isValidFavorite);
+          state.favorites = state.favorites.filter(isValidFavorite).map(migrateFavorite);
           state.hydrated = true;
         }
       },
