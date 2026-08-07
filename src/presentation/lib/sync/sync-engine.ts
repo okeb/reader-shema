@@ -5,7 +5,7 @@ import type { ICommandResult } from '@/src/domain/use-cases/base.command.interfa
 import type { IQueryResult } from '@/src/domain/use-cases/base.query.interface';
 import type { EncryptedBlob, SyncBlobMap, SyncKind } from '@/src/domain/entities/sync.entity';
 import { PullAllSyncQuery } from '@/src/application/queries/sync/queries';
-import { PushSyncCommand } from '@/src/application/commands/sync/commands';
+import { PushSyncCommand, DeleteAccountCommand } from '@/src/application/commands/sync/commands';
 import {
   NotAuthenticatedError,
   AuthNotConfiguredError,
@@ -162,6 +162,30 @@ export async function pullAndMerge(): Promise<void> {
   } finally {
     suppress = false;
   }
+}
+
+// --- suppression du compte cloud ----------------------------------------------
+
+/**
+ * Supprime toutes les données cloud du compte — spec 22 §5.
+ *
+ * Exécute `DELETE /api/account` (purge des blobs `user_data`), verrouille la master
+ * key et vide l'horloge + la file de sync locales. La fermeture de l'identité Neon
+ * (signOut) est laissée à l'UI appelante. En cas de compte non configuré ou non
+ * authentifié, l'appel est silencieux (mode local-only).
+ */
+export async function deleteAccount(): Promise<void> {
+  ensureConfigured();
+  const bus = getCqrsBus();
+  try {
+    await bus.executeCommand<ICommandResult<void>>(new DeleteAccountCommand());
+  } catch (err) {
+    if (err instanceof NotAuthenticatedError || err instanceof AuthNotConfiguredError) return;
+    throw err;
+  }
+  useCryptoSession.getState().lock();
+  useSyncMeta.getState().clear();
+  useSyncQueue.getState().clear();
 }
 
 // --- detection cloud (decide premier login vs retour) -------------------------

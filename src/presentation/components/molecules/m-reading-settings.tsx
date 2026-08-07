@@ -6,7 +6,10 @@ import { cn } from '@/lib/utils';
 import { FloatingMenu } from '@/src/presentation/components/molecules/m-floating-menu';
 import { useReaderPreferences } from '@/src/presentation/stores/reader-preferences.store';
 import { useAccount } from '@/src/presentation/stores/account.store';
-import { useAccountAvailability } from '@/src/presentation/components/organisms/o-account-provider';
+import { useAccountAvailability, useSessionIndicator } from '@/src/presentation/components/organisms/o-account-provider';
+import { authClient } from '@/lib/auth/client';
+import { deleteAccount } from '@/src/presentation/lib/sync/sync-engine';
+import { downloadBackup } from '@/src/presentation/lib/data-transfer';
 import {
   FONT_OPTIONS,
   BOOK_FONT_OPTIONS,
@@ -66,6 +69,106 @@ function Seg<T extends string | number>({
         </button>
       ))}
     </div>
+  );
+}
+
+/**
+ * Section « Vos données » — spec 22 §7. Visible uniquement si le compte est disponible.
+ *
+ * Export : réutilise `downloadBackup()` (sauvegarde JSON locale, indépendante du compte).
+ * Suppression : `DELETE /api/account` (purge des blobs cloud) + signOut + reset des préférences
+ * de sync. Confirmation en deux temps (bouton → « confirmer »). Pas de score, pas de stats.
+ */
+function AccountDataSection() {
+  const session = useSessionIndicator();
+  const resetAccount = useAccount((s) => s.reset);
+  const [confirming, setConfirming] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  // Compte non configuré : la section n'est pas rendue (voir ReadingSettings).
+  if (session.active === null) return null;
+
+  async function doDelete() {
+    setBusy(true);
+    try {
+      await deleteAccount();
+      await authClient.signOut();
+      resetAccount();
+    } catch {
+      // Erreur réseau / non authentifié : on laisse l'utilisateur réessayer.
+    } finally {
+      setBusy(false);
+      setConfirming(false);
+    }
+  }
+
+  return (
+    <>
+      <div className="mx-2 my-1 h-px bg-border" />
+      <div className="px-2 py-1.5">
+        <div className="mb-1.5 text-[11px] font-medium text-foreground">Vos données</div>
+
+        {session.active ? (
+          <p className="mb-2 truncate text-[11px] text-muted-foreground">
+            Compte : <span className="text-foreground">{session.email ?? 'connecté'}</span>
+          </p>
+        ) : (
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new Event('bym:open-account'))}
+            className="mb-2 flex w-full items-center gap-2 rounded-md px-1 py-1.5 text-left text-[12px] text-primary transition-colors hover:bg-accent"
+          >
+            <Icon icon="hugeicons:user-circle" className="h-4 w-4" />
+            Créer un compte / se connecter
+          </button>
+        )}
+
+        <button
+          type="button"
+          onClick={downloadBackup}
+          className="flex w-full items-center gap-2 rounded-md px-1 py-1.5 text-left text-[12px] transition-colors hover:bg-accent"
+        >
+          <Icon icon="hugeicons:download-04" className="h-4 w-4 text-foreground" />
+          Exporter mes données
+        </button>
+
+        {session.active &&
+          (confirming ? (
+            <div className="mt-1 rounded-md border border-destructive/40 bg-destructive/5 p-2">
+              <p className="mb-2 text-[11px] leading-snug text-foreground">
+                Vos données cloud seront supprimées définitivement. Les données locales sont
+                conservées. Confirmer ?
+              </p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={doDelete}
+                  className="flex-1 rounded-md bg-destructive px-2 py-1.5 text-[12px] font-medium text-white transition-opacity disabled:opacity-50"
+                >
+                  {busy ? '…' : 'Supprimer'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirming(false)}
+                  className="flex-1 rounded-md border border-input px-2 py-1.5 text-[12px] transition-colors hover:bg-accent"
+                >
+                  Annuler
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setConfirming(true)}
+              className="mt-1 flex w-full items-center gap-2 rounded-md px-1 py-1.5 text-left text-[12px] text-destructive transition-colors hover:bg-destructive/10"
+            >
+              <Icon icon="ph:trash" className="h-4 w-4" />
+              Supprimer mon compte
+            </button>
+          ))}
+      </div>
+    </>
   );
 }
 
@@ -291,6 +394,9 @@ export function ReadingSettings({ showLayout = true }: { showLayout?: boolean })
               </button>
             </>
           )}
+
+          {/* Section « Vos données » — spec 22 §7 (export, suppression, lien compte). */}
+          {authEnabled && <AccountDataSection />}
         </div>
       )}
     </FloatingMenu>
