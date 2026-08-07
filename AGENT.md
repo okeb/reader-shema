@@ -38,9 +38,8 @@ il isole chaque évolution, garde `master` exclusivement pour les releases tagg�
 
 1. **Se synchroniser** : `git checkout develop && git pull origin develop`.
 2. **Créer la branche** : `git checkout -b feature/<slug> develop`.
-3. **Coder** dans la feature branch. Commits courts et atomiques, préfixés
-   [Conventional Commits](https://www.conventionalcommits.org/) quand pertinent :
-   `feat:`, `fix:`, `refactor:`, `docs:`, `chore:`, `test:`, `perf:`.
+3. **Coder** dans la feature branch. Commits courts et atomiques respectant **strictement**
+   le format décrit au §10 (`<type>(<portée>): <sujet>` + description + footer).
 4. **Terminer la feature** (une fois testée) :
    ```
    git checkout develop
@@ -116,3 +115,86 @@ livraison, son statut passe à ✅ Implémenté dans `specs/README.md`.
 - Ne faire de **release** que sur demande explicite (ou accord de l'utilisateur) : suivre §5,
   mettre à jour le `CHANGELOG.md`, tagger, pusher `master` + tag.
 - Mettre à jour le `CHANGELOG.md` à chaque merge de feature (sous `[Unreleased]`).
+- **Tous** les commits respectent strictement le format §10.
+
+## 10. Format des commits (obligatoire)
+
+Chaque commit suit le format [Conventional Commits](https://www.conventionalcommits.org/) :
+
+```
+<type>(<portée>): <sujet>
+
+<description>
+
+<footer>
+```
+
+### Type (obligatoire)
+
+| Type | Usage |
+|------|-------|
+| `feat` | Ajout d'une fonctionnalité |
+| `fix` | Correction de bogue |
+| `perf` | Amélioration des performances |
+| `refactor` | Changement de code sans changement de comportement |
+| `style` | Changement de style du code (sans changer la logique) |
+| `test` | Modification des tests |
+| `docs` | Documentation |
+| `build` | Système de build (gulp, webpack, npm, etc.) |
+| `ci` | Intégration continue (Travis, Circle, BrowserStack, SauceLabs, etc.) |
+| `chore` | Tâches diverses ne rentrant pas dans les catégories ci-dessus (outillage, dépendances, processus) |
+
+### Portée (optionnelle)
+
+Partie de l'application/librairie affectée — `feat(reader): …`, `fix(strong): …`,
+`docs(agent): …`. Sans portée : `docs: …`. Suivie d'un `:` puis d'une espace.
+
+### Sujet
+
+- Description **succincte** des changements.
+- **Impératif présent** : « change », pas « changed » ni « changes ».
+- **Pas de majuscule** au début.
+- **Pas de point** à la fin.
+- ≤ ~50 caractères idéalement.
+
+### Description (corps)
+
+- Détaille les **motivations** derrière le changement (le « pourquoi »), pas seulement le « quoi ».
+- Mêmes règles que le sujet : impératif présent, pas de majuscule, pas de point à la fin de chaque
+  ligne/paragraphe.
+- Laisser une **ligne vide** entre le sujet et la description.
+
+### Footer
+
+- **Breaking Changes** : préfixer `BREAKING CHANGE:` puis l'explication. Le type peut aussi porter
+  un `!` : `feat(api)!: …`.
+- **Références** : `Closes #123`, `Refs #42`, `Fixes #7` (issues GitHub/GitLab).
+- Laisser une **ligne vide** entre la description et le footer.
+
+### Exemples
+
+```
+feat(reader): ajouter le mode focus
+
+le mode focus masque la topbar et le dock tant que la touche Escape
+n'est pas pressée, pour réduire les distractions pendant la lecture
+
+Closes #14
+```
+
+```
+fix(strong): gérer l'absence de code strong sur la version lsg
+
+la concordance repliait vers un état vide quand le code strong etait
+invalide ; on affiche maintenant un message explicite
+```
+
+```
+docs(agent): formaliser le format des commits conventionnels
+
+ajoute la section 10 a AGENT.md decrivant le format type(portee): sujet
+plus description et footer, ainsi que les regles de typographie
+```
+
+> Les **commits de merge** Git Flow suivent un format libre :
+> `Merge feature/<slug> into develop` (cf. §4 étape 4).
