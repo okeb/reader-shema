@@ -8,6 +8,7 @@ import { getVersion } from '@/src/shared/constants/bible-versions';
 import { ShortcutsHelp } from '@/src/presentation/components/molecules/m-shortcuts-help';
 import { DataTransfer } from '@/src/presentation/components/molecules/m-data-transfer';
 import { SiteFooter } from '@/src/presentation/components/molecules/m-footer';
+import { useAccountAvailability } from '@/src/presentation/components/organisms/o-account-provider';
 import type { FavoriteVerse } from '@/src/domain/entities';
 
 /** Lien localisé vers la lecture au bon verset, ou null si la référence n'est pas localisable. */
@@ -31,6 +32,7 @@ export default function FavorisPage() {
   const hydrated = useFavorites((s) => s.hydrated);
   const router = useRouter();
   const [helpOpen, setHelpOpen] = useState(false);
+  const { authEnabled } = useAccountAvailability();
 
   // Raccourcis : « F » revient à la lecture (réciproque du lecteur), « ? » affiche l'aide.
   useEffect(() => {
@@ -88,6 +90,16 @@ export default function FavorisPage() {
             <p className="mt-1 text-sm text-muted-foreground/70">
               Sélectionnez des versets dans le lecteur, puis touchez le cœur.
             </p>
+            {authEnabled && (
+              <button
+                type="button"
+                onClick={() => window.dispatchEvent(new Event('bym:open-account'))}
+                className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-background/70 px-3 py-1.5 text-sm text-primary transition-all hover:bg-primary/15"
+              >
+                <Icon icon="hugeicons:cloud-sync" className="h-4 w-4" />
+                Retrouver sur tous vos appareils
+              </button>
+            )}
           </div>
         ) : (
           <div className="space-y-10">

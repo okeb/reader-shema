@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { Icon } from '@iconify/react';
 import { cn } from '@/lib/utils';
 import type { Note } from '@/src/domain/entities';
+import { useAccountAvailability } from '@/src/presentation/components/organisms/o-account-provider';
 
 interface NotesPanelProps {
   open: boolean;
@@ -25,6 +26,7 @@ interface NotesPanelProps {
  */
 export function NotesPanel({ open, notes, activeId, onSelect, onRemoveNote, onClose }: NotesPanelProps) {
   const [query, setQuery] = useState('');
+  const { authEnabled } = useAccountAvailability();
 
   // Filtre en direct sur le texte de la note, les références et les extraits des versets associés.
   const filtered = useMemo(() => {
@@ -66,9 +68,21 @@ export function NotesPanel({ open, notes, activeId, onSelect, onRemoveNote, onCl
         </div>
 
         {notes.length === 0 ? (
-          <p className="pr-2 text-[12px] leading-snug text-muted-foreground/70">
-            Aucune note pour l'instant. Sélectionnez un verset puis touchez l'icône note.
-          </p>
+          <div className="space-y-2 pr-2">
+            <p className="text-[12px] leading-snug text-muted-foreground/70">
+              Aucune note pour l'instant. Sélectionnez un verset puis touchez l'icône note.
+            </p>
+            {authEnabled && (
+              <button
+                type="button"
+                onClick={() => window.dispatchEvent(new Event('bym:open-account'))}
+                className="flex items-center gap-1.5 text-[12px] text-primary/90 transition-colors hover:text-primary"
+              >
+                <Icon icon="hugeicons:cloud-sync" className="h-3.5 w-3.5" />
+                Retrouver sur tous vos appareils
+              </button>
+            )}
+          </div>
         ) : (
           <>
             {/* Recherche locale. */}

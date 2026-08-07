@@ -156,6 +156,32 @@ export async function pullAndMerge(): Promise<void> {
   }
 }
 
+// --- detection cloud (decide premier login vs retour) -------------------------
+
+/**
+ * Indique si le compte possède déjà des blobs cloud — spec 22 §4.3.
+ *
+ * Sert à l'UI compte à distinguer le premier login (cloud vide → on génère une
+ * recovery key et on migre le local) du retour sur un nouvel appareil (cloud
+ * rempli → on demande la recovery key existante). Ne déchiffre rien : on regarde
+ * seulement si la carte de blobs est non vide.
+ *
+ * @returns `true`/`false` si la requête aboutit, `null` si pas de compte / Neon
+ *  absent (mode local-only).
+ */
+export async function hasCloudData(): Promise<boolean | null> {
+  ensureConfigured();
+  const bus = getCqrsBus();
+  try {
+    const res = await bus.executeQuery<IQueryResult<SyncBlobMap>>(new PullAllSyncQuery());
+    return Object.keys(res.data ?? {}).length > 0;
+  } catch (err) {
+    if (err instanceof NotAuthenticatedError || err instanceof AuthNotConfiguredError) return null;
+    console.warn('sync: echec hasCloudData', err);
+    return null;
+  }
+}
+
 // --- migration premier login ---------------------------------------------------
 
 /**

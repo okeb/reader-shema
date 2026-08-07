@@ -19,6 +19,9 @@ import { ThemeProvider } from '@/src/presentation/providers/theme-provider';
 import { QueryProvider } from '@/src/presentation/providers/query-client-provider';
 import { StoreHydrationProvider } from '@/src/presentation/providers/store-hydration-provider';
 import { CommandPalette } from '@/src/presentation/components/organisms/o-command-palette';
+import { AccountProvider } from '@/src/presentation/components/organisms/o-account-provider';
+import { isAuthConfigured } from '@/lib/auth/server';
+import { isDbConfigured } from '@/src/infrastructure/database/neon-client';
 import { ACCENT_INIT_SCRIPT } from '@/src/shared/constants/reader-preferences';
 
 import '@/app/styles/base/globals.scss';
@@ -84,6 +87,9 @@ export default async function LocaleLayout({ children, params }: Props) {
   setRequestLocale(locale);
 
   const messages = await getMessages();
+  // Compte + sync spec 22 : disponible uniquement si l'auth Neon ET la base sont
+  // provisionnées (sinon mode local-only, entrées compte masquées, lecteur inchangé).
+  const authEnabled = isAuthConfigured && isDbConfigured();
 
   return (
     <html lang={locale} className={fontVariables} suppressHydrationWarning>
@@ -94,10 +100,12 @@ export default async function LocaleLayout({ children, params }: Props) {
           <NextIntlClientProvider locale={locale} messages={messages}>
             <QueryProvider>
               <StoreHydrationProvider>
-                {children}
-                {/* Palette de recherche globale (⌘/Ctrl + K) — montée en permanence, présente sur
-                    toutes les pages (lecteur, accueil, favoris). Cf. spec 19. */}
-                <CommandPalette />
+                <AccountProvider authEnabled={authEnabled}>
+                  {children}
+                  {/* Palette de recherche globale (⌘/Ctrl + K) — montée en permanence, présente sur
+                      toutes les pages (lecteur, accueil, favoris). Cf. spec 19. */}
+                  <CommandPalette />
+                </AccountProvider>
               </StoreHydrationProvider>
             </QueryProvider>
           </NextIntlClientProvider>

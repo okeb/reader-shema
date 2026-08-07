@@ -10,6 +10,7 @@ import {
   ACCENT_OPTIONS,
   LOGO_STYLE_OPTIONS,
 } from '@/src/shared/constants/reader-preferences';
+import { useSessionIndicator } from '@/src/presentation/components/organisms/o-account-provider';
 import type { Theme } from '@/src/shared/constants/theme';
 
 const THEME_OPTIONS: { key: Theme; label: string }[] = [
@@ -41,6 +42,7 @@ interface AppearanceMenuProps {
 export function AppearanceMenu({ onOpenHelp, className }: AppearanceMenuProps) {
   const prefs = useReaderPreferences();
   const { theme, setTheme, mounted } = useThemeCycle();
+  const session = useSessionIndicator();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -89,6 +91,33 @@ export function AppearanceMenu({ onOpenHelp, className }: AppearanceMenuProps) {
             GLASS_PILL,
           )}
         >
+          {/* Compte & synchronisation — spec 22. Discret, hors champ de lecture. */}
+          {session.active !== null ? (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setOpen(false);
+                window.dispatchEvent(new Event('bym:open-account'));
+              }}
+              className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-sm transition-colors hover:bg-foreground/5"
+            >
+              <Icon
+                icon={session.active ? 'hugeicons:user-check-02' : 'hugeicons:user-circle'}
+                className="h-4 w-4 shrink-0 text-muted-foreground"
+              />
+              <span className="flex-1 truncate text-foreground">
+                {session.active ? (session.email ?? 'Compte') : 'Compte & synchronisation'}
+              </span>
+              {!session.active && (
+                <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground/60">
+                  Se connecter
+                </span>
+              )}
+            </button>
+          ) : null}
+          {session.active !== null && <div className="mx-3 h-px bg-border" />}
+
           {/* Thème (clair / sombre / système) — on attend le montage (next-themes) pour cocher. */}
           <p className="px-3 pb-1 pt-2.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/60">
             Thème

@@ -5,6 +5,7 @@ import { Icon } from '@iconify/react';
 import { cn } from '@/lib/utils';
 import { BOOKMARK_COLORS } from '@/src/domain/entities';
 import type { BookmarkGroup, BookmarkVerse } from '@/src/domain/entities';
+import { useAccountAvailability } from '@/src/presentation/components/organisms/o-account-provider';
 
 interface BookmarkPanelProps {
   open: boolean;
@@ -40,6 +41,7 @@ export function BookmarkPanel({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [colorEditId, setColorEditId] = useState<string | null>(null);
+  const { authEnabled } = useAccountAvailability();
 
   if (!open) return null;
 
@@ -75,9 +77,21 @@ export function BookmarkPanel({
       </div>
 
       {groupsWithItems.length === 0 ? (
-        <p className="pr-2 text-[12px] leading-snug text-muted-foreground/70">
-          Aucun signet. Sélectionnez des versets puis touchez l'icône signet.
-        </p>
+        <div className="space-y-2 pr-2">
+          <p className="text-[12px] leading-snug text-muted-foreground/70">
+            Aucun signet. Sélectionnez des versets puis touchez l'icône signet.
+          </p>
+          {authEnabled && (
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new Event('bym:open-account'))}
+              className="flex items-center gap-1.5 text-[12px] text-primary/90 transition-colors hover:text-primary"
+            >
+              <Icon icon="hugeicons:cloud-sync" className="h-3.5 w-3.5" />
+              Retrouver sur tous vos appareils
+            </button>
+          )}
+        </div>
       ) : (
         <div className="space-y-5">
             {groupsWithItems.map(({ group, items }) => (
