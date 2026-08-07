@@ -73,6 +73,20 @@ export const HOST = {
   url: "https://vercel.com",
 } as const;
 
+/**
+ * Hébergement des données de synchronisation (compte facultatif) — spec 22 §8.
+ *
+ * Les blobs synchronisés sont chiffrés bout-en-bout côté client (AES-GCM) ; le serveur
+ * ne stocke que des blobs opaques (jamais la clé, jamais la recovery key, jamais le
+ * clair). Région d'hébergement : à confirmer en console Neon au provisionnement et à
+ * documenter ici (intention : Union européenne). Ne promettre une ville précise que
+ * si elle est effectivement sélectionnée dans la console.
+ */
+export const SYNC_HOSTING = {
+  provider: "Neon Postgres",
+  region: "Région de l'Union européenne (à confirmer au provisionnement)",
+} as const;
+
 /** Liens des pages informationnelles (footer + sitemap). */
 export const INFO_LINKS = [
   { href: "/a-propos", label: "À propos" },
@@ -83,15 +97,19 @@ export const INFO_LINKS = [
 
 /**
  * Clés `localStorage` utilisées par l'application — listées sur la page Confidentialité pour la
- * transparence RGPD. Aucune ne quitte l'appareil de l'utilisateur.
+ * transparence RGPD. Par défaut, aucune ne quitte l'appareil. Si vous activez un compte
+ * (facultatif), les données marquées « (sync) » sont chiffrées bout-en-bout puis envoyées sous
+ * forme de blobs opaques au serveur — jamais en clair (cf. section « Compte & synchronisation »).
  */
 export const STORAGE_KEYS: { key: string; label: string }[] = [
-  { key: "bymFavorites", label: "Versets favoris" },
-  { key: "bymBookmarkGroups / bymBookmarks", label: "Signets et groupes de signets" },
-  { key: "bymHighlights / bymNotes", label: "Surlignages et notes personnelles" },
+  { key: "bymFavorites", label: "Versets favoris (sync)" },
+  { key: "bymBookmarkGroups / bymBookmarks", label: "Signets et groupes de signets (sync)" },
+  { key: "bymHighlights / bymNotes", label: "Surlignages et notes personnelles (sync)" },
   { key: "bym:version / bym:compare-version", label: "Version de lecture active et comparaison" },
-  { key: "reader-preferences", label: "Réglages de lecture (police, taille, thème, disposition)" },
-  { key: "reading-position", label: "Dernière position de lecture (reprise)" },
+  { key: "reader-preferences", label: "Réglages de lecture (police, taille, thème, disposition) (sync opt-in)" },
+  { key: "reading-position", label: "Dernière position de lecture, reprise (sync)" },
+  { key: "bym:account", label: "Préférences de synchronisation (sync activée, opt-in réglages)" },
+  { key: "bym:sync-meta / bym:sync-queue", label: "Horloges et file d'attente de synchronisation locales" },
 ];
 
 /** Crédits divers (les versions de Bible sont créditées via `lib/bible-versions.ts`). */
