@@ -5,6 +5,11 @@ import { Icon } from '@iconify/react';
 import { cn } from '@/lib/utils';
 import { FloatingMenu } from '@/src/presentation/components/molecules/m-floating-menu';
 import { useReaderPreferences } from '@/src/presentation/stores/reader-preferences.store';
+import { useAccount } from '@/src/presentation/stores/account.store';
+import { useAccountAvailability, useSessionIndicator } from '@/src/presentation/components/organisms/o-account-provider';
+import { authClient } from '@/lib/auth/client';
+import { deleteAccount } from '@/src/presentation/lib/sync/sync-engine';
+import { downloadBackup } from '@/src/presentation/lib/data-transfer';
 import {
   FONT_OPTIONS,
   BOOK_FONT_OPTIONS,
@@ -68,6 +73,106 @@ function Seg<T extends string | number>({
 }
 
 /**
+ * Section « Vos données » — spec 22 §7. Visible uniquement si le compte est disponible.
+ *
+ * Export : réutilise `downloadBackup()` (sauvegarde JSON locale, indépendante du compte).
+ * Suppression : `DELETE /api/account` (purge des blobs cloud) + signOut + reset des préférences
+ * de sync. Confirmation en deux temps (bouton → « confirmer »). Pas de score, pas de stats.
+ */
+function AccountDataSection() {
+  const session = useSessionIndicator();
+  const resetAccount = useAccount((s) => s.reset);
+  const [confirming, setConfirming] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  // Compte non configuré : la section n'est pas rendue (voir ReadingSettings).
+  if (session.active === null) return null;
+
+  async function doDelete() {
+    setBusy(true);
+    try {
+      await deleteAccount();
+      await authClient.signOut();
+      resetAccount();
+    } catch {
+      // Erreur réseau / non authentifié : on laisse l'utilisateur réessayer.
+    } finally {
+      setBusy(false);
+      setConfirming(false);
+    }
+  }
+
+  return (
+    <>
+      <div className="mx-2 my-1 h-px bg-border" />
+      <div className="px-2 py-1.5">
+        <div className="mb-1.5 text-[11px] font-medium text-foreground">Vos données</div>
+
+        {session.active ? (
+          <p className="mb-2 truncate text-[11px] text-muted-foreground">
+            Compte : <span className="text-foreground">{session.email ?? 'connecté'}</span>
+          </p>
+        ) : (
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new Event('bym:open-account'))}
+            className="mb-2 flex w-full items-center gap-2 rounded-md px-1 py-1.5 text-left text-[12px] text-primary transition-colors hover:bg-accent"
+          >
+            <Icon icon="hugeicons:user-circle" className="h-4 w-4" />
+            Créer un compte / se connecter
+          </button>
+        )}
+
+        <button
+          type="button"
+          onClick={downloadBackup}
+          className="flex w-full items-center gap-2 rounded-md px-1 py-1.5 text-left text-[12px] transition-colors hover:bg-accent"
+        >
+          <Icon icon="hugeicons:download-04" className="h-4 w-4 text-foreground" />
+          Exporter mes données
+        </button>
+
+        {session.active &&
+          (confirming ? (
+            <div className="mt-1 rounded-md border border-destructive/40 bg-destructive/5 p-2">
+              <p className="mb-2 text-[11px] leading-snug text-foreground">
+                Vos données cloud seront supprimées définitivement. Les données locales sont
+                conservées. Confirmer ?
+              </p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={doDelete}
+                  className="flex-1 rounded-md bg-destructive px-2 py-1.5 text-[12px] font-medium text-white transition-opacity disabled:opacity-50"
+                >
+                  {busy ? '…' : 'Supprimer'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirming(false)}
+                  className="flex-1 rounded-md border border-input px-2 py-1.5 text-[12px] transition-colors hover:bg-accent"
+                >
+                  Annuler
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setConfirming(true)}
+              className="mt-1 flex w-full items-center gap-2 rounded-md px-1 py-1.5 text-left text-[12px] text-destructive transition-colors hover:bg-destructive/10"
+            >
+              <Icon icon="ph:trash" className="h-4 w-4" />
+              Supprimer mon compte
+            </button>
+          ))}
+      </div>
+    </>
+  );
+}
+
+/**
  * Panneau « Réglages de lecture » : police, police du livre, taille, interligne, largeur, fond de
  * lecture, disposition, colonnes, renvois et mode focus. Lit/écrit directement dans le store
  * `useReaderPreferences` (persistance localStorage + application des vars CSS). Self-contained.
@@ -79,6 +184,10 @@ function Seg<T extends string | number>({
  */
 export function ReadingSettings({ showLayout = true }: { showLayout?: boolean }) {
   const prefs = useReaderPreferences();
+  const { authEnabled } = useAccountAvailability();
+  const syncEnabled = useAccount((s) => s.syncEnabled);
+  const settingsSyncOptIn = useAccount((s) => s.settingsSyncOptIn);
+  const setSettingsSyncOptIn = useAccount((s) => s.setSettingsSyncOptIn);
 
   // Brouillon local du champ taille (validé au blur / Entrée), comme l'ancien FontSwitcher.
   const [draft, setDraft] = useState(String(prefs.fontSize));
@@ -251,6 +360,43 @@ export function ReadingSettings({ showLayout = true }: { showLayout?: boolean })
               />
             </span>
           </button>
+
+          {/* Opt-in sync des réglages (spec 22 §4.2) — visible uniquement si le compte est
+              disponible ET la sync active. Par défaut non : l'utilisateur garde ses réglages
+              par appareil sauf choix contraire. */}
+          {authEnabled && syncEnabled && (
+            <>
+              <div className="mx-2 my-1 h-px bg-border" />
+              <button
+                type="button"
+                role="switch"
+                aria-checked={settingsSyncOptIn}
+                onClick={() => setSettingsSyncOptIn(!settingsSyncOptIn)}
+                className="flex w-full items-center justify-between rounded-md px-2 py-2 text-left text-[12px] transition-colors hover:bg-accent"
+              >
+                <span className="flex items-center gap-2">
+                  <Icon icon="hugeicons:cloud-sync" className="h-4 w-4 text-foreground" />
+                  Synchroniser mes réglages
+                </span>
+                <span
+                  className={cn(
+                    'relative h-4 w-7 rounded-full transition-colors',
+                    settingsSyncOptIn ? 'bg-primary' : 'bg-input',
+                  )}
+                >
+                  <span
+                    className={cn(
+                      'absolute top-0.5 h-3 w-3 rounded-full bg-white transition-all',
+                      settingsSyncOptIn ? 'left-[14px]' : 'left-0.5',
+                    )}
+                  />
+                </span>
+              </button>
+            </>
+          )}
+
+          {/* Section « Vos données » — spec 22 §7 (export, suppression, lien compte). */}
+          {authEnabled && <AccountDataSection />}
         </div>
       )}
     </FloatingMenu>

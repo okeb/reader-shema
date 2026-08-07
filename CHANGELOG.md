@@ -36,6 +36,21 @@ Refonte complète de l'application selon les conventions du projet de référenc
 
 - Middleware next-intl : exclusion `data` / `doodle` / `.riv` / `.xml` pour servir les assets statiques et `sitemap.xml` sans réécriture (404 sinon).
 
+### Compte & synchronisation (spec 22 — phase 1 + 2)
+
+- **Compte facultatif (Neon Managed Better Auth)** : authentification par **magic link ET email/password** (les deux), UI custom (modal, pas les composants pré-construits). Le lecteur reste **ouvert sans compte** — l'auth ne protège que `/account` et `/admin` (proxy), jamais les pages de lecture. Première dépendance serveur runtime du projet.
+- **Chiffrement bout-en-bout (Web Crypto natif, zéro dépendance)** : `PBKDF2` (250k iters, SHA-256) sur une **clé de récupération** aléatoire 256-bit → master key `AES-GCM` 256 non-extractable. La clé de récupération est affichée **une fois**, purement client (jamais stockée par le serveur). **Perte = données synchronisées irrécupérables** (assumé par la spec). Le serveur ne stocke que des **blobs opaques** (ciphertext + nonce).
+- **Synchronisation multi-appareil per-kind-blob LWW** : un blob JSON chiffré par kind (`favorites`, `bookmarkGroups`, `bookmarks`, `notes`, `highlights`, `readingPosition`, `readerPrefs` opt-in). Fusion au pull : `remote.updatedAt > local → remplacer`. **Pas de tombstones** (suppression = réécriture du blob). Simplification assumée vs « par entité » (§4.2) — per-entity = raffinement futur.
+- **File offline** : kinds sales dans un store persisté, flush debouncé 2 s, déclenché aussi sur `online` et `visibilitychange` (hidden). Mode local-only silencieux si pas de compte / Neon absent.
+- **API routes** : `GET /api/sync` (pull-all), `GET/PUT /api/sync/[kind]` (LWW server-side `ON CONFLICT … WHERE updated_at < EXCLUDED`), `DELETE /api/account` (purge immédiate). Table applicative `user_data` (BYTEA ciphertext/nonce) à côté du schéma `neon_auth`.
+- **UI compte** : modal custom (machine à états email → magic-sent/password → recovery-display/entry → migration → done), focus trap maison, ouverture cross-panels via `bym:open-account`. Entrées « Retrouver sur tous vos appareils » dans les empty-states (notes, signets, favoris). Indicateur de session discret dans le menu Apparence.
+- **Section « Vos données »** (réglages de lecture) : email/lien compte, toggle « Synchroniser mes réglages » (opt-in), **export JSON** (réutilise `downloadBackup()`), **suppression de compte** en deux temps. « Pas de score, pas de stats. »
+- **Migration premier login** : local présent + cloud vide → le local devient la source (push). Distinction premier login / retour via `hasCloudData()` (pull sans décrypt).
+- **Horodatages d'entités (phase 2)** : `updatedAt` ajouté à `FavoriteVerse`, `BookmarkVerse`, `BookmarkGroup` (migration `onRehydrateStorage` `updatedAt ?? createdAt`, miroir de `migrateNotes`). `Note` déjà pourvu ; `HighlightMap` reste blob-LWW. Clés `localStorage` inchangées.
+- **Mentions RGPD** : section « Compte & synchronisation (facultatif) » sur la page Confidentialité (blobs E2EE opaques, région UE, clé de récupération responsabilité utilisateur, droits export/suppression, aucune métrique, lecture anonyme préservée). `STORAGE_KEYS` complété avec les clés sync.
+
+> Phase 3 (administration éditoriale) hors scope.
+
 ## [0.1.12] : 2026-07-30
 
 ### Changements

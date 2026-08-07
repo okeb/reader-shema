@@ -48,6 +48,17 @@ function isValidBookmark(x: unknown): x is BookmarkVerse {
   );
 }
 
+/**
+ * Migre un groupe / un signet vers le format spec 22 §4.2 (phase 2) : ajoute `updatedAt`
+ * manquant en reprenant `createdAt` (miroir de `migrateNotes`). Idempotent.
+ */
+function migrateGroup(g: BookmarkGroup): BookmarkGroup {
+  return { ...g, updatedAt: g.updatedAt ?? g.createdAt };
+}
+function migrateBookmark(b: BookmarkVerse): BookmarkVerse {
+  return { ...b, updatedAt: b.updatedAt ?? b.createdAt };
+}
+
 interface BookmarksState {
   groups: BookmarkGroup[];
   bookmarks: BookmarkVerse[];
@@ -76,8 +87,9 @@ export const useBookmarks = create<BookmarksState>()(
 
       addGroup: (name, color) => {
         const id = uid();
+        const ts = now();
         set((s) => {
-          s.groups.push({ id, name: name.trim() || DEFAULT_GROUP_NAME, color, createdAt: now() });
+          s.groups.push({ id, name: name.trim() || DEFAULT_GROUP_NAME, color, createdAt: ts, updatedAt: ts });
         });
         return id;
       },
@@ -85,13 +97,19 @@ export const useBookmarks = create<BookmarksState>()(
       renameGroup: (id, name) =>
         set((s) => {
           const g = s.groups.find((x) => x.id === id);
-          if (g) g.name = name.trim() || g.name;
+          if (g) {
+            g.name = name.trim() || g.name;
+            g.updatedAt = now();
+          }
         }),
 
       setGroupColor: (id, color) =>
         set((s) => {
           const g = s.groups.find((x) => x.id === id);
-          if (g) g.color = color;
+          if (g) {
+            g.color = color;
+            g.updatedAt = now();
+          }
         }),
 
       removeGroup: (id) =>
@@ -104,7 +122,8 @@ export const useBookmarks = create<BookmarksState>()(
         set((s) => {
           // Un verset n'appartient qu'à un groupe : on déplace s'il existe déjà.
           s.bookmarks = s.bookmarks.filter((b) => b.id !== item.id);
-          s.bookmarks.push({ ...item, groupId, createdAt: now() });
+          const ts = now();
+          s.bookmarks.push({ ...item, groupId, createdAt: ts, updatedAt: ts });
         }),
 
       remove: (id) =>
@@ -121,11 +140,12 @@ export const useBookmarks = create<BookmarksState>()(
       partialize: (s) => ({ groups: s.groups, bookmarks: s.bookmarks }),
       onRehydrateStorage: () => (state) => {
         if (!state) return;
-        state.groups = (state.groups ?? []).filter(isValidGroup);
-        state.bookmarks = (state.bookmarks ?? []).filter(isValidBookmark);
+        state.groups = (state.groups ?? []).filter(isValidGroup).map(migrateGroup);
+        state.bookmarks = (state.bookmarks ?? []).filter(isValidBookmark).map(migrateBookmark);
         // Amorçage d'un groupe par défaut si aucun (comportement historique).
         if (state.groups.length === 0) {
-          state.groups = [{ id: uid(), name: DEFAULT_GROUP_NAME, color: BOOKMARK_COLORS[0], createdAt: now() }];
+          const ts = now();
+          state.groups = [{ id: uid(), name: DEFAULT_GROUP_NAME, color: BOOKMARK_COLORS[0], createdAt: ts, updatedAt: ts }];
         }
         state.hydrated = true;
       },

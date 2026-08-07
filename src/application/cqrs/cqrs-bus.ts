@@ -6,17 +6,17 @@ import type { IQuery, IQueryResult, IQueryHandler } from '@/src/domain/use-cases
  * débarrassé des imports auth. Registres commande + query prêts pour le compte-sync (spec 22).
  */
 export class CQRSBus {
-  private commandHandlers = new Map<string, ICommandHandler<ICommand, ICommandResult>>();
+  private commandHandlers = new Map<string, ICommandHandler<ICommand, unknown>>();
   private queryHandlers = new Map<string, IQueryHandler<IQuery, IQueryResult>>();
 
-  registerCommandHandler<C extends ICommand, R extends ICommandResult>(
+  registerCommandHandler<C extends ICommand, R = unknown>(
     commandType: string,
     handler: ICommandHandler<C, R>,
   ): void {
     if (this.commandHandlers.has(commandType)) {
       throw new Error(`Command handler for ${commandType} is already registered`);
     }
-    this.commandHandlers.set(commandType, handler as unknown as ICommandHandler<ICommand, ICommandResult>);
+    this.commandHandlers.set(commandType, handler as unknown as ICommandHandler<ICommand, unknown>);
   }
 
   registerQueryHandler<Q extends IQuery, R extends IQueryResult>(

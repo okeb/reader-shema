@@ -66,6 +66,16 @@ function applyAllVars(p: ReaderPreferences) {
   applyReduceMotion(p.reduceMotion);
 }
 
+/**
+ * Applique un jeu de préférences distant (sync) dans le store + rafraîchit les vars CSS.
+ * Exporté pour l'adaptateur de sync opt-in `readerPrefs` (spec 22 §4.2).
+ */
+export function applyReaderPrefs(p: Partial<ReaderPreferences>) {
+  const next = { ...READER_PREFS_DEFAULTS, ...pickPrefs(useReaderPreferences.getState()), ...p };
+  useReaderPreferences.setState({ ...next, hydrated: true });
+  applyAllVars(next);
+}
+
 // --- Store ---------------------------------------------------------------------
 
 interface ReaderPrefsState extends ReaderPreferences {
