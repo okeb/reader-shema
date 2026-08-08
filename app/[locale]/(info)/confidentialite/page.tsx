@@ -71,8 +71,9 @@ export default async function ConfidentialitePage({ params }: Props) {
         </p>
         <p>
           <strong>Hébergement.</strong> Les blobs chiffrés sont stockés sur {SYNC_HOSTING.provider}{' '}
-          ({SYNC_HOSTING.region}). Seul le texte chiffré transite et y est conservé ; aucun
-          identifiant de navigation, aucune métrique, aucun comptage, aucun e-mail de relance.
+          ({SYNC_HOSTING.region}). {SYNC_HOSTING.adequacy} Seul le texte chiffré transite et y est
+          conservé ; aucun identifiant de navigation, aucune métrique, aucun comptage, aucun e-mail
+          de relance.
         </p>
         <p>
           <strong>Lecture anonyme préservée.</strong> Le compte ne ferme jamais le lecteur :

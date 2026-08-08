@@ -12,8 +12,9 @@
 -- l'isolation repose sur `user_id` issu de la session. La suppression de compte
 -- (DELETE /api/account) purge les lignes de l'utilisateur avant déconnexion.
 --
--- Région : la base est provisionnée dans la région UE retenue en console Neon
--- (documentée côté légal). À confirmer au provisionnement.
+-- Région : la base est provisionnée dans la région Neon `eu-west-2` (AWS Londres,
+-- Royaume-Uni — adéquation RGPD de l'UE). Région réelle confirmée au provisionnement
+-- et documentée côté légal (`SYNC_HOSTING` dans `src/shared/constants/legal.ts`).
 
 CREATE TABLE IF NOT EXISTS user_data (
   user_id        TEXT       NOT NULL,

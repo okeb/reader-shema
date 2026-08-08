@@ -47,7 +47,7 @@ Refonte complète de l'application selon les conventions du projet de référenc
 - **Section « Vos données »** (réglages de lecture) : email/lien compte, toggle « Synchroniser mes réglages » (opt-in), **export JSON** (réutilise `downloadBackup()`), **suppression de compte** en deux temps. « Pas de score, pas de stats. »
 - **Migration premier login** : local présent + cloud vide → le local devient la source (push). Distinction premier login / retour via `hasCloudData()` (pull sans décrypt).
 - **Horodatages d'entités (phase 2)** : `updatedAt` ajouté à `FavoriteVerse`, `BookmarkVerse`, `BookmarkGroup` (migration `onRehydrateStorage` `updatedAt ?? createdAt`, miroir de `migrateNotes`). `Note` déjà pourvu ; `HighlightMap` reste blob-LWW. Clés `localStorage` inchangées.
-- **Mentions RGPD** : section « Compte & synchronisation (facultatif) » sur la page Confidentialité (blobs E2EE opaques, région UE, clé de récupération responsabilité utilisateur, droits export/suppression, aucune métrique, lecture anonyme préservée). `STORAGE_KEYS` complété avec les clés sync.
+- **Mentions RGPD** : section « Compte & synchronisation (facultatif) » sur la page Confidentialité (blobs E2EE opaques, région eu-west-2 / AWS Londres, Royaume-Uni — adéquation RGPD, clé de récupération responsabilité utilisateur, droits export/suppression, aucune métrique, lecture anonyme préservée). `STORAGE_KEYS` complété avec les clés sync.
 
 > Phase 3 (administration éditoriale) hors scope.
 
