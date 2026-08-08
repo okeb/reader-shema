@@ -78,13 +78,19 @@ export const HOST = {
  *
  * Les blobs synchronisés sont chiffrés bout-en-bout côté client (AES-GCM) ; le serveur
  * ne stocke que des blobs opaques (jamais la clé, jamais la recovery key, jamais le
- * clair). Région d'hébergement : à confirmer en console Neon au provisionnement et à
- * documenter ici (intention : Union européenne). Ne promettre une ville précise que
- * si elle est effectivement sélectionnée dans la console.
+ * clair). Région réelle confirmée en console Neon au provisionnement — ne pas promettre
+ * une localisation non effectivement sélectionnée.
+ *
+ * Région active : `eu-west-2` (AWS Londres, Royaume-Uni). Le Royaume-Uni n'est pas dans
+ * l'Union européenne (Brexit) mais bénéficie d'une décision d'adéquation RGPD de l'UE :
+ * les transferts UE → UK sont autorisés sans garantie additionnelle.
  */
 export const SYNC_HOSTING = {
   provider: "Neon Postgres",
-  region: "Région de l'Union européenne (à confirmer au provisionnement)",
+  region: "eu-west-2 — AWS Londres, Royaume-Uni",
+  /** Décision d'adéquation RGPD de l'UE : transferts UE → UK autorisés sans garantie additionnelle. */
+  adequacy:
+    "Le Royaume-Uni bénéficie d'une décision d'adéquation RGPD de l'Union européenne.",
 } as const;
 
 /** Liens des pages informationnelles (footer + sitemap). */
