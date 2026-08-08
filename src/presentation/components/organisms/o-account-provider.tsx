@@ -63,13 +63,22 @@ export function AccountProvider({ authEnabled, children }: AccountProviderProps)
 }
 
 /**
- * Indicateur de session discret pour le menu apparence — spec 22 §7.
+ * Indicateur de session discret pour le menu apparence — spec 22 §7, spec 27 (seed avatar).
  * `active === null` → compte non configuré ou session en cours de chargement (on n'affiche rien) ;
- * `false` → compte configuré mais déconnecté ; `true` → connecté (`email` renseigné).
+ * `false` → compte configuré mais déconnecté ; `true` → connecté (`email` + `userId` renseignés).
+ * `userId` sert de seed à l'avatar (opaque, stable, identique sur tous les appareils — pas l'e-mail).
  */
-export function useSessionIndicator(): { active: boolean | null; email: string | null } {
+export function useSessionIndicator(): {
+  active: boolean | null;
+  email: string | null;
+  userId: string | null;
+} {
   const { authEnabled } = useContext(AccountAvailabilityContext);
   const session = authClient.useSession();
-  if (!authEnabled || session.isPending) return { active: null, email: null };
-  return { active: Boolean(session.data?.user), email: session.data?.user.email ?? null };
+  if (!authEnabled || session.isPending) return { active: null, email: null, userId: null };
+  return {
+    active: Boolean(session.data?.user),
+    email: session.data?.user.email ?? null,
+    userId: session.data?.user.id ?? null,
+  };
 }

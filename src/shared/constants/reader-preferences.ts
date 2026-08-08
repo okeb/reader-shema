@@ -114,6 +114,31 @@ export const LOGO_STYLE_OPTIONS: { key: LogoStyle; label: string }[] = [
   { key: 'icon', label: 'Icône' },
 ];
 
+/**
+ * Avatar utilisateur (spec 27) : générateur déterministe depuis `user.id`, rendu côté client.
+ * `minidenticons` = identicons pixelisés (string SVG, pas de variante) ; `playful` = avatars
+ * géométriques (`playful-avatars`, 6 variantes). Le choix est une préférence cosmétique locale
+ * (persistée dans `bibleReaderPrefs`, synchronisée via le kind `readerPrefs` si opt-in).
+ */
+export type AvatarStyle = 'minidenticons' | 'playful';
+export const AVATAR_STYLE_OPTIONS: { key: AvatarStyle; label: string }[] = [
+  { key: 'playful', label: 'Avatars' },
+  { key: 'minidenticons', label: 'Identicons' },
+];
+export type PlayfulVariant = 'beam' | 'marble' | 'pixel' | 'sunset' | 'ring' | 'bauhaus';
+export const PLAYFUL_VARIANT_OPTIONS: { key: PlayfulVariant; label: string }[] = [
+  { key: 'beam', label: 'Beam' },
+  { key: 'marble', label: 'Marble' },
+  { key: 'pixel', label: 'Pixel' },
+  { key: 'sunset', label: 'Sunset' },
+  { key: 'ring', label: 'Ring' },
+  { key: 'bauhaus', label: 'Bauhaus' },
+];
+/** Palette `playful-avatars` pour le mode clair (teintes saturées, fond clair). */
+export const AVATAR_PALETTE_LIGHT: string[] = ['#92A1C6', '#146A7C', '#F0AB3D', '#C271B4', '#C20D90'];
+/** Palette `playful-avatars` pour le mode sombre (teintes plus claires, fond sombre). */
+export const AVATAR_PALETTE_DARK: string[] = ['#A6B8D8', '#3A9CB0', '#F5C463', '#D58FCC', '#E54FB0'];
+
 export const MIN_FONT_SIZE = 12;
 export const MAX_FONT_SIZE = 32;
 export const DEFAULT_FONT_SIZE = 16;
@@ -150,6 +175,8 @@ export interface ReaderPreferences {
   readingTint: ReadingTint;
   reduceMotion: boolean;
   quizEnabled: boolean;
+  avatarStyle: AvatarStyle;
+  avatarVariant: PlayfulVariant;
 }
 
 export const READER_PREFS_DEFAULTS: ReaderPreferences = {
@@ -167,4 +194,6 @@ export const READER_PREFS_DEFAULTS: ReaderPreferences = {
   readingTint: 'none',
   reduceMotion: false,
   quizEnabled: true,
+  avatarStyle: 'playful',
+  avatarVariant: 'beam',
 };
