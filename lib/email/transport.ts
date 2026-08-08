@@ -5,7 +5,7 @@ import { env } from '@/env.mjs';
  * Transport e-mail transactionnel (Resend) — spec 26.
  *
  * Source unique d'envoi pour les e-mails Better Auth (vérification, reset mot de passe,
- * lien magique) et, plus tard (spec 27), la recovery key à l'inscription.
+ * lien magique) et, plus tard (spec ultérieure), la recovery key à l'inscription.
  *
  * `RESEND_API_KEY` est optionnelle : en dev (clé absente) `sendEmail` no-op + `console.warn`
  * plutôt que de planter les flux d'auth. En prod, le domaine expéditeur

@@ -74,8 +74,8 @@ Refonte complète de l'application selon les conventions du projet de référenc
 - **Forgot-password** : « Mot de passe oublié ? » dans la modal → e-mail → page publique
   `/${locale}/reinitialiser?token=` → nouveau mot de passe. **Doctrinal : récupère l'accès au
   compte (login), pas aux données** — un nouvel appareil garde besoin de la clé de récupération
-  (le chiffrage E2EE est intact, spec 22). La connexion au seul mot de passe est renvoyée à la
-  spec 27 (enveloppe DEK+KEK).
+  (le chiffrage E2EE est intact, spec 22). La connexion au seul mot de passe est renvoyée à une
+  spec ultérieure (enveloppe DEK+KEK).
 - **Magic-link** : « Recevoir un lien de connexion » sur l'étape e-mail → mail → `/account`
   (verrouillé) → déverrouillage via la clé de récupération.
 - **Vérification e-mail** : `sendVerificationEmail` best-effort après inscription ;
