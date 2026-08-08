@@ -49,7 +49,46 @@ Refonte complète de l'application selon les conventions du projet de référenc
 - **Horodatages d'entités (phase 2)** : `updatedAt` ajouté à `FavoriteVerse`, `BookmarkVerse`, `BookmarkGroup` (migration `onRehydrateStorage` `updatedAt ?? createdAt`, miroir de `migrateNotes`). `Note` déjà pourvu ; `HighlightMap` reste blob-LWW. Clés `localStorage` inchangées.
 - **Mentions RGPD** : section « Compte & synchronisation (facultatif) » sur la page Confidentialité (blobs E2EE opaques, région eu-west-2 / AWS Londres, Royaume-Uni — adéquation RGPD, clé de récupération responsabilité utilisateur, droits export/suppression, aucune métrique, lecture anonyme préservée). `STORAGE_KEYS` complété avec les clés sync.
 
+### Page « Compte & données » (spec 25)
+
+- **Page dédiée `/account`** : la gestion des données (email, bascules de sync, export JSON, suppression de compte en deux temps, déconnexion) quitte le popup « Réglages de lecture » pour une page dédiée, respirante et bookmarkable. La modal reste l'unique entrée pour **se connecter** et **déverrouiller** (recovery key) ; la page gère un compte déjà authentifié. Route protégée par le proxy (chemin `/account` identique dans les deux locales pour préserver le gating).
+- **Source unique des bascules** : `syncEnabled` et l'opt-in `settingsSyncOptIn` ne vivent plus que sur `/account` (plus de toggle dans la modal `done` ni dans le popup réglages). Évite la triplication et les états divergents.
+- **Retrait de la section compte du popup réglages** : le popup « Réglages de lecture » ne porte plus aucune entrée compte — l'entrée reste uniquement dans le menu Apparence (top-left), qui ouvre la modal.
+- **États verrouillé / déverrouillé** : master key absente (retour sur l'appareil) → bannière « Déverrouiller » (ouvre la modal à l'étape `recovery-entry`) ; export et suppression restent disponibles (locaux / serveur, sans master key).
+
 > Phase 3 (administration éditoriale) hors scope.
+
+### Authentification & e-mails (spec 26 — Better Auth raw)
+
+- **Migration vers Better Auth raw auto-hébergé** : abandon du wrapper Neon Managed Better Auth
+  (`@neondatabase/auth`, qui ne surfaceait ni plugins ni `sendEmail`) au profit de `better-auth`
+  branché directement sur un `pg.Pool` (endpoint Neon **pooled `-pooler`**). Les tables
+  d'authentification (`user`, `session`, `account`, `verification`) vivent désormais dans le
+  schéma `public` de la même base Neon eu-west-2 que `user_data` — **sans FK** vers cette dernière
+  (doctrine d'isolation). `@neondatabase/auth` retiré ; `@neondatabase/serverless` conservé
+  (toujours utilisé pour `user_data`).
+- **E-mails transactionnels via Resend** : vérification de l'adresse e-mail, réinitialisation
+  du mot de passe (forgot-password) et lien de connexion (magic-link) sont désormais réellement
+  câblés via `sendEmail` (Resend). No-op en dev si la clé est absente. Templates HTML maison
+  (`lib/email/templates.ts`) — pas de dépendance `@react-email`.
+- **Forgot-password** : « Mot de passe oublié ? » dans la modal → e-mail → page publique
+  `/${locale}/reinitialiser?token=` → nouveau mot de passe. **Doctrinal : récupère l'accès au
+  compte (login), pas aux données** — un nouvel appareil garde besoin de la clé de récupération
+  (le chiffrage E2EE est intact, spec 22). La connexion au seul mot de passe est renvoyée à la
+  spec 27 (enveloppe DEK+KEK).
+- **Magic-link** : « Recevoir un lien de connexion » sur l'étape e-mail → mail → `/account`
+  (verrouillé) → déverrouillage via la clé de récupération.
+- **Vérification e-mail** : `sendVerificationEmail` best-effort après inscription ;
+  `requireEmailVerification:false` (un non-vérifié peut se connecter ; les données restent gated
+  par la clé de récupération).
+- **Gate proxy allégée** : `getSessionCookie` (présence de cookie, sans hit DB) au middleware ;
+  vérité réelle re-validée côté serveur dans `requireUser()` (`auth.api.getSession`).
+- **Environnement** : `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `DATABASE_URL` (pooled),
+  `RESEND_API_KEY` (optionnel) ; retrait de `NEON_AUTH_BASE_URL` / `NEON_AUTH_COOKIE_SECRET`.
+- **Doctrine RGPD** : page Confidentialité complétée — authentification auto-hébergée (Better Auth,
+  tables applicatives dans `public`), sous-traitement e-mails via Resend (canal limité à
+  l'adresse + un lien signé à courte expiration), précision « mot de passe oublié ≠ accès aux
+  données ». `EMAIL_PROVIDER` ajouté à `src/shared/constants/legal.ts`.
 
 ## [0.1.12] : 2026-07-30
 

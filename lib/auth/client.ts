@@ -1,14 +1,25 @@
 'use client';
 
-import { createAuthClient } from '@neondatabase/auth/next';
+import { createAuthClient } from 'better-auth/react';
+import { magicLinkClient } from 'better-auth/client/plugins';
+import { env } from '@/env.mjs';
 
 /**
- * Client d'authentification navigateur (Neon Managed Better Auth) — spec 22.
+ * Client d'authentification navigateur (self-hosted Better Auth) — spec 26.
  *
- * Utilisé par l'UI compte (modal) pour les opérations browser : `signIn.email`,
- * `signIn.magicLink`, `signUp.email`, `signOut`, `useSession`. Les requêtes transitent
- * par le handler d'API `/api/auth/[...path]` (proxy serveur vers Neon).
+ * Remplace `createAuthClient()` du wrapper Neon. Les méthodes consommées par l'UI compte
+ * (`useSession`, `signUp.email`, `signIn.email`, `signOut`) restent identiques → les
+ * call sites (`m-account-dialog`, `account/page`, `o-account-provider`) ne changent pas.
  *
- * @see https://neon.com/docs/auth/quick-start/nextjs-api-only
+ * Nouvelles méthodes débloquées par Better Auth raw + Resend :
+ *  - `forgetPassword({ email, callbackURL })` → `POST /api/auth/request-password-reset`
+ *  - `resetPassword({ newPassword, token })` → `POST /api/auth/reset-password`
+ *  - `sendVerificationEmail({ email, callbackURL? })` → `POST /api/auth/send-verification-email`
+ *  - `signIn.magicLink({ email, callbackURL })` (plugin `magicLinkClient`)
+ *
+ * Les requêtes transitent par le handler `/api/auth/[...path]` (`toNextJsHandler`).
  */
-export const authClient = createAuthClient();
+export const authClient = createAuthClient({
+  baseURL: env.NEXT_PUBLIC_APP_URL,
+  plugins: [magicLinkClient()],
+});

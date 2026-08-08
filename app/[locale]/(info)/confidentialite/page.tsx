@@ -3,7 +3,7 @@ import { setRequestLocale } from 'next-intl/server';
 import { Link } from '@/i18n/routing';
 import { InfoPage } from '@/src/presentation/components/templates/t-info-page';
 import { ProseSection } from '@/src/presentation/components/atoms/a-prose-section';
-import { STORAGE_KEYS, SYNC_HOSTING } from '@/src/shared/constants/legal';
+import { STORAGE_KEYS, SYNC_HOSTING, EMAIL_PROVIDER } from '@/src/shared/constants/legal';
 
 export const metadata: Metadata = {
   title: 'Confidentialité — ShemaProject',
@@ -74,6 +74,27 @@ export default async function ConfidentialitePage({ params }: Props) {
           ({SYNC_HOSTING.region}). {SYNC_HOSTING.adequacy} Seul le texte chiffré transite et y est
           conservé ; aucun identifiant de navigation, aucune métrique, aucun comptage, aucun e-mail
           de relance.
+        </p>
+        <p>
+          <strong>Authentification auto-hébergée.</strong> La gestion du compte (identifiants,
+          sessions, vérification e-mail) repose sur Better Auth, exécuté sur nos propres serveurs :
+          les tables d&apos;authentification vivent dans la même base {SYNC_HOSTING.provider} que
+          vos blobs chiffrés. Aucun service d&apos;authentification managé tiers ne traite vos
+          identifiants.
+        </p>
+        <p>
+          <strong>E-mails transactionnels.</strong> Les messages du compte (vérification de
+          l&apos;adresse e-mail, réinitialisation du mot de passe, lien de connexion) sont envoyés
+          via {EMAIL_PROVIDER.provider}. {EMAIL_PROVIDER.scope}{' '}
+          Aucune donnée de lecture, aucun favori, aucun blob chiffré ne transite par ce canal —
+          seulement l&apos;adresse e-mail et un lien signé à courte expiration.
+        </p>
+        <p>
+          <strong>Mot de passe oublié ≠ accès aux données.</strong> Réinitialiser votre mot de
+          passe restaure l&apos;accès à votre <em>compte</em> (connexion), pas à vos{' '}
+          <em>données</em> : sur un nouvel appareil, la clé de récupération reste nécessaire pour
+          déchiffrer vos blobs. La connexion au seul mot de passe — sans clé de récupération — est
+          un raffinement à venir.
         </p>
         <p>
           <strong>Lecture anonyme préservée.</strong> Le compte ne ferme jamais le lecteur :
