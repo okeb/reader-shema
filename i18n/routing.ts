@@ -19,6 +19,9 @@ export const routing = defineRouting({
     // sans locale (`pathWithoutLocale(...).startsWith('/account)`) pour le gating auth.
     // Toute traduction (ex. /compte) casserait ce gating — à ne jamais faire. (spec 25)
     '/account': { en: '/account', fr: '/account' },
+    // Page publique de réinitialisation de mot de passe (spec 26) — ne PAS l'ajouter à
+    // `protectedRoutes` (proxy.ts) : l'utilisateur y arrive SANS session, via le lien mail.
+    '/reinitialiser': { en: '/reset-password', fr: '/reinitialiser' },
   },
 });
 

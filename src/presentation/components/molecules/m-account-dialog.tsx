@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Icon } from '@iconify/react';
+import { useLocale } from 'next-intl';
 import { cn } from '@/lib/utils';
 import { authClient } from '@/lib/auth/client';
 import { useScrollLock } from '@/src/presentation/hooks/use-scroll-lock';
@@ -23,6 +24,9 @@ import {
 type Step =
   | 'email' // saisie email → mot de passe
   | 'password' // saisie mot de passe (sign in / sign up)
+  | 'forgot-password' // saisie email → envoi du reset (spec 26)
+  | 'forgot-password-sent' // confirmation envoi reset
+  | 'magic-link-sent' // confirmation envoi lien magique
   | 'recovery-display' // 1ʳᵉ fois : on montre la recovery key (à copier)
   | 'recovery-entry' // retour appareil : on saisit la recovery key
   | 'migrating' // migration local → cloud en cours
@@ -52,6 +56,7 @@ export function AccountDialog({ open, onClose }: AccountDialogProps) {
   useFocusTrap(open, ref);
 
   const session = authClient.useSession();
+  const locale = useLocale();
   const [step, setStep] = useState<Step>('email');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -60,6 +65,10 @@ export function AccountDialog({ open, onClose }: AccountDialogProps) {
   const [generatedKey, setGeneratedKey] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+
+  // Callbacks localisés pour les flux e-mail (Better Auth appends le token à l'URL). (spec 26)
+  const resetCallbackURL = `/${locale}/reinitialiser`;
+  const accountCallbackURL = `/${locale}/account`;
 
   // Initialisation au redimensionnement de la modale : positionne l'étape selon la session
   // courante et l'état de déverrouillage de la master key.
@@ -142,6 +151,11 @@ export function AccountDialog({ open, onClose }: AccountDialogProps) {
         setError(error.message ?? 'Un compte existe déjà pour cet email.');
         return;
       }
+      // Best-effort : on demande l'envoi de l'e-mail de vérification (Resend). Ne bloque
+      // pas l'inscription — swallow si Resend absent (no-op) ou si l'envoi échoue. (spec 26)
+      void authClient
+        .sendVerificationEmail({ email: trimmed, callbackURL: accountCallbackURL })
+        .catch(() => {});
     } else {
       const { error } = await authClient.signIn.email({ email: trimmed, password });
       setBusy(false);
@@ -179,6 +193,39 @@ export function AccountDialog({ open, onClose }: AccountDialogProps) {
       console.warn('sync: migration partielle');
     }
     setStep('done');
+  }
+
+  // --- Flux e-mail (spec 26 : Better Auth raw + Resend) ---
+
+  async function submitForgotPassword() {
+    if (!email.trim()) return;
+    setBusy(true);
+    setError('');
+    try {
+      // Même message quel que soit le résultat : on ne fuite pas l'existence du compte.
+      // 1.4.18 : l'endpoint `/request-password-reset` expose `redirectTo` (pas `callbackURL`) ;
+      // le serveur construit `${baseURL}/reset-password/${token}?callbackURL=${redirectTo}`.
+      await authClient.requestPasswordReset({ email: email.trim(), redirectTo: resetCallbackURL });
+      setStep('forgot-password-sent');
+    } catch {
+      setStep('forgot-password-sent');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function submitMagicLink() {
+    if (!email.trim()) return;
+    setBusy(true);
+    setError('');
+    try {
+      await authClient.signIn.magicLink({ email: email.trim(), callbackURL: accountCallbackURL });
+      setStep('magic-link-sent');
+    } catch {
+      setError("Impossible d'envoyer le lien de connexion.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function signOut() {
@@ -247,6 +294,19 @@ export function AccountDialog({ open, onClose }: AccountDialogProps) {
               >
                 Continuer
               </button>
+              <div className="flex items-center gap-2 py-0.5 text-[11px] text-muted-foreground">
+                <span className="h-px flex-1 bg-border" />
+                <span>ou</span>
+                <span className="h-px flex-1 bg-border" />
+              </div>
+              <button
+                type="button"
+                disabled={busy || !email.trim()}
+                onClick={submitMagicLink}
+                className="w-full rounded-lg border border-input px-3 py-2 text-sm transition-colors hover:bg-foreground/5 disabled:opacity-50"
+              >
+                {busy ? '…' : 'Recevoir un lien de connexion'}
+              </button>
               {error && <p className="text-[12px] text-destructive">{error}</p>}
             </div>
           )}
@@ -291,7 +351,100 @@ export function AccountDialog({ open, onClose }: AccountDialogProps) {
               >
                 {busy ? '…' : pwMode === 'up' ? 'Créer mon compte' : 'Se connecter'}
               </button>
+              {pwMode === 'in' && (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => {
+                    setError('');
+                    setStep('forgot-password');
+                  }}
+                  className="text-right text-[12px] text-muted-foreground underline underline-offset-2 transition-colors hover:text-foreground disabled:opacity-50"
+                >
+                  Mot de passe oublié&nbsp;?
+                </button>
+              )}
               {error && <p className="text-[12px] text-destructive">{error}</p>}
+            </div>
+          )}
+
+          {/* Étape : mot de passe oublié — saisie email → envoi reset (spec 26). */}
+          {step === 'forgot-password' && (
+            <div className="space-y-3">
+              <p className="text-[13px] leading-snug text-muted-foreground">
+                Saisissez votre e-mail : si un compte existe, vous recevrez un lien pour
+                réinitialiser votre mot de passe.
+              </p>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="vous@exemple.com"
+                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+              />
+              <button
+                type="button"
+                disabled={busy || !email.trim()}
+                onClick={submitForgotPassword}
+                className="w-full rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition-opacity disabled:opacity-50"
+              >
+                {busy ? 'Envoi…' : 'Envoyer le lien de réinitialisation'}
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => {
+                  setError('');
+                  setStep('password');
+                }}
+                className="w-full text-center text-[12px] text-muted-foreground underline underline-offset-2 transition-colors hover:text-foreground disabled:opacity-50"
+              >
+                Retour
+              </button>
+              {error && <p className="text-[12px] text-destructive">{error}</p>}
+            </div>
+          )}
+
+          {/* Étape : confirmation envoi reset (spec 26). */}
+          {step === 'forgot-password-sent' && (
+            <div className="space-y-3 py-2 text-center">
+              <Icon icon="hugeicons:mail-send-02" className="mx-auto h-8 w-8 text-primary" />
+              <p className="text-[13px] leading-snug text-muted-foreground">
+                Si un compte existe pour <strong className="text-foreground">{email || 'cette adresse'}</strong>,
+                un e-mail de réinitialisation a été envoyé. Vérifiez votre boîte de réception
+                (et les spams). Le lien expire rapidement.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setError('');
+                  setStep('email');
+                }}
+                className="w-full rounded-lg border border-input px-3 py-2 text-sm transition-colors hover:bg-foreground/5"
+              >
+                Retour à la connexion
+              </button>
+            </div>
+          )}
+
+          {/* Étape : confirmation envoi lien magique (spec 26). */}
+          {step === 'magic-link-sent' && (
+            <div className="space-y-3 py-2 text-center">
+              <Icon icon="hugeicons:mail-send-02" className="mx-auto h-8 w-8 text-primary" />
+              <p className="text-[13px] leading-snug text-muted-foreground">
+                Un lien de connexion a été envoyé à <strong className="text-foreground">{email}</strong>.
+                Cliquez dessus pour vous connecter — il expire dans 5 minutes et est à usage unique.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setError('');
+                  setStep('email');
+                }}
+                className="w-full rounded-lg border border-input px-3 py-2 text-sm transition-colors hover:bg-foreground/5"
+              >
+                Retour
+              </button>
             </div>
           )}
 
