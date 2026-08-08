@@ -6,6 +6,8 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/).
 
 ## [Unreleased]
 
+## [0.2.0] : 2026-08-09
+
 ### Processus
 
 - **Convention de travail Git Flow** : ajout de `AGENT.md` gouvernant le modèle de branches
