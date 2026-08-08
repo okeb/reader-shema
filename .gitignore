@@ -1,0 +1,26 @@
+.vercel
+
+# Source brute des renvois (téléchargée à la demande, non versionnée — seuls les JSON générés le sont)
+/scripts/data/
+
+node_modules/
+.venv/
+venv/
+.env*
+!.env.example
+.next/
+dist/
+build/
+.cache/
+.turbo/
+__pycache__/
+*.pyc
+.DS_Store
+coverage/
+
+# IDE (JetBrains)
+.idea/
+# Cache de build TypeScript (compilation incrémentale)
+*.tsbuildinfo
+# Artefact de build — version injectée par scripts/set-version.mjs
+.next-version

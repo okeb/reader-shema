@@ -1,0 +1,275 @@
+import apiClient from '@/lib/axios';
+import { getBookById, resolveBookId } from '@/src/shared/constants/bible-books';
+import type {
+  ChapterVerse,
+  BiblicalVerse,
+  StrongToken,
+  StrongFetchItem,
+  StrongOccurrence,
+  StrongConcordance,
+  BookInfo,
+} from '@/src/domain/entities';
+import { compressVerses } from '@/src/domain/value-objects/verse-selection.vo';
+
+/**
+ * Client HTTP bas niveau pour l'API Bible (shema/index.js), port de
+ * `services/bible/bibleApi.ts` (ancien projet) vers axios.
+ *
+ * Source unique des données Bible. Les fonctions manipulent des identifiants
+ * bruts (chaînes) ; la validation Value-Object se fait dans l'impl du repository.
+ */
+
+/** Forme brute d'un verset renvoyé par l'API. */
+export interface ApiVerse {
+  livre: string;
+  chapitre: number;
+  verset: number;
+  ecrit: string;
+  version: string;
+  titre?: string;
+  paragraphe?: 'start' | 'end';
+  /** Tokens Strong (présents uniquement avec ?strongs=1). */
+  strongs?: StrongToken[];
+}
+
+/** Transforme l'objet { "Jn. 3:1": ApiVerse, ... } en tableau trié par numéro de verset. */
+function parseVerseMap(data: Record<string, ApiVerse>): ApiVerse[] {
+  return Object.values(data).sort((a, b) => a.verset - b.verset);
+}
+
+/** Récupère une map de versets ; null si 404. */
+async function fetchVerseMap(path: string): Promise<Record<string, ApiVerse> | null> {
+  try {
+    const res = await apiClient.get<Record<string, ApiVerse>>(path);
+    return res.data;
+  } catch (err: unknown) {
+    const status = (err as { response?: { status?: number } })?.response?.status;
+    if (status === 404) return null;
+    throw new Error(`Erreur API sur ${path}`);
+  }
+}
+
+/** Récupère tous les versets d'un chapitre (lecture continue) dans la version indiquée. */
+export async function getChapter(
+  version: string,
+  bookId: string,
+  chapter: number,
+): Promise<ChapterVerse[]> {
+  const data = await fetchVerseMap(`/${version}/${bookId}/${chapter}`);
+  if (!data) return [];
+  return parseVerseMap(data).map((v) => ({
+    number: v.verset,
+    text: v.ecrit,
+    titre: v.titre,
+    paragraphe: v.paragraphe,
+  }));
+}
+
+/**
+ * Récupère une liste de références (mode "références").
+ * Chaque ref est un slug "livre/chap/selection" (ex. "jean/3/16" ou "jean/3/1-5,8").
+ * Retourne une carte par référence (les refs introuvables sont ignorées).
+ */
+export async function getReferences(version: string, refs: string[]): Promise<BiblicalVerse[]> {
+  const results = await Promise.all(
+    refs.map(async (rawRef): Promise<BiblicalVerse | null> => {
+      const ref = rawRef.trim();
+      if (!ref) return null;
+
+      const [bookId, chap, selection] = ref.split('/');
+      if (!bookId || !chap) return null;
+
+      const path = selection
+        ? `/${version}/${bookId}/${chap}/${selection}`
+        : `/${version}/${bookId}/${chap}`;
+      const data = await fetchVerseMap(path);
+      if (!data) return null;
+
+      const verses = parseVerseMap(data);
+      if (verses.length === 0) return null;
+
+      const book = getBookById(bookId);
+      const bookName = book?.name ?? verses[0].livre.trim();
+      const reference = `${bookName} ${chap}:${selection ?? ''}`.trim().replace(/:$/, '');
+
+      return {
+        id: `${verses[0].livre}${chap}:${verses[0].verset}`,
+        reference,
+        verses: verses.map((v) => ({ number: v.verset, text: v.ecrit })),
+        bookId: book?.id ?? bookId,
+        chapter: Number(chap),
+      };
+    }),
+  );
+
+  return results.filter((r): r is BiblicalVerse => r !== null);
+}
+
+/**
+ * Récupère le **texte** d'une liste de versets dans la version indiquée (regroupés par livre/chapitre).
+ * Retourne `id → texte`. Les requêtes échouées laissent l'id absent du résultat.
+ */
+export async function getVersesText(
+  version: string,
+  items: StrongFetchItem[],
+): Promise<Record<string, string>> {
+  const result: Record<string, string> = {};
+  if (items.length === 0) return result;
+
+  const groups = new Map<
+    string,
+    { bookId: string; chapter: number; verses: number[]; idByVerse: Map<number, string> }
+  >();
+  for (const it of items) {
+    const key = `${it.bookId}/${it.chapter}`;
+    let g = groups.get(key);
+    if (!g) {
+      g = { bookId: it.bookId, chapter: it.chapter, verses: [], idByVerse: new Map() };
+      groups.set(key, g);
+    }
+    if (!g.verses.includes(it.verse)) g.verses.push(it.verse);
+    g.idByVerse.set(it.verse, it.id);
+  }
+
+  await Promise.all(
+    Array.from(groups.values()).map(async (g) => {
+      const selection = compressVerses(g.verses);
+      if (!selection) return;
+      try {
+        const data = await fetchVerseMap(`/${version}/${g.bookId}/${g.chapter}/${selection}`);
+        if (!data) return;
+        for (const v of Object.values(data)) {
+          const id = g.idByVerse.get(v.verset);
+          if (id) result[id] = v.ecrit;
+        }
+      } catch {
+        // Une requête échouée laisse simplement le texte d'origine en place.
+      }
+    }),
+  );
+
+  return result;
+}
+
+/**
+ * Récupère les tokens Strong d'une liste de versets (regroupés par livre/chapitre).
+ * Utilise `/{version}/:livre/:chap/:selection?strongs=1`. Retourne `id → StrongToken[]`.
+ */
+export async function getStrongsForVerses(
+  version: string,
+  items: StrongFetchItem[],
+): Promise<Record<string, StrongToken[]>> {
+  const result: Record<string, StrongToken[]> = {};
+  if (items.length === 0) return result;
+
+  const groups = new Map<
+    string,
+    { bookId: string; chapter: number; verses: number[]; idByVerse: Map<number, string> }
+  >();
+  for (const it of items) {
+    const key = `${it.bookId}/${it.chapter}`;
+    let g = groups.get(key);
+    if (!g) {
+      g = { bookId: it.bookId, chapter: it.chapter, verses: [], idByVerse: new Map() };
+      groups.set(key, g);
+    }
+    if (!g.verses.includes(it.verse)) g.verses.push(it.verse);
+    g.idByVerse.set(it.verse, it.id);
+  }
+
+  await Promise.all(
+    Array.from(groups.values()).map(async (g) => {
+      const selection = compressVerses(g.verses);
+      if (!selection) return;
+      const path = `/${version}/${g.bookId}/${g.chapter}/${selection}?strongs=1`;
+      try {
+        const res = await apiClient.get<Record<string, ApiVerse & { strongs?: StrongToken[] }>>(path);
+        for (const v of Object.values(res.data)) {
+          const id = g.idByVerse.get(v.verset);
+          if (id && Array.isArray(v.strongs)) result[id] = v.strongs;
+        }
+      } catch {
+        // Une requête échouée ne doit pas casser les autres groupes.
+      }
+    }),
+  );
+
+  return result;
+}
+
+/** Forme brute d'une page de concordance renvoyée par l'API. */
+interface ApiConcordance {
+  code: string;
+  total: number;
+  page: number;
+  size: number;
+  lexicon?: { translit?: string; definition?: string };
+  items?: { livre: string; chapitre: number; verset: number; ecrit: string }[];
+}
+
+/** Cache mémoire des pages de concordance déjà récupérées (clé `code:page:size`). */
+const concordanceCache = new Map<string, StrongConcordance>();
+
+/**
+ * Récupère les occurrences d'un numéro Strong (concordance) via `/bym/strong/:code?page=&size=`.
+ * Pagination 1-based. Retourne null si le code est introuvable (404).
+ *
+ * Note : l'index de concordance n'existe que sous `bym` (l'API renvoie « Livre introuvable » pour
+ * `/lsg/strong/...`). La concordance affiche donc le texte BYM quelle que soit la version primaire.
+ */
+export async function getStrongOccurrences(
+  code: string,
+  opts: { page?: number; size?: number } = {},
+): Promise<StrongConcordance | null> {
+  const page = opts.page ?? 1;
+  const size = opts.size ?? 20;
+  const cacheKey = `${code}:${page}:${size}`;
+  const cached = concordanceCache.get(cacheKey);
+  if (cached) return cached;
+
+  try {
+    const res = await apiClient.get<ApiConcordance>(
+      `/bym/strong/${encodeURIComponent(code)}?page=${page}&size=${size}`,
+    );
+    const data = res.data;
+    const items: StrongOccurrence[] = (data.items ?? []).map((it) => {
+      const bookId = resolveBookId(it.livre) ?? it.livre.toLowerCase();
+      const bookName = getBookById(bookId)?.name ?? it.livre;
+      return {
+        bookId,
+        livre: it.livre,
+        chapter: it.chapitre,
+        verse: it.verset,
+        reference: `${bookName} ${it.chapitre}:${it.verset}`,
+        text: it.ecrit,
+      };
+    });
+
+    const result: StrongConcordance = {
+      code: data.code,
+      total: data.total,
+      page: data.page,
+      size: data.size,
+      lexicon: data.lexicon ?? {},
+      items,
+    };
+    concordanceCache.set(cacheKey, result);
+    return result;
+  } catch (err: unknown) {
+    const status = (err as { response?: { status?: number } })?.response?.status;
+    if (status === 404) return null;
+    throw new Error(`Erreur API concordance ${code}`);
+  }
+}
+
+/** Récupère les informations d'un livre (signification, auteur, thème, date, introduction). */
+export async function getBookInfo(version: string, bookId: string): Promise<BookInfo | null> {
+  try {
+    const res = await apiClient.get<BookInfo>(`/${version}/${bookId}/info`);
+    return res.data;
+  } catch (err: unknown) {
+    const status = (err as { response?: { status?: number } })?.response?.status;
+    if (status === 404) return null;
+    return null;
+  }
+}

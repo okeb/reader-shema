@@ -1,0 +1,16 @@
+{
+  "common": {
+    "appName": "Shema Reader"
+  },
+  "theme": {
+    "label": "Theme",
+    "appearance": "Appearance",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "shell": {
+    "scaffoldTitle": "reader_shema — scaffold Phase 1",
+    "scaffoldBody": "Active locale: {locale}. The reader arrives in Phase 3."
+  }
+}
