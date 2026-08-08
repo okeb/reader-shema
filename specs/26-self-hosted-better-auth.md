@@ -1,7 +1,7 @@
 # Spec 26 — Migration Better Auth raw + e-mails (sans toucher au chiffrage)
 
 > **Statut** : Accepté · **Priorité** : 🔴 Haute · **Effort** : M · **Dépendances** : spec 22 (compte & sync), spec 15 (socle légal), spec 25 (page compte)
-> **Découpage** : « Auth d'abord, enveloppe ensuite ». Cette spec = auth ; la suivante (spec 27, enveloppe DEK+KEK) est hors scope.
+> **Découpage** : « Auth d'abord, enveloppe ensuite ». Cette spec = auth ; la suivante (enveloppe DEK+KEK) est hors scope.
 
 ## 1. Contexte & motivation
 L'auth passait par le **wrapper Neon Managed Better Auth** (`@neondatabase/auth@0.4.2-beta`)
@@ -18,10 +18,10 @@ débloquer vérification e-mail, forgot-password/reset et magic-link fonctionnel
 - **forgot-password récupère l'accès au COMPTE (login), PAS les données.** Un nouvel appareil a
   toujours besoin de la recovery key pour déchiffrer. Réinitialiser son mot de passe ne donne pas
   accès aux blobs chiffrés existants sur un nouvel appareil.
-- **L'accès aux données au mot de passe seul = spec 27** (enveloppe DEK+KEK). Hors scope ici.
+- **L'accès aux données au mot de passe seul = une spec ultérieure** (enveloppe DEK+KEK). Hors scope ici.
 - **Le chiffrage E2EE actuel (recovery key → PBKDF2 250k → master key AES-GCM 256) est INTOUCHABLE.**
   La recovery key reste nécessaire sur un nouvel appareil ; la friction « clé à chaque appareil »
-  ne disparaît qu'en spec 27.
+  ne disparaît qu'avec l'enveloppe (spec ultérieure).
 - **Auth désormais self-hosted** : les tables `user/session/account/verification` vivent dans le
   schéma `public` de la même base Neon eu-west-2 que `user_data` (même `DATABASE_URL`, endpoint
   **pooled `-pooler`**). **Pas de FK** vers `user_data` (doctrine d'isolation : un row compte
@@ -52,9 +52,10 @@ débloquer vérification e-mail, forgot-password/reset et magic-link fonctionnel
   - `env.mjs` + `.env.example` : `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `DATABASE_URL` (pooled),
     `RESEND_API_KEY` ; retrait des vars Neon.
   - Doctrine : `src/shared/constants/legal.ts` + page Confidentialité.
-- **Exclu (spec 27)** : enveloppe DEK+KEK, login/nouvel appareil au mot de passe seul, recovery key
-  envoyée par mail à l'inscription, migration ancien schème → enveloppe. `crypto.service.ts`,
-  `crypto-session.store.ts`, `sync-engine.ts`, schéma `user_data` — tout hors scope.
+- **Exclu (enveloppe, spec ultérieure)** : DEK+KEK, login/nouvel appareil au mot de passe seul,
+  recovery key envoyée par mail à l'inscription, migration ancien schème → enveloppe.
+  `crypto.service.ts`, `crypto-session.store.ts`, `sync-engine.ts`, schéma `user_data` — tout hors
+  scope.
 
 ## 4. API Better Auth 1.4.18 (vérifiée contre le package installé)
 
@@ -142,7 +143,7 @@ débloquer vérification e-mail, forgot-password/reset et magic-link fonctionnel
 - [ ] `tsc --noEmit` + `pnpm build` verts ; doctrine (legal.ts + Confidentialité) à jour.
 - [ ] CHANGELOG : entrée spec 26 sous `[Unreleased]`.
 
-## 8. Hors scope (spec 27)
-Enveloppe DEK+KEK (login/nouvel appareil au mdp seul), recovery key envoyée par mail à
-l'inscription, migration ancien schème → enveloppe. `crypto.service.ts`, `crypto-session.store.ts`,
+## 8. Hors scope (enveloppe, spec ultérieure)
+DEK+KEK (login/nouvel appareil au mdp seul), recovery key envoyée par mail à l'inscription,
+migration ancien schème → enveloppe. `crypto.service.ts`, `crypto-session.store.ts`,
 `sync-engine.ts`, schéma `user_data` (colonne envelope / nouvelle table) — tout hors scope ici.
