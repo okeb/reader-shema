@@ -24,21 +24,36 @@ import {
  *  - `nextCookies()` est OBLIGATOIRE en App Router pour propager Set-Cookie via `next/headers`.
  *  - `getSession({ headers })` côté serveur ; `getSessionCookie(req)` pour la gate proxy.
  *
- * `null` tant que Better Auth n'est pas configuré (`BETTER_AUTH_SECRET` + `DATABASE_URL`) :
- * l'app démarre en mode local-only (lecture anonyme inchangée) et les routes/features compte
- * renvoient 503 / sont masquées. Le chiffrage E2EE (recovery key → master key) est INTOUCHÉ.
+ * `null` tant que Better Auth n'est pas configuré (`BETTER_AUTH_SECRET` + `DATABASE_URL` +
+ * `baseURL`) : l'app démarre en mode local-only (lecture anonyme inchangée) et les
+ * routes/features compte renvoient 503 / sont masquées. Le chiffrage E2EE (recovery key →
+ * master key) est INTOUCHÉ.
+ *
+ * Déploiement Vercel : `BETTER_AUTH_URL` (serveur) et `trustedOrigins` sont dérivés de
+ * `VERCEL_URL` (injecté par Vercel à chaque déploiement) quand l'env explicite ne couvre pas
+ * l'origine servie — typiquement les previews `*.vercel.app`. Côté client, `NEXT_PUBLIC_APP_URL`
+ * doit suivre le même principe (scope Vercel Preview = `https://$VERCEL_URL`, Production =
+ * domaine fixe) car ce n'est pas dérivable côté serveur.
  */
-const configured = Boolean(env.BETTER_AUTH_SECRET && env.DATABASE_URL);
+// `VERCEL_URL` (sans protocole) est posé par Vercel au build + runtime ; absent en local.
+const vercelOrigin = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined;
+const baseURL = env.BETTER_AUTH_URL ?? vercelOrigin;
+
+const configured = Boolean(env.BETTER_AUTH_SECRET && env.DATABASE_URL && baseURL);
 
 export const isAuthConfigured = configured;
 
 export const auth = configured
   ? betterAuth({
-      baseURL: env.BETTER_AUTH_URL,
+      baseURL,
       secret: env.BETTER_AUTH_SECRET,
       basePath: '/api/auth',
       database: pool as any,
-      trustedOrigins: [env.NEXT_PUBLIC_APP_URL],
+      // Inclut l'origine explicite (prod) et, si présent, l'origine preview Vercel dérivée.
+      trustedOrigins: [
+        env.NEXT_PUBLIC_APP_URL,
+        ...(vercelOrigin ? [vercelOrigin] : []),
+      ],
       emailAndPassword: {
         enabled: true,
         // La data reste gated par la recovery key (E2EE) ; on n'exige pas un e-mail vérifié
