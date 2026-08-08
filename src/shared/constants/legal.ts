@@ -74,7 +74,7 @@ export const HOST = {
 } as const;
 
 /**
- * Hébergement des données de synchronisation (compte facultatif) — spec 22 §8.
+ * Hébergement des données de synchronisation (compte facultatif) — spec 22 §8, spec 26.
  *
  * Les blobs synchronisés sont chiffrés bout-en-bout côté client (AES-GCM) ; le serveur
  * ne stocke que des blobs opaques (jamais la clé, jamais la recovery key, jamais le
@@ -84,6 +84,10 @@ export const HOST = {
  * Région active : `eu-west-2` (AWS Londres, Royaume-Uni). Le Royaume-Uni n'est pas dans
  * l'Union européenne (Brexit) mais bénéficie d'une décision d'adéquation RGPD de l'UE :
  * les transferts UE → UK sont autorisés sans garantie additionnelle.
+ *
+ * Depuis la spec 26, l'authentification est **self-hosted Better Auth** (tables applicatives
+ * `user/session/account/verification` dans le schéma `public`, même base Neon eu-west-2, même
+ * `DATABASE_URL` pooled). Aucun service d'authentification managé tiers ne traite les identifiants.
  */
 export const SYNC_HOSTING = {
   provider: "Neon Postgres",
@@ -91,6 +95,21 @@ export const SYNC_HOSTING = {
   /** Décision d'adéquation RGPD de l'UE : transferts UE → UK autorisés sans garantie additionnelle. */
   adequacy:
     "Le Royaume-Uni bénéficie d'une décision d'adéquation RGPD de l'Union européenne.",
+} as const;
+
+/**
+ * E-mails transactionnels du compte (spec 26) — sous-traitement à mentionner (RGPD art. 28).
+ *
+ * Better Auth raw appelle `sendEmail` (vérification e-mail, reset mot de passe, magic-link) ;
+ * l'envoi est délégué à Resend. Aucune donnée de lecture ni blob chiffré ne transite par ce canal —
+ * uniquement l'adresse e-mail de l'utilisateur et le lien signé. No-op en dev si la clé absente.
+ */
+export const EMAIL_PROVIDER = {
+  provider: "Resend",
+  url: "https://resend.com",
+  /** Ce qui transite par ce canal : uniquement l'adresse e-mail + un lien signé à expiration courte. */
+  scope:
+    "Uniquement l'adresse e-mail et un lien signé à courte expiration (vérification, reset, magic-link).",
 } as const;
 
 /** Liens des pages informationnelles (footer + sitemap). */

@@ -58,6 +58,38 @@ Refonte complète de l'application selon les conventions du projet de référenc
 
 > Phase 3 (administration éditoriale) hors scope.
 
+### Authentification & e-mails (spec 26 — Better Auth raw)
+
+- **Migration vers Better Auth raw auto-hébergé** : abandon du wrapper Neon Managed Better Auth
+  (`@neondatabase/auth`, qui ne surfaceait ni plugins ni `sendEmail`) au profit de `better-auth`
+  branché directement sur un `pg.Pool` (endpoint Neon **pooled `-pooler`**). Les tables
+  d'authentification (`user`, `session`, `account`, `verification`) vivent désormais dans le
+  schéma `public` de la même base Neon eu-west-2 que `user_data` — **sans FK** vers cette dernière
+  (doctrine d'isolation). `@neondatabase/auth` retiré ; `@neondatabase/serverless` conservé
+  (toujours utilisé pour `user_data`).
+- **E-mails transactionnels via Resend** : vérification de l'adresse e-mail, réinitialisation
+  du mot de passe (forgot-password) et lien de connexion (magic-link) sont désormais réellement
+  câblés via `sendEmail` (Resend). No-op en dev si la clé est absente. Templates HTML maison
+  (`lib/email/templates.ts`) — pas de dépendance `@react-email`.
+- **Forgot-password** : « Mot de passe oublié ? » dans la modal → e-mail → page publique
+  `/${locale}/reinitialiser?token=` → nouveau mot de passe. **Doctrinal : récupère l'accès au
+  compte (login), pas aux données** — un nouvel appareil garde besoin de la clé de récupération
+  (le chiffrage E2EE est intact, spec 22). La connexion au seul mot de passe est renvoyée à la
+  spec 27 (enveloppe DEK+KEK).
+- **Magic-link** : « Recevoir un lien de connexion » sur l'étape e-mail → mail → `/account`
+  (verrouillé) → déverrouillage via la clé de récupération.
+- **Vérification e-mail** : `sendVerificationEmail` best-effort après inscription ;
+  `requireEmailVerification:false` (un non-vérifié peut se connecter ; les données restent gated
+  par la clé de récupération).
+- **Gate proxy allégée** : `getSessionCookie` (présence de cookie, sans hit DB) au middleware ;
+  vérité réelle re-validée côté serveur dans `requireUser()` (`auth.api.getSession`).
+- **Environnement** : `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `DATABASE_URL` (pooled),
+  `RESEND_API_KEY` (optionnel) ; retrait de `NEON_AUTH_BASE_URL` / `NEON_AUTH_COOKIE_SECRET`.
+- **Doctrine RGPD** : page Confidentialité complétée — authentification auto-hébergée (Better Auth,
+  tables applicatives dans `public`), sous-traitement e-mails via Resend (canal limité à
+  l'adresse + un lien signé à courte expiration), précision « mot de passe oublié ≠ accès aux
+  données ». `EMAIL_PROVIDER` ajouté à `src/shared/constants/legal.ts`.
+
 ## [0.1.12] : 2026-07-30
 
 ### Changements
