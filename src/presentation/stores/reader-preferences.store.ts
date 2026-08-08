@@ -22,6 +22,8 @@ import {
   type LogoStyle,
   type AccentKey,
   type ReadingTint,
+  type AvatarStyle,
+  type PlayfulVariant,
 } from '@/src/shared/constants/reader-preferences';
 import { jsonStorage } from './multi-key-storage';
 
@@ -96,6 +98,8 @@ interface ReaderPrefsState extends ReaderPreferences {
   setFocusMode: (on: boolean) => void;
   toggleFocus: () => void;
   toggleQuiz: () => void;
+  setAvatarStyle: (style: AvatarStyle) => void;
+  setAvatarVariant: (variant: PlayfulVariant) => void;
 }
 
 /** Extrait l'objet `ReaderPreferences` plat depuis l'état du store (format verbatim persisté). */
@@ -115,6 +119,8 @@ function pickPrefs(s: ReaderPreferences): ReaderPreferences {
     readingTint: s.readingTint,
     reduceMotion: s.reduceMotion,
     quizEnabled: s.quizEnabled,
+    avatarStyle: s.avatarStyle,
+    avatarVariant: s.avatarVariant,
   };
 }
 
@@ -141,6 +147,8 @@ export const useReaderPreferences = create<ReaderPrefsState>()(
       setFocusMode: (focusMode) => set((s) => { s.focusMode = focusMode; }),
       toggleFocus: () => set((s) => { s.focusMode = !s.focusMode; }),
       toggleQuiz: () => set((s) => { s.quizEnabled = !s.quizEnabled; }),
+      setAvatarStyle: (avatarStyle) => set((s) => { s.avatarStyle = avatarStyle; }),
+      setAvatarVariant: (avatarVariant) => set((s) => { s.avatarVariant = avatarVariant; }),
     })),
     {
       name: READER_PREFS_STORAGE_KEY,

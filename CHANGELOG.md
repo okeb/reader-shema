@@ -90,6 +90,24 @@ Refonte complète de l'application selon les conventions du projet de référenc
   l'adresse + un lien signé à courte expiration), précision « mot de passe oublié ≠ accès aux
   données ». `EMAIL_PROVIDER` ajouté à `src/shared/constants/legal.ts`.
 
+### Avatar utilisateur (spec 27)
+
+- **Avatar déterministe depuis l'identifiant** : connecté, le bouton de réglages (roue crantée)
+  en haut à droite devient l'avatar de l'utilisateur (fond qui suit le thème) au lieu de l'icône.
+  Le clic ouvre toujours le menu Apparence. La seed est `user.id` (opaque, stable, identique sur
+  tous les appareils) — **jamais l'e-mail** (PII). Aucune collection serveur, aucun upload.
+- **Deux générateurs au choix** : `minidenticons` (laurentpayot/minidenticons, identicons
+  pixelisés en string SVG → data URI dans un `<img>`, SSR-safe) ou `playful-avatars`
+  (cmaas/playful-avatars, web component `<playful-avatar>` à 6 variantes — `beam`, `marble`,
+  `pixel`, `sunset`, `ring`, `bauhaus`). `playful-avatars` appelle `customElements.define` au
+  top-level sans garde → **import dynamique côté client** (effet) pour éviter un crash SSR.
+- **Réglage dans le menu Apparence** : section « Avatar » (connecté seulement) avec choix du
+  générateur (radiogroup) + grille des 6 variantes `playful` (prévisualisation live sur la seed).
+  Préférence cosmétique persistée dans `bibleReaderPrefs` (`avatarStyle`, `avatarVariant`),
+  synchronisée via le kind existant `readerPrefs` (opt-in) — pas de nouveau kind de sync.
+- **Déconnecté** : la roue crantée reste ; l'entrée « Compte & synchronisation / Se connecter »
+  ouvre la modal de compte (possibilité de se connecter dans ce même menu).
+
 ## [0.1.12] : 2026-07-30
 
 ### Changements
