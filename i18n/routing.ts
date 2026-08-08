@@ -15,6 +15,10 @@ export const routing = defineRouting({
     '/credits': { en: '/credits', fr: '/credits' },
     '/mentions-legales': { en: '/legal-notice', fr: '/mentions-legales' },
     '/nouveautes': { en: '/changelog', fr: '/nouveautes' },
+    // /account reste identique dans les deux locales : le proxy (proxy.ts) matche le chemin
+    // sans locale (`pathWithoutLocale(...).startsWith('/account)`) pour le gating auth.
+    // Toute traduction (ex. /compte) casserait ce gating — à ne jamais faire. (spec 25)
+    '/account': { en: '/account', fr: '/account' },
   },
 });
 

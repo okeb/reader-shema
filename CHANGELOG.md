@@ -49,6 +49,13 @@ Refonte complète de l'application selon les conventions du projet de référenc
 - **Horodatages d'entités (phase 2)** : `updatedAt` ajouté à `FavoriteVerse`, `BookmarkVerse`, `BookmarkGroup` (migration `onRehydrateStorage` `updatedAt ?? createdAt`, miroir de `migrateNotes`). `Note` déjà pourvu ; `HighlightMap` reste blob-LWW. Clés `localStorage` inchangées.
 - **Mentions RGPD** : section « Compte & synchronisation (facultatif) » sur la page Confidentialité (blobs E2EE opaques, région eu-west-2 / AWS Londres, Royaume-Uni — adéquation RGPD, clé de récupération responsabilité utilisateur, droits export/suppression, aucune métrique, lecture anonyme préservée). `STORAGE_KEYS` complété avec les clés sync.
 
+### Page « Compte & données » (spec 25)
+
+- **Page dédiée `/account`** : la gestion des données (email, bascules de sync, export JSON, suppression de compte en deux temps, déconnexion) quitte le popup « Réglages de lecture » pour une page dédiée, respirante et bookmarkable. La modal reste l'unique entrée pour **se connecter** et **déverrouiller** (recovery key) ; la page gère un compte déjà authentifié. Route protégée par le proxy (chemin `/account` identique dans les deux locales pour préserver le gating).
+- **Source unique des bascules** : `syncEnabled` et l'opt-in `settingsSyncOptIn` ne vivent plus que sur `/account` (plus de toggle dans la modal `done` ni dans le popup réglages). Évite la triplication et les états divergents.
+- **Retrait de la section compte du popup réglages** : le popup « Réglages de lecture » ne porte plus aucune entrée compte — l'entrée reste uniquement dans le menu Apparence (top-left), qui ouvre la modal.
+- **États verrouillé / déverrouillé** : master key absente (retour sur l'appareil) → bannière « Déverrouiller » (ouvre la modal à l'étape `recovery-entry`) ; export et suppression restent disponibles (locaux / serveur, sans master key).
+
 > Phase 3 (administration éditoriale) hors scope.
 
 ## [0.1.12] : 2026-07-30

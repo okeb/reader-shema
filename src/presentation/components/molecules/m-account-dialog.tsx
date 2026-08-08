@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { authClient } from '@/lib/auth/client';
 import { useScrollLock } from '@/src/presentation/hooks/use-scroll-lock';
 import { useFocusTrap } from '@/src/presentation/hooks/use-focus-trap';
+import { Link } from '@/i18n/routing';
 import {
   generateRecoveryKey,
   deriveMasterKey,
@@ -59,9 +60,6 @@ export function AccountDialog({ open, onClose }: AccountDialogProps) {
   const [generatedKey, setGeneratedKey] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-
-  const syncEnabled = useAccount((s) => s.syncEnabled);
-  const setSyncEnabled = useAccount((s) => s.setSyncEnabled);
 
   // Initialisation au redimensionnement de la modale : positionne l'étape selon la session
   // courante et l'état de déverrouillage de la master key.
@@ -365,7 +363,9 @@ export function AccountDialog({ open, onClose }: AccountDialogProps) {
             </div>
           )}
 
-          {/* Étape : compte ouvert. */}
+          {/* Étape : compte ouvert. La gestion des données (bascules de sync, export,
+              suppression) vit sur la page /account (spec 25) — la modale n'est plus que le
+              point d'entrée se connecter / déverrouiller. */}
           {step === 'done' && session.data?.user && (
             <div className="space-y-3">
               <div className="flex items-center gap-2 rounded-lg bg-foreground/[3%] px-3 py-2">
@@ -378,18 +378,14 @@ export function AccountDialog({ open, onClose }: AccountDialogProps) {
                 Vos favoris et votre position de lecture se synchronisent sur vos appareils.
                 Pas de score, pas de statistique.
               </p>
-              <label className="flex items-center justify-between gap-3 rounded-lg px-1 py-1">
-                <span className="text-[13px] text-foreground">Synchroniser sur mes appareils</span>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={syncEnabled}
-                  onClick={() => setSyncEnabled(!syncEnabled)}
-                  className={cn('relative h-5 w-9 shrink-0 rounded-full transition-colors', syncEnabled ? 'bg-primary' : 'bg-input')}
-                >
-                  <span className={cn('absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all', syncEnabled ? 'left-[18px]' : 'left-0.5')} />
-                </button>
-              </label>
+              <Link
+                href="/account"
+                onClick={onClose}
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
+              >
+                <Icon icon="hugeicons:settings" className="h-4 w-4" />
+                Gérer mes données
+              </Link>
               <button
                 type="button"
                 onClick={signOut}
