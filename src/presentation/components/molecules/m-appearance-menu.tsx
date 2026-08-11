@@ -109,7 +109,24 @@ export function AppearanceMenu({ onOpenHelp, className }: AppearanceMenuProps) {
           )}
         >
           {/* Compte & synchronisation — spec 22. Discret, hors champ de lecture. */}
-          {session.active !== null ? (
+          {/* Déconnecté : bouton « Se connecter » mis en avant (CTA primaire, sans libellé
+              « Compte & synchronisation » devant). Connecté : ligne e-mail discrète. */}
+          {session.active === false ? (
+            <div className="p-3">
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setOpen(false);
+                  window.dispatchEvent(new Event('bym:open-account'));
+                }}
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
+              >
+                <Icon icon="hugeicons:user-circle" className="h-4 w-4 shrink-0" />
+                Se connecter
+              </button>
+            </div>
+          ) : session.active === true ? (
             <button
               type="button"
               role="menuitem"
@@ -120,17 +137,12 @@ export function AppearanceMenu({ onOpenHelp, className }: AppearanceMenuProps) {
               className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-sm transition-colors hover:bg-foreground/5"
             >
               <Icon
-                icon={session.active ? 'hugeicons:user-check-02' : 'hugeicons:user-circle'}
+                icon="hugeicons:user-check-02"
                 className="h-4 w-4 shrink-0 text-muted-foreground"
               />
               <span className="flex-1 truncate text-foreground">
-                {session.active ? (session.email ?? 'Compte') : 'Compte & synchronisation'}
+                {session.email ?? 'Compte'}
               </span>
-              {!session.active && (
-                <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground/60">
-                  Se connecter
-                </span>
-              )}
             </button>
           ) : null}
           {session.active !== null && <div className="mx-3 h-px bg-border" />}

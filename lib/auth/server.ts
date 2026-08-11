@@ -37,9 +37,19 @@ import {
  */
 // `VERCEL_URL` (sans protocole) est posé par Vercel au build + runtime ; absent en local.
 const vercelOrigin = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined;
-const baseURL = env.BETTER_AUTH_URL ?? vercelOrigin;
+// `baseURL` n'est fixé QUE si `BETTER_AUTH_URL` est explicite (dev local). Sur Vercel on ne le
+// fixe pas : Better Auth le déduit de la requête (origin servie = alias `reader-shema.vercel.app`,
+// preview `$VERCEL_URL`, ou domaine final `reader.shemaproject.org`) → `trustedOrigins` englobe
+// l'origin servie sur TOUT déploiement sans rien hardcoder. Fixait-on `baseURL` à `VERCEL_URL`
+// (l'URL du déploiement *spécifique*), l'origin de l'alias n'était jamais trustée → « invalid
+// origin ». Miroir du client (`lib/auth/client.ts`) qui n'a pas de `baseURL` non plus.
+const baseURL = env.BETTER_AUTH_URL;
 
-const configured = Boolean(env.BETTER_AUTH_SECRET && env.DATABASE_URL && baseURL);
+// `configured` reste vrai sur Vercel via `vercelOrigin` (téoin de déploiement Vercel) même si
+// `baseURL` est laissé à la déduction par requête.
+const configured = Boolean(
+  env.BETTER_AUTH_SECRET && env.DATABASE_URL && (baseURL || vercelOrigin),
+);
 
 export const isAuthConfigured = configured;
 
@@ -49,7 +59,9 @@ export const auth = configured
       secret: env.BETTER_AUTH_SECRET,
       basePath: '/api/auth',
       database: pool as any,
-      // Inclut l'origine explicite (prod) et, si présent, l'origine preview Vercel dérivée.
+      // Complète l'origin auto-déduite du baseURL (requête servie) : domaine de prod explicite
+      // (`NEXT_PUBLIC_APP_URL`) + origin preview Vercel dérivée. L'origin servie est déjà trustée
+      // via le baseURL déduit de la requête, donc couvre alias/previews/domaine sans hardcodage.
       trustedOrigins: [
         env.NEXT_PUBLIC_APP_URL,
         ...(vercelOrigin ? [vercelOrigin] : []),
