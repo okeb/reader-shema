@@ -12,6 +12,12 @@ export interface StrongToken {
   definition?: string;
   /** Langue d'origine : "greek" | "hebrew". */
   lang?: string;
+  /** Prononciation phonétique (ex. "(ray-sheeth')"). */
+  phonetique?: string;
+  /** Étymologie / origine du mot — peut contenir des références Strong cliquables. */
+  origine?: string;
+  /** Catégorie grammaticale (ex. "Nom féminin", "Verbe"). */
+  type?: string;
 }
 
 /** Item à résoudre en Strong : un verset identifié par livre/chapitre/numéro. */
