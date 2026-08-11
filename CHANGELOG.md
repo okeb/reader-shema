@@ -6,6 +6,15 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/).
 
 ## [Unreleased]
 
+### Modifié
+
+- **Topbar (menu Apparence)** : bouton « Se connecter » mis en avant en CTA primaire (sans libellé « Compte & synchronisation » devant) quand l'utilisateur est déconnecté.
+- **Dock de lecture** : padding vertical réduit (`py-1.5` → `py-1`).
+
+### Corrigé
+
+- **Auth + e-mail sur Vercel** : `baseURL` (serveur + client Better Auth) dérivé de l'origine servie (alias `reader-shema.vercel.app`, previews `$VERCEL_URL`, domaine final) au lieu d'une URL fixe — corrige « invalid origin » en test sur l'alias. Expéditeur Resend aligné sur le domaine vérifié `send.shemaproject.org`.
+
 ## [0.2.0] : 2026-08-09
 
 ### Processus
