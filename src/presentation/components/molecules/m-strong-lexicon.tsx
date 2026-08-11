@@ -45,15 +45,15 @@ export function StrongLexiconCard({
         </span>
       </div>
 
+      {lexicon.phonetique && (
+        <p className="mb-2 font-mono text-[12px] text-muted-foreground">{lexicon.phonetique}</p>
+      )}
+
       {lexicon.type && (
         <div className="mb-2 text-[12px] text-muted-foreground">
           <span className="font-semibold text-foreground/70">Type : </span>
           {lexicon.type}
         </div>
-      )}
-
-      {lexicon.phonetique && (
-        <p className="mb-2 font-mono text-[12px] text-muted-foreground">{lexicon.phonetique}</p>
       )}
 
       {lexicon.definition && (
