@@ -1,6 +1,6 @@
 # Spec 30 — Icône note dans la bulle d'action de sélection
 
-> **Statut** : Proposé · **Priorité** : 🟢 Basse · **Effort** : S · **Dépendances** : Spec 12
+> **Statut** : ✅ Implémenté · **Priorité** : 🟢 Basse · **Effort** : S · **Dépendances** : Spec 12
 > (bulle d'action de sélection), spec 21 (notes de verset)
 
 ## 1. Objectif
