@@ -15,7 +15,7 @@ import type {
   GetVersesTextResult,
   GetStrongsForVersesResult,
 } from '@/src/domain/use-cases/bible';
-import type { StrongOccurrence, StrongToken } from '@/src/domain/entities';
+import type { StrongLexicon, StrongOccurrence, StrongToken } from '@/src/domain/entities';
 
 const PAGE_SIZE = 20;
 
@@ -40,6 +40,67 @@ export interface StrongConcordanceProps {
 }
 
 type Status = 'loading' | 'loaded' | 'error';
+
+/**
+ * Carte lexique d'un code Strong : lemme (script d'origine), translittération, phonétique,
+ * langue, type grammatical, origine et définition. Rendue en tête de la concordance, tout provient
+ * du fetch `/bym/strong/:code` (page détail auto-suffisante : un seul appel par code).
+ */
+function LexiconDetail({
+  lexicon,
+  code,
+  accent,
+}: {
+  lexicon: StrongLexicon;
+  code: string;
+  accent: string;
+}) {
+  const hebrew = lexicon.lang === 'hebrew';
+  return (
+    <section className="mb-5 rounded-[12px] bg-foreground/[2%] p-3 text-[13px] leading-relaxed">
+      <div className="mb-2 flex flex-wrap items-baseline gap-x-2 gap-y-1">
+        {lexicon.lemma && (
+          <span className={cn('font-serif text-[22px] font-semibold leading-none', accent)}>{lexicon.lemma}</span>
+        )}
+        {lexicon.translit && (
+          <span className="text-[14px] font-semibold text-foreground/80">{lexicon.translit}</span>
+        )}
+        {lexicon.phonetique && (
+          <span className="text-[12px] italic text-muted-foreground">{lexicon.phonetique}</span>
+        )}
+        <span
+          className={cn(
+            'rounded px-1 py-0 text-[10px] font-bold',
+            hebrew ? 'bg-primary/15 text-primary' : 'bg-purple-500/15 text-purple-500',
+          )}
+        >
+          {code.replace('H', '').replace('G', '')}
+        </span>
+      </div>
+
+      {(lexicon.type || lexicon.origine) && (
+        <div className="mb-2 flex flex-col gap-0.5 text-[12px] text-muted-foreground">
+          {lexicon.type && (
+            <span>
+              <span className="font-semibold text-foreground/70">Type : </span>
+              {lexicon.type}
+            </span>
+          )}
+          {lexicon.origine && (
+            <span>
+              <span className="font-semibold text-foreground/70">Origine : </span>
+              {lexicon.origine}
+            </span>
+          )}
+        </div>
+      )}
+
+      {lexicon.definition && (
+        <p className="whitespace-pre-line text-foreground/85">{lexicon.definition}</p>
+      )}
+    </section>
+  );
+}
 
 /** Id stable d'une occurrence (pour le surlignage de la ligne active). */
 const occId = (o: StrongOccurrence) => `${o.bookId}:${o.chapter}:${o.verse}`;
@@ -67,6 +128,10 @@ export function StrongConcordance({
   const [status, setStatus] = useState<Status>('loading');
   const [loadingMore, setLoadingMore] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
+  // Lexique du code, issu du même fetch que les occurrences (page détail auto-suffisante : un seul
+  // appel `/bym/strong/:code` porte le lemme, la langue, la phonétique, l'origine, le type et la
+  // définition — pas de second fetch vers `/strong/:code`).
+  const [lexicon, setLexicon] = useState<StrongLexicon | null>(null);
   // Tokens Strong par occurrence (pour colorer le mot) — best-effort, récupérés en arrière-plan.
   const [tokensById, setTokensById] = useState<Map<string, StrongToken[]>>(new Map());
 
@@ -77,6 +142,7 @@ export function StrongConcordance({
           createGetStrongOccurrencesQuery(code, next, PAGE_SIZE),
         );
         setTotal(res.total);
+        if (next === 1) setLexicon(res.lexicon ?? null);
 
         // L'index de concordance n'existe que sous `bym` → `res.items` porte le texte BYM. En LSG (ou
         // toute version ≠ bym), on réaffiche le texte des mêmes versets dans la version active (la
@@ -125,6 +191,7 @@ export function StrongConcordance({
     setPage(0);
     setActiveId(null);
     setTokensById(new Map());
+    setLexicon(null);
     setStatus('loading');
     void loadPage(1);
   }, [open, code, loadPage]);
@@ -167,7 +234,11 @@ export function StrongConcordance({
   if (!open) return null;
 
   const hasMore = items.length < total;
-  const accent = lang === 'hebrew' ? 'text-primary' : 'text-purple-500';
+  // Langue et titre résolus depuis le lexique du fetch (auto-suffisant), avec repli sur les props
+  // (token d'origine) le temps que la première page arrive.
+  const detailLang = lexicon?.lang ?? lang;
+  const accent = detailLang === 'hebrew' ? 'text-primary' : 'text-purple-500';
+  const displayTitle = lexicon?.lemma || lexicon?.translit || title;
 
   return (
     <>
@@ -187,7 +258,7 @@ export function StrongConcordance({
             Retour
           </button>
           <div className="flex min-w-0 flex-1 items-baseline justify-end gap-2">
-            <span className={cn('truncate font-serif text-[15px] font-semibold', accent)}>{title}</span>
+            <span className={cn('truncate font-serif text-[15px] font-semibold', accent)}>{displayTitle}</span>
             <span className="shrink-0 text-[11px] text-muted-foreground" aria-live="polite">
               {status === 'loaded' ? `${total} occurrence${total > 1 ? 's' : ''}` : ''}
             </span>
@@ -210,10 +281,16 @@ export function StrongConcordance({
             <p className="py-10 text-center text-sm text-muted-foreground">
               Concordance indisponible pour le moment.
             </p>
-          ) : items.length === 0 ? (
-            <p className="py-10 text-center text-sm text-muted-foreground">Aucune occurrence trouvée.</p>
           ) : (
-            <div role="list" className="space-y-5">
+            <div className="space-y-5">
+              {/* Lexique du code : lemme, phonétique, origine, type, définition —
+                  tout issu du même fetch que les occurrences (page détail auto-suffisante). */}
+              {lexicon && <LexiconDetail lexicon={lexicon} code={code} accent={accent} />}
+
+              {items.length === 0 ? (
+                <p className="py-10 text-center text-sm text-muted-foreground">Aucune occurrence trouvée.</p>
+              ) : (
+                <div role="list" className="space-y-5">
               {groups.map((g) => (
                 <div key={g.bookId}>
                   <div className="sticky top-0 z-10 bg-background/95 px-2 py-1 text-[11px] font-semibold uppercase tracking-widest text-primary backdrop-blur-sm">
@@ -263,6 +340,8 @@ export function StrongConcordance({
                   )}
                   Charger plus
                 </button>
+              )}
+                </div>
               )}
             </div>
           )}

@@ -7,6 +7,7 @@ import type {
   StrongFetchItem,
   StrongOccurrence,
   StrongConcordance,
+  StrongLexicon,
   BookInfo,
 } from '@/src/domain/entities';
 import { compressVerses } from '@/src/domain/value-objects/verse-selection.vo';
@@ -203,7 +204,7 @@ interface ApiConcordance {
   total: number;
   page: number;
   size: number;
-  lexicon?: { translit?: string; definition?: string };
+  lexicon?: StrongLexicon;
   items?: { livre: string; chapitre: number; verset: number; ecrit: string }[];
 }
 
