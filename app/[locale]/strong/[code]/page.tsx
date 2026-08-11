@@ -10,10 +10,10 @@ type Props = {
 
 /**
  * Code Strong accepté dans l'URL : forme préfixée (`H7218` / `G2316`) ou hébraïque zero-padded
- * 5 chiffres (`07218`). Les nombres nus sans préfixe ni zero-padding (ex. `7218`) et tout autre
- * format → 404. Cf. spec 29 — détail Strong.
+ * (`0` + 1-5 chiffres, ex. `0433`, `07218`). Les nombres nus sans préfixe ni zero-padding
+ * (ex. `7218`) et tout autre format → 404. Cf. spec 29 — détail Strong.
  */
-const ROUTE_CODE = /^(H\d{1,5}|G\d{1,5}|0\d{4})$/;
+const ROUTE_CODE = /^(H\d{1,5}|G\d{1,5}|0\d{1,5})$/;
 
 /**
  * Canonicalise un code Strong d'URL : `07218` → `H7218`, `H07218` → `H7218`, `G2316` → `G2316`.

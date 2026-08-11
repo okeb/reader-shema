@@ -5,7 +5,8 @@
  *
  * Références reconnues (regex `ORIGINE_REF`) :
  *  - forme préfixée  : `H7223`, `G2316`, `H1` (1 à 5 chiffres) ;
- *  - forme hébraïque zero-padded 5 chiffres : `07218` (convention de l'API).
+ *  - forme hébraïque zero-padded : `0` + 1 à 5 chiffres (`0433`, `07218`, `010`) — l'API préfixe
+ *    systématiquement les numéros hébraïques d'un `0` (largeur variable).
  * Les nombres nus sans préfixe ni zero-padding sont ignorés (évite les faux positifs sur numéros de
  * verset, années, etc. dans la prose). Plusieurs références par `origine` sont possibles.
  */
@@ -21,8 +22,8 @@ export interface OrigineSegment {
   raw?: string;
 }
 
-/** Reconnaît une référence Strong : préfixe H/G + 1-5 chiffres, OU 5 chiffres zero-padded. */
-const ORIGINE_REF = /\b([HG]\d{1,5}|0\d{4})\b/g;
+/** Reconnaît une référence Strong : préfixe H/G + 1-5 chiffres, OU `0` + 1-5 chiffres (zero-padded). */
+const ORIGINE_REF = /\b([HG]\d{1,5}|0\d{1,5})\b/g;
 
 /**
  * Normalise un token de référence Strong en code canonique `H`/`G` + chiffres sans zéros de tête.
