@@ -111,11 +111,6 @@ export function StrongVerse({
                 </span>
               )}
             </p>
-            {activeToken.phonetique && (
-              <p className="w-full font-mono text-[12px] text-muted-foreground">
-                {activeToken.phonetique}
-              </p>
-            )}
             <div className="-mt-3 mb-3 flex flex-wrap items-center gap-2 transition-all duration-500">
               {activeToken.lemma && (
                 <span className="font-serif text-[20px] font-semibold text-foreground/80">
@@ -136,6 +131,11 @@ export function StrongVerse({
                 <span className="rounded bg-foreground/5 px-1.5 py-0 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
                   {activeToken.type}
                 </span>
+              )}
+              {activeToken.phonetique && (
+                <p className="mt-1 w-full font-mono text-[12px] text-muted-foreground">
+                  {activeToken.phonetique}
+                </p>
               )}
             </div>
           </div>
