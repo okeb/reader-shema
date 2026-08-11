@@ -25,7 +25,7 @@ export function OrigineText({
   if (segments.length === 0) return null;
 
   return (
-    <p className="text-[12px] italic leading-relaxed text-muted-foreground">
+    <span className="italic">
       {segments.map((seg, i) => {
         if (seg.kind === 'text') return <span key={i}>{seg.text}</span>;
         const hebrew = lang !== 'greek'; // hébreu par défaut (convention zero-padded)
@@ -51,7 +51,7 @@ export function OrigineText({
           </button>
         );
       })}
-    </p>
+    </span>
   );
 }
 

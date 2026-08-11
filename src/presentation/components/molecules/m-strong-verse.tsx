@@ -133,11 +133,15 @@ export function StrongVerse({
           )}
 
           {/* Origine étymologique — les références Strong qu'elle contient sont cliquables (spec 29). */}
-          <OrigineText
-            origine={activeToken.origine}
-            lang={activeToken.lang}
-            onNavigate={onNavigateStrong}
-          />
+          {activeToken.origine && (
+            <p className="mt-2 text-[12px] italic leading-relaxed text-muted-foreground">
+              <OrigineText
+                origine={activeToken.origine}
+                lang={activeToken.lang}
+                onNavigate={onNavigateStrong}
+              />
+            </p>
+          )}
 
           {/* Concordance : ouvre toutes les occurrences du même numéro Strong. */}
           {onSeeOccurrences && (
