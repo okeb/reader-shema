@@ -129,7 +129,14 @@ export function StrongVerse({
               </span>
               {activeToken.type && (
                 <span className="rounded bg-foreground/5 px-1.5 py-0 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                  {activeToken.type}
+                  <OrigineText
+                    origine={activeToken.type}
+                    lang={activeToken.lang}
+                    className="not-italic"
+                    onNavigate={(target) =>
+                      onNavigateStrong?.(target, { verseId: verse.id, strongCode: activeToken.strong ?? undefined })
+                    }
+                  />
                 </span>
               )}
               {activeToken.phonetique && (

@@ -52,7 +52,7 @@ export function StrongLexiconCard({
       {lexicon.type && (
         <div className="mb-2 text-[12px] text-muted-foreground">
           <span className="font-semibold text-foreground/70">Type : </span>
-          {lexicon.type}
+          <OrigineText origine={lexicon.type} onNavigate={onNavigate} className="not-italic" />
         </div>
       )}
 
