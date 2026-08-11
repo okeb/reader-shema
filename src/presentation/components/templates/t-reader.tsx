@@ -477,6 +477,15 @@ export function TReader({
     [router, locale, coarse, closeConcordance],
   );
 
+  // Navigue vers la fiche détail d'un code Strong (depuis une référence d'`origine` dans le panneau
+  // Strong). `push` (pas `replace`) pour que le bouton retour revienne au lecteur (spec 29).
+  const navigateStrong = useCallback(
+    (code: string) => {
+      router.push(`/${locale}/strong/${code}`);
+    },
+    [router, locale],
+  );
+
   // --- Quiz (Phase 6) --------------------------------------------------------- @nolint
 
   // Questions du chapitre courant (mode read, si l'option est active).
@@ -810,6 +819,7 @@ export function TReader({
         version={primary}
         onVersion={(id) => setPrimary(id)}
         onSeeOccurrences={openConcordance}
+        onNavigateStrong={navigateStrong}
         covered={concordance != null}
         onClose={() => setStrongsOpen(false)}
       />
