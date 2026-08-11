@@ -97,11 +97,6 @@ export function StrongVerse({
                 </span>
               )}
             </p>
-            {activeToken.phonetique && (
-              <p className="mb-1 text-[12px] italic text-muted-foreground">
-                {activeToken.phonetique}
-              </p>
-            )}
             <div className="-mt-3 mb-3 flex flex-wrap items-center gap-2 transition-all duration-500">
               {activeToken.lemma && (
                 <span className="font-serif text-[20px] font-semibold text-foreground/80">
@@ -125,6 +120,12 @@ export function StrongVerse({
               )}
             </div>
           </div>
+
+          {activeToken.phonetique && (
+            <p className="mb-1 font-mono text-[12px] text-muted-foreground">
+              {activeToken.phonetique}
+            </p>
+          )}
 
           {activeToken.definition && (
             <p className="animate-fade-in whitespace-pre-line text-foreground/85">

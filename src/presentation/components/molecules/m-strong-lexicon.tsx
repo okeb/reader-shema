@@ -35,9 +35,6 @@ export function StrongLexiconCard({
         {lexicon.translit && (
           <span className="text-[14px] font-semibold text-foreground/80">{lexicon.translit}</span>
         )}
-        {lexicon.phonetique && (
-          <span className="text-[12px] italic text-muted-foreground">{lexicon.phonetique}</span>
-        )}
         <span
           className={cn(
             'rounded px-1 py-0 text-[10px] font-bold',
@@ -53,6 +50,10 @@ export function StrongLexiconCard({
           <span className="font-semibold text-foreground/70">Type : </span>
           {lexicon.type}
         </div>
+      )}
+
+      {lexicon.phonetique && (
+        <p className="mb-2 font-mono text-[12px] text-muted-foreground">{lexicon.phonetique}</p>
       )}
 
       {lexicon.definition && (
