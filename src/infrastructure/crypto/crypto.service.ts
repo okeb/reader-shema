@@ -143,3 +143,159 @@ export async function decryptBlob(
 }
 
 export { base64UrlToBytes };
+
+// --- Enveloppe DEK/KEK (spec 28) ----------------------------------------------
+//
+// La master key (spec 22) était dérivée directement de la recovery key. Spec 28 : un DEK
+// aléatoire chiffre les blobs `user_data` ; le DEK est wrappé par une KEK mot de passe (routine)
+// ET par une KEK recovery (urgence). L'enveloppe (JSON des deux wraps + le sel pw) est stockée
+// dans `user_data` kind=`keyEnvelope`. On déverrouille au mot de passe (qu'on connaît) ; la
+// recovery key (e-mailée à l'inscription) ne sert qu'en cas de compte perdu.
+//
+// Le DEK est volontairement `extractable` en mémoire (contrairement à la master key spec 22,
+// non-extractable) : `rewrapPassword` et `upgradeLegacyToEnvelope` doivent pouvoir exporter le
+// DEK raw pour le re-wrapper/re-chiffrer. Sur le plan menace, un attaquant ayant le handle du DEK
+// en page (XSS) peut déchiffrer les blobs directement — extractable ou non — donc le delta de
+// sécurité est négligeable, et l'extractabilité débloque le re-wrap (filet post-reset mot de
+// passe, qui préserve la doctrine « recovery = urgence uniquement »).
+
+const ENVELOPE_VERSION = 1;
+// Placeholder pour la colonne `nonce` (BYTEA NOT NULL) de la row keyEnvelope. L'enveloppe n'est
+// pas chiffrée au niveau de la row (elle doit être lisible sans le DEK pour déwraper) ; les IV
+// réels vivent dans pwWrap/recoveryWrap. Préfixe `v:1` dans le JSON pour qu'un relecteur ne
+// suppose pas de l'AES-GCM au niveau de la row.
+const PLACEHOLDER_NONCE_B64 = bytesToBase64(new Uint8Array(IV_LENGTH));
+
+/**
+ * Génère le DEK (AES-GCM 256, extractable). L'extractabilité est nécessaire pour `exportKey('raw')`
+ * au wrap (bootstrap) et au re-wrap (changement de mot de passe) — voir note module.
+ */
+export async function generateDek(): Promise<CryptoKey> {
+  assertCrypto();
+  return crypto.subtle.generateKey(
+    { name: 'AES-GCM', length: KEY_LENGTH },
+    true,
+    ['encrypt', 'decrypt'],
+  );
+}
+
+/** Sel par-utilisateur (16 octets aléatoires) pour la KEK mot de passe — distinct du sel app global. */
+export function generatePwSalt(): string {
+  assertCrypto();
+  return bytesToBase64(crypto.getRandomValues(new Uint8Array(16)));
+}
+
+/**
+ * Dérive la KEK mot de passe (AES-GCM, `['encrypt','decrypt']`, non-extractable) via PBKDF2 sur un
+ * sel par-utilisateur. Contrairement à `deriveMasterKey` (recovery key 256-bit, sel app global),
+ * l'entrée est un mot de passe faible → sel par-utilisateur + 250k iters (domain separation).
+ */
+export async function deriveKekPw(password: string, pwSaltB64: string): Promise<CryptoKey> {
+  assertCrypto();
+  const baseKey = await crypto.subtle.importKey(
+    'raw',
+    utf8ToBytes(password) as BufferSource,
+    'PBKDF2',
+    false,
+    ['deriveKey'],
+  );
+  return crypto.subtle.deriveKey(
+    {
+      name: 'PBKDF2',
+      salt: base64ToBytes(pwSaltB64) as BufferSource,
+      iterations: PBKDF2_ITERATIONS,
+      hash: 'SHA-256',
+    },
+    baseKey,
+    { name: 'AES-GCM', length: KEY_LENGTH },
+    false,
+    ['encrypt', 'decrypt'],
+  );
+}
+
+/**
+ * Wrap le DEK : exporte la clé raw (base64) puis la chiffre avec la KEK (AES-GCM via `encryptBlob`).
+ * On évite `crypto.subtle.wrapKey` (qui exigerait des usages KEK `['wrapKey','unwrapKey']` et
+ * casserait la réutilisation de `deriveMasterKey` pour KEK_rec) pour le même résultat.
+ */
+export async function wrapDek(
+  kek: CryptoKey,
+  dek: CryptoKey,
+): Promise<{ ct: string; nonce: string }> {
+  assertCrypto();
+  const raw = await crypto.subtle.exportKey('raw', dek);
+  const b64 = bytesToBase64(new Uint8Array(raw));
+  const { ciphertext, nonce } = await encryptBlob(kek, b64);
+  return { ct: ciphertext, nonce };
+}
+
+/**
+ * Unwrap le DEK : déchiffre (AES-GCM) → base64 de la clé raw → `importKey` (extractable, pour le
+ * re-wrap futur). Lève en cas de KEK incorrect (auth tag AES-GCM invalide) — signature d'un mauvais
+ * mot de passe / mauvaise clé de récupération.
+ */
+export async function unwrapDek(
+  kek: CryptoKey,
+  ct: string,
+  nonce: string,
+): Promise<CryptoKey> {
+  assertCrypto();
+  const b64 = await decryptBlob(kek, ct, nonce);
+  const raw = base64ToBytes(b64);
+  return crypto.subtle.importKey(
+    'raw',
+    raw as BufferSource,
+    { name: 'AES-GCM', length: KEY_LENGTH },
+    true, // extractable : permet le re-wrap / re-chiffrement (voir note module)
+    ['encrypt', 'decrypt'],
+  );
+}
+
+/** Enveloppe DEK wrappée — stockée dans `user_data` kind=`keyEnvelope`. */
+export interface KeyEnvelope {
+  v: number;
+  /** Sel par-utilisateur de la KEK mot de passe. Absent si `pwWrap` absent (magic-link). */
+  pwSalt?: string;
+  /** DEK wrappé par la KEK mot de passe. Absent pour les comptes sans mot de passe. */
+  pwWrap?: { ct: string; nonce: string };
+  /** DEK wrappé par la KEK recovery (toujours présent — filet d'urgence). */
+  recoveryWrap: { ct: string; nonce: string };
+  /** `false` pour les comptes magic-link (pas de mot de passe). */
+  pwWrapPresent: boolean;
+}
+
+/** Construit l'enveloppe depuis ses parts (pwWrap optionnel pour magic-link). */
+export function buildEnvelope(parts: {
+  pwSalt?: string;
+  pwWrap?: { ct: string; nonce: string };
+  recoveryWrap: { ct: string; nonce: string };
+}): KeyEnvelope {
+  return {
+    v: ENVELOPE_VERSION,
+    pwSalt: parts.pwWrap ? parts.pwSalt : undefined,
+    pwWrap: parts.pwWrap,
+    recoveryWrap: parts.recoveryWrap,
+    pwWrapPresent: Boolean(parts.pwWrap),
+  };
+}
+
+/** Sérialise l'enveloppe en base64 (colonne `ciphertext` de la row keyEnvelope). */
+export function serializeEnvelope(env: KeyEnvelope): string {
+  return bytesToBase64(utf8ToBytes(JSON.stringify(env)));
+}
+
+/** Parse l'enveloppe depuis le `ciphertext` base64 d'un blob pull. `null` si invalide. */
+export function parseEnvelope(ciphertextB64: string): KeyEnvelope | null {
+  try {
+    const env = JSON.parse(bytesToUtf8(base64ToBytes(ciphertextB64))) as KeyEnvelope;
+    if (env.v !== ENVELOPE_VERSION || !env.recoveryWrap) return null;
+    return env;
+  } catch {
+    return null;
+  }
+}
+
+/** Placeholder nonce pour la row keyEnvelope (colonne `nonce` BYTEA NOT NULL). */
+export function envelopePlaceholderNonce(): string {
+  return PLACEHOLDER_NONCE_B64;
+}
