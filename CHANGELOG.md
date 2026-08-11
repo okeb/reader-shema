@@ -9,6 +9,7 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/).
 ### Ajouté
 
 - **Compte & synchronisation (spec 28)** : déverrouillage routine de la sync par **mot de passe** via enveloppe DEK/KEK. La **clé de récupération** devient un secours d'urgence (mot de passe oublié, comptes lien magique) et est **e-mailée à l'inscription** pour ne plus jamais être perdue. Option « se souvenir de cet appareil (30 jours) » : la clé de déverrouillage est persistée sur l'appareil (IndexedDB, handle crypto non-extractable) pour un déverrouillage silencieux au reload. Migration sans perte des comptes pré-spec-28 qui ont encore leur ancienne clé (`upgradeLegacyToEnvelope`) ; reset définitif possible pour ceux qui l'ont perdue.
+- **Sync de l'historique de navigation** : l'historique des passages/recherches récents (`bym:nav-history`) est désormais synchronisé entre appareils. Fusion par `id` au pull (union, doublon → entrée la plus récente, cap 25) plutôt que replace pur — évite la perte d'entrées en écriture concurrente multi-appareil inhérente au LWW par kind.
 
 ### Modifié
 

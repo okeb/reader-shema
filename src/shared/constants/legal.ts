@@ -137,6 +137,7 @@ export const STORAGE_KEYS: { key: string; label: string }[] = [
   { key: "bym:version / bym:compare-version", label: "Version de lecture active et comparaison" },
   { key: "reader-preferences", label: "Réglages de lecture (police, taille, thème, disposition) (sync opt-in)" },
   { key: "reading-position", label: "Dernière position de lecture, reprise (sync)" },
+  { key: "bym:nav-history", label: "Historique de navigation / recherches récentes (sync)" },
   { key: "bym:account", label: "Préférences de synchronisation (sync activée, opt-in réglages)" },
   { key: "bym:sync-meta / bym:sync-queue", label: "Horloges et file d'attente de synchronisation locales" },
   {
