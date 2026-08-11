@@ -77,9 +77,11 @@ export const HOST = {
  * Hébergement des données de synchronisation (compte facultatif) — spec 22 §8, spec 26.
  *
  * Les blobs synchronisés sont chiffrés bout-en-bout côté client (AES-GCM) ; le serveur
- * ne stocke que des blobs opaques (jamais la clé, jamais la recovery key, jamais le
- * clair). Région réelle confirmée en console Neon au provisionnement — ne pas promettre
- * une localisation non effectivement sélectionnée.
+ * ne stocke que des blobs opaques (jamais la clé de chiffrement DEK, jamais le clair).
+ * Depuis la spec 28, la clé de récupération d'urgence est e-mailée à l'adresse du compte
+ * (à l'inscription et au re-keying) : elle est vue fugacement par le serveur pour la passer
+ * à Resend, mais n'est jamais persistée côté serveur. Région réelle confirmée en console
+ * Neon au provisionnement — ne pas promettre une localisation non effectivement sélectionnée.
  *
  * Région active : `eu-west-2` (AWS Londres, Royaume-Uni). Le Royaume-Uni n'est pas dans
  * l'Union européenne (Brexit) mais bénéficie d'une décision d'adéquation RGPD de l'UE :
@@ -107,9 +109,10 @@ export const SYNC_HOSTING = {
 export const EMAIL_PROVIDER = {
   provider: "Resend",
   url: "https://resend.com",
-  /** Ce qui transite par ce canal : uniquement l'adresse e-mail + un lien signé à expiration courte. */
+  /** Ce qui transite par ce canal : l'adresse e-mail, des liens signés à courte expiration, et (spec 28)
+   *  la clé de récupération d'urgence e-mailée à l'inscription / au re-keying (jamais persistée serveur). */
   scope:
-    "Uniquement l'adresse e-mail et un lien signé à courte expiration (vérification, reset, magic-link).",
+    "L'adresse e-mail, des liens signés à courte expiration (vérification, reset, magic-link) et la clé de récupération d'urgence (e-mailée à l'adresse du compte, jamais persistée).",
 } as const;
 
 /** Liens des pages informationnelles (footer + sitemap). */
@@ -121,10 +124,11 @@ export const INFO_LINKS = [
 ] as const;
 
 /**
- * Clés `localStorage` utilisées par l'application — listées sur la page Confidentialité pour la
- * transparence RGPD. Par défaut, aucune ne quitte l'appareil. Si vous activez un compte
- * (facultatif), les données marquées « (sync) » sont chiffrées bout-en-bout puis envoyées sous
- * forme de blobs opaques au serveur — jamais en clair (cf. section « Compte & synchronisation »).
+ * Clés `localStorage` (et un store `IndexedDB`) utilisées par l'application — listées sur la page
+ * Confidentialité pour la transparence RGPD. Par défaut, aucune ne quitte l'appareil. Si vous
+ * activez un compte (facultatif), les données marquées « (sync) » sont chiffrées bout-en-bout puis
+ * envoyées sous forme de blobs opaques au serveur — jamais en clair (cf. section « Compte &
+ * synchronisation »).
  */
 export const STORAGE_KEYS: { key: string; label: string }[] = [
   { key: "bymFavorites", label: "Versets favoris (sync)" },
@@ -135,6 +139,11 @@ export const STORAGE_KEYS: { key: string; label: string }[] = [
   { key: "reading-position", label: "Dernière position de lecture, reprise (sync)" },
   { key: "bym:account", label: "Préférences de synchronisation (sync activée, opt-in réglages)" },
   { key: "bym:sync-meta / bym:sync-queue", label: "Horloges et file d'attente de synchronisation locales" },
+  {
+    key: "bym:device-keys (IndexedDB)",
+    label:
+      "Clé de déverrouillage persistée « se souvenir de cet appareil » (30 jours, opt-in — spec 28) : handle crypto non-extractable, pas d'octets bruts sur disque",
+  },
 ];
 
 /** Crédits divers (les versions de Bible sont créditées via `lib/bible-versions.ts`). */

@@ -6,6 +6,10 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/).
 
 ## [Unreleased]
 
+### Ajouté
+
+- **Compte & synchronisation (spec 28)** : déverrouillage routine de la sync par **mot de passe** via enveloppe DEK/KEK. La **clé de récupération** devient un secours d'urgence (mot de passe oublié, comptes lien magique) et est **e-mailée à l'inscription** pour ne plus jamais être perdue. Option « se souvenir de cet appareil (30 jours) » : la clé de déverrouillage est persistée sur l'appareil (IndexedDB, handle crypto non-extractable) pour un déverrouillage silencieux au reload. Migration sans perte des comptes pré-spec-28 qui ont encore leur ancienne clé (`upgradeLegacyToEnvelope`) ; reset définitif possible pour ceux qui l'ont perdue.
+
 ### Modifié
 
 - **Topbar (menu Apparence)** : bouton « Se connecter » mis en avant en CTA primaire (sans libellé « Compte & synchronisation » devant) quand l'utilisateur est déconnecté.
