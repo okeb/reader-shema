@@ -16,6 +16,7 @@ export type SyncKind =
   | 'readingPosition'
   | 'readerPrefs' // opt-in (phase 2)
   | 'themeAccent' // opt-in (phase 2)
+  | 'history' // historique de navigation (fusion par id au pull — pas de replace pur)
   | 'keyEnvelope'; // spec 28 : enveloppe DEK/KEK (pas un kind de données — pas d'adapter)
 
 /** Liste des kinds (Phase 1 : favoris + position ; Phase 2 étendra via adaptateurs). */
@@ -28,6 +29,7 @@ export const SYNC_KINDS: SyncKind[] = [
   'highlights',
   'readerPrefs',
   'themeAccent',
+  'history',
   'keyEnvelope',
 ];
 
