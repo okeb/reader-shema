@@ -10,6 +10,7 @@ import { StrongLexiconCard } from '@/src/presentation/components/molecules/m-str
 import { StrongOccurrenceList } from '@/src/presentation/components/molecules/m-strong-occurrence-list';
 import { SiteFooter } from '@/src/presentation/components/molecules/m-footer';
 import { useConcordancePages } from '@/src/presentation/hooks/use-concordance-pages';
+import { useStrongResume } from '@/src/presentation/stores/strong-resume.store';
 import type { StrongOccurrence } from '@/src/domain/entities';
 
 const PAGE_SIZE = 20;
@@ -34,8 +35,13 @@ export function TStrongDetail({ code }: { code: string }) {
   const displayTitle = lexicon?.lemma || lexicon?.translit || code;
 
   const navigateStrong = (c: string) => router.push(`/${locale}/strong/${c}`);
-  const goToOccurrence = (occ: StrongOccurrence) =>
+  const goToOccurrence = (occ: StrongOccurrence) => {
+    // Navigation vers le lecteur (verset ciblé) : on efface la reprise Strong en attente pour
+    // ne pas restaurer l'ancienne sélection au montage du lecteur (l'utilisateur va à un verset
+    // précis, pas un retour). Spec 29.
+    useStrongResume.getState().clear();
     router.push(`/${locale}/read?livre=${occ.bookId}&chap=${occ.chapter}&v=${occ.verse}`);
+  };
 
   const hasLexicon = Boolean(lexicon && (lexicon.translit || lexicon.lemma || lexicon.definition));
   const isEmpty = status === 'loaded' && total === 0 && !hasLexicon;
