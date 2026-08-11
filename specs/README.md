@@ -39,7 +39,7 @@ la doctrine gagne.
 | 23 | [Version du projet & signalement de bug](23-version-signalement-bug.md) | 🟠 Moyenne | S | Proposé | spec 15 (footer, `lib/legal.ts`) |
 | 24 | [Consulter une note (mode lecture)](24-consulter-note-lecture-seule.md) | 🟠 Moyenne | S | Proposé | spec 10 (notes), spec 12 (dock) |
 | 28 | [Déverrouillage par mot de passe (enveloppe DEK/KEK)](28-deverouillage-mdp-enveloppe.md) | 🔴 Haute | M | ✅ Implémenté | spec 22 (sync E2EE), spec 26 (Better Auth + Resend), spec 25 (page /account) |
-| 29 | [Détail Strong (champs phonetique/origine/type + page /strong/[code])](29-detail-strong.md) | 🟠 Moyenne | M | Proposé | spec 02 (concordance Strong) |
+| 29 | [Détail Strong (champs phonetique/origine/type + page /strong/[code])](29-detail-strong.md) | 🟠 Moyenne | M | ✅ Implémenté | spec 02 (concordance Strong) |
 | 23 | [Version du projet & signalement de bug](23-version-signalement-bug.md) | 🟠 Moyenne | S | Proposé | spec 15 (footer, `lib/legal.ts`) |
 
 **Légende effort** : S = quelques heures · M = 1–2 jours · L = 3 jours et +.

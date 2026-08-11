@@ -1,6 +1,6 @@
 # Spec 29 — Détail Strong (champs phonetique/origine/type + page `/strong/[code]`)
 
-> **Statut** : Proposé · **Priorité** : 🟠 Moyenne · **Effort** : M · **Dépendances** : Spec 02
+> **Statut** : ✅ Implémenté · **Priorité** : 🟠 Moyenne · **Effort** : M · **Dépendances** : Spec 02
 > (concordance Strong, endpoint `/bym/strong/:code`) · endpoint per-token `?strongs=1` étendu côté API.
 
 ## 1. Objectif
