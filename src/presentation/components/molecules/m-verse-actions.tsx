@@ -125,8 +125,9 @@ export function VerseActions({
 
   // Bouton d'envoi fusionné (copier le verset / copier le lien / partager) — présent si l'une des actions existe.
   const hasSend = !!onCopyLink || !!onCopyVerse || !!onShare;
-  // Le menu ⋯ (signet / surlignage / note) — Strong reste un outil de base, hors menu.
-  const hasOverflow = !!(groups && onBookmark) || !!onHighlight || !!onNote;
+  // Le menu ⋯ (signet / surlignage) — Strong et la note restent des outils de base, hors menu
+  // (la note est promue au premier niveau : accès direct à l'éditeur, sans popover). Spec 30.
+  const hasOverflow = !!(groups && onBookmark) || !!onHighlight;
 
   // Épingle le cluster tant qu'un popover (envoi / menu ⋯ / signet / surlignage) est ouvert. On ne
   // signale que les **transitions** (pas au montage) : un `onMenuToggle(false)` au montage
@@ -270,6 +271,19 @@ export function VerseActions({
         </button>
       )}
 
+      {/* Note — promue au premier niveau (spec 30) : accès direct à l'éditeur de la sélection,
+          sans popover intermédiaire. `sticky-note-01` sans note, `note-edit` accentué avec note. */}
+      {onNote && (
+        <button
+          type="button"
+          className={cn(btnCls, hasNote && 'text-primary')}
+          title={hasNote ? 'Modifier la note' : 'Noter'}
+          onClick={stop(onNote!)}
+        >
+          <Icon icon={hasNote ? 'hugeicons:note-edit' : 'hugeicons:sticky-note-01'} className={iconCls} />
+        </button>
+      )}
+
       {hasOverflow && (
         <span ref={overflowRef} className="relative inline-flex">
           <button
@@ -328,24 +342,6 @@ export function VerseActions({
                   style={highlightColor ? { color: highlightColor } : undefined}
                 />
                 Surligner
-              </button>
-            )}
-
-            {onNote && (
-              <button
-                type="button"
-                title={hasNote ? 'Modifier la note' : 'Noter'}
-                onClick={stop(() => {
-                  onNote();
-                  setMenuOpen(false);
-                })}
-                className={cn(
-                  'flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm transition-colors hover:bg-accent',
-                  hasNote ? 'text-primary' : 'text-foreground',
-                )}
-              >
-                <Icon icon={hasNote ? 'hugeicons:note-edit' : 'hugeicons:sticky-note-01'} className="h-4 w-4" />
-                Note
               </button>
             )}
           </PortalPopover>
