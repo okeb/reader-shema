@@ -17,6 +17,7 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/).
 
 ### Corrigé
 
+- **Sync multi-appareil (spec 22)** : horloge LWW — `pushKind` ne pousse plus un horodatage nul. La migration premier-login enfile les kinds sans « bumper » le méta local (`meta[kind] === 0`) ; le blob partait alors daté `0` et était ignoré au pull sur un autre appareil (`remote.updatedAt > localTs` → `0 > 0` = faux). On date maintenant au moment du push quand l'horloge locale est vide, pour que les données migrées ressortent sur le 2ᵉ appareil.
 - **Auth + e-mail sur Vercel** : `baseURL` (serveur + client Better Auth) dérivé de l'origine servie (alias `reader-shema.vercel.app`, previews `$VERCEL_URL`, domaine final) au lieu d'une URL fixe — corrige « invalid origin » en test sur l'alias. Expéditeur Resend aligné sur le domaine vérifié `send.shemaproject.org`.
 
 ## [0.2.0] : 2026-08-09

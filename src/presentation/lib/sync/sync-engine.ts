@@ -96,7 +96,12 @@ async function pushKind(kind: SyncKind): Promise<void> {
 
   const plaintext = adapter.serialize();
   const { ciphertext, nonce } = await encryptBlob(masterKey, plaintext);
-  const updatedAt = useSyncMeta.getState().get(kind);
+  // Horloge LWW : on ne pousse jamais un horodatage nul. La migration premier-login
+  // enfile les kinds sans « bumper » le méta (meta[kind] === 0) ; si on poussait 0, le
+  // blob serait daté 0 et ignoré au pull sur un autre appareil (`remote.updatedAt >
+  // localTs` → `0 > 0` = faux). On date donc au moment du push quand l'horloge est vide.
+  const metaTs = useSyncMeta.getState().get(kind);
+  const updatedAt = metaTs > 0 ? metaTs : Date.now();
   const blob: EncryptedBlob = { ciphertext, nonce, updatedAt };
 
   const bus = getCqrsBus();
