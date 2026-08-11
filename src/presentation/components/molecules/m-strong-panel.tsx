@@ -116,8 +116,11 @@ interface StrongPanelProps {
   onVersion: (id: string) => void;
   /** Ouvre la concordance d'un token Strong (relayé à chaque verset). */
   onSeeOccurrences?: (token: StrongToken) => void;
-  /** Navigue vers la fiche détail d'un code Strong (depuis une référence d'`origine`, relayé). */
-  onNavigateStrong?: (code: string) => void;
+  /** Navigue vers la fiche détail d'un code Strong (depuis une référence d'`origine`, relayé).
+   *  Transmet le token source pour mémoriser le contexte de reprise (spec 29). */
+  onNavigateStrong?: (targetCode: string, source: { verseId: string; strongCode?: string }) => void;
+  /** Token à réactiver au montage (reprise après retour d'une fiche /strong/[code]). */
+  initialActiveStrong?: { verseId: string; strongCode: string };
   /** Vrai quand la concordance recouvre ce panneau : le rend inerte (sinon, sur iOS, le geste sur la
    *  concordance défile cette définition en arrière-plan au lieu de la liste d'occurrences). */
   covered?: boolean;
@@ -139,6 +142,7 @@ export function StrongPanel({
   onVersion,
   onSeeOccurrences,
   onNavigateStrong,
+  initialActiveStrong,
   covered = false,
   onClose,
 }: StrongPanelProps) {
@@ -206,6 +210,11 @@ export function StrongPanel({
                   verse={verse}
                   onSeeOccurrences={onSeeOccurrences}
                   onNavigateStrong={onNavigateStrong}
+                  initialActiveStrong={
+                    initialActiveStrong && initialActiveStrong.verseId === verse.id
+                      ? initialActiveStrong.strongCode
+                      : undefined
+                  }
                 />
               ))}
             </div>
