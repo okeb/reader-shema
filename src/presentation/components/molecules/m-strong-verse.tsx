@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Icon } from '@iconify/react';
 import { cn } from '@/lib/utils';
 import type { StrongToken } from '@/src/domain/entities';
+import { OrigineText } from '@/src/presentation/components/atoms/a-origine-text';
 
 export interface StrongVerseView {
   /** Id logique du verset (ex. "jean:3:16"). */
@@ -29,10 +30,13 @@ function bubbleColor(lang?: string) {
 export function StrongVerse({
   verse,
   onSeeOccurrences,
+  onNavigateStrong,
 }: {
   verse: StrongVerseView;
   /** Ouvre la concordance du token (toutes les occurrences du même Strong). */
   onSeeOccurrences?: (token: StrongToken) => void;
+  /** Navigue vers la fiche détail d'un code Strong (depuis une référence d'`origine`). */
+  onNavigateStrong?: (code: string) => void;
 }) {
   // Indice du token actif (dernier clic).
   const [activeIdx, setActiveIdx] = useState<number | null>(null);
@@ -93,6 +97,11 @@ export function StrongVerse({
                 </span>
               )}
             </p>
+            {activeToken.phonetique && (
+              <p className="mb-1 text-[12px] italic text-muted-foreground">
+                {activeToken.phonetique}
+              </p>
+            )}
             <div className="-mt-3 mb-3 flex flex-wrap items-center gap-2 transition-all duration-500">
               {activeToken.lemma && (
                 <span className="font-serif text-[20px] font-semibold text-foreground/80">
@@ -109,12 +118,28 @@ export function StrongVerse({
               >
                 {activeToken.strong.replace('H', '').replace('G', '')}
               </span>
+              {activeToken.type && (
+                <span className="rounded bg-foreground/5 px-1.5 py-0 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                  {activeToken.type}
+                </span>
+              )}
             </div>
           </div>
 
           {activeToken.definition && (
             <p className="animate-fade-in whitespace-pre-line text-foreground/85">
               {activeToken.definition}
+            </p>
+          )}
+
+          {/* Origine étymologique — les références Strong qu'elle contient sont cliquables (spec 29). */}
+          {activeToken.origine && (
+            <p className="mt-2 text-[12px] italic leading-relaxed text-muted-foreground">
+              <OrigineText
+                origine={activeToken.origine}
+                lang={activeToken.lang}
+                onNavigate={onNavigateStrong}
+              />
             </p>
           )}
 

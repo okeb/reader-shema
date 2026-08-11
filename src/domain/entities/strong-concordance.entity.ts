@@ -12,6 +12,23 @@ export interface StrongOccurrence {
   text: string;
 }
 
+/** Lexique Strong d'un code, porté par l'endpoint de concordance (/bym/strong/:code).
+ *  La page détail d'un code tire toutes ses métadonnées de ce seul fetch — pas d'appel séparé
+ *  à /strong/:code. Tous les champs sont optionnels (l'entrée peut être absente du lexique). */
+export interface StrongLexicon {
+  lemma?: string;
+  /** Langue d'origine : "hebrew" | "greek". */
+  lang?: string;
+  translit?: string;
+  /** Phonétique (ex. "(theh'-os)"). */
+  phonetique?: string;
+  /** Origine étymologique. */
+  origine?: string;
+  /** Catégorie grammaticale (ex. "Nom masculin"). */
+  type?: string;
+  definition?: string;
+}
+
 /** Résultat paginé de la concordance d'un numéro Strong (endpoint /bym/strong/:code). */
 export interface StrongConcordance {
   code: string;
@@ -19,6 +36,6 @@ export interface StrongConcordance {
   total: number;
   page: number;
   size: number;
-  lexicon: { translit?: string; definition?: string };
+  lexicon: StrongLexicon;
   items: StrongOccurrence[];
 }
