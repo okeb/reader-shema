@@ -7,9 +7,10 @@
  * adaptatif clair/sombre (`prefers-color-scheme`), accent orange `#f76808`, logo apposé.
  *
  * Décision inversée vs spec 26 qui évitait `@react-email/*` par prudence (déps transitive fragiles) :
- * les déps sont désormais acceptées (spec 32 §8). Si une dep casse le build, retomber sur les
- * styles inline react.email (sans `<Tailwind>`) — les composants `@react-email/components` restent
- * utilisables sans `@react-email/tailwind`.
+ * les déps sont désormais acceptées (spec 32 §8). Le rendu se fait en **styles inline react.email**
+ * (pas de `<Tailwind>` — l’approche retenue est 100 % inline + un bloc `<style>` pour l’adaptatif,
+ * cf. `email-shell`), ce qui évite la dépendance `@react-email/tailwind`. DM Sans est chargé via
+ * `@font-face` (web-font variable) pour les gros titres ; le corps reste en stack système.
  *
  * **Contrat transport inchangé** : chaque fonction async renvoie une chaîne HTML passée à
  * `sendEmail({ to, subject, html })`. Les sujets et destinataires ne changent pas. Les `url`

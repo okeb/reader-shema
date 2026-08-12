@@ -1,6 +1,7 @@
-import { Text, Section } from '@react-email/components';
+import { Text } from '@react-email/components';
 import { EmailShell } from '@/lib/email/components/email-shell';
-import { EmailButton } from '@/lib/email/components/email-button';
+import { EmailCta } from '@/lib/email/components/email-cta';
+import { BODY_TEXT } from '@/lib/email/theme';
 
 /**
  * E-mail de réinitialisation de mot de passe (spec 32) — click →
@@ -12,16 +13,16 @@ export function ResetPasswordEmail({ url }: { url: string }) {
       title="Réinitialisez votre mot de passe"
       preview="Vous avez demandé à réinitialiser votre mot de passe ShemaProject."
     >
-      <Text className="text-fg" style={{ color: '#111111', fontSize: '14px', lineHeight: '1.5', margin: '0 0 16px' }}>
+      <Text className="e-fg" style={BODY_TEXT}>
         Bonjour,
         <br />
         <br />
-        Vous avez demandé à réinitialiser le mot de passe de votre compte ShemaProject. Ce lien est
-        à usage unique et expire rapidement.
+        Vous avez demandé à réinitialiser le mot de passe de votre compte ShemaProject. Ce lien
+        est à usage unique et expire rapidement.
       </Text>
-      <Section style={{ textAlign: 'center', margin: '8px 0 16px' }}>
-        <EmailButton href={url} label="Réinitialiser mon mot de passe" />
-      </Section>
+      <Text style={{ margin: '8px 0 0' }}>
+        <EmailCta href={url} label="Réinitialiser mon mot de passe" />
+      </Text>
     </EmailShell>
   );
 }

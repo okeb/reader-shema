@@ -1,6 +1,7 @@
-import { Text, Section } from '@react-email/components';
+import { Text } from '@react-email/components';
 import { EmailShell } from '@/lib/email/components/email-shell';
-import { EmailButton } from '@/lib/email/components/email-button';
+import { EmailCta } from '@/lib/email/components/email-cta';
+import { BODY_TEXT } from '@/lib/email/theme';
 
 /**
  * E-mail de vérification d'adresse (spec 32) — click → `/api/auth/verify-email?token=…`.
@@ -14,16 +15,16 @@ export function VerificationEmail({ url }: { url: string }) {
       title="Vérifiez votre e-mail"
       preview="Confirmez votre adresse e-mail pour activer votre compte ShemaProject."
     >
-      <Text className="text-fg" style={{ color: '#111111', fontSize: '14px', lineHeight: '1.5', margin: '0 0 16px' }}>
+      <Text className="e-fg" style={BODY_TEXT}>
         Bonjour,
         <br />
         <br />
-        Confirmez votre adresse e-mail pour activer votre compte ShemaProject. Le lien expire dans
-        1 heure.
+        Confirmez votre adresse e-mail pour activer votre compte ShemaProject. Le lien expire
+        dans 1 heure.
       </Text>
-      <Section style={{ textAlign: 'center', margin: '8px 0 16px' }}>
-        <EmailButton href={url} label="Vérifier mon e-mail" />
-      </Section>
+      <Text style={{ margin: '8px 0 0' }}>
+        <EmailCta href={url} label="Vérifier mon e-mail" />
+      </Text>
     </EmailShell>
   );
 }

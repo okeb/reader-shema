@@ -2,42 +2,57 @@ import {
   Html,
   Head,
   Preview,
-  Tailwind,
   Body,
   Container,
-  Section,
   Text,
   Hr,
 } from '@react-email/components';
-import emailTailwindConfig from '@/lib/email/tailwind.config';
+import { EMAIL } from '@/lib/email/theme';
 import { EmailLogo } from './email-logo';
 
 /**
  * Shell partagé des 5 e-mails transactionnels (spec 32 §5.2 / §5.5) — **adaptatif clair/sombre**.
  *
- * **Technique adaptative** (§5.5) : le **clair est la base inline** (couleurs posées en attributs
- * `style="…"` sur chaque cellule — lues par tous les clients, même ceux qui stripent `<style>`).
- * Le **sombre est une surcharge** via un bloc `<style>` en `<head>` posé par `DARK_STYLE` :
- * `@media (prefers-color-scheme: dark)` surcharge les classes adaptatives `.bg-body` / `.bg-card`
- * / `.text-fg` / `.text-muted` / `.border-card` / `.bg-code` / `.logo-*` avec `!important`. Les
- * classes sont posées **en plus** des styles inline (le inline gagne sans media query ; le
- * `!important` de la media query gagne quand elle s'applique).
+ * Reprise du modèle « Skin » (reset-password) : layout à plat, logo en haut à gauche, gros titre
+ * en **DM Sans**, corps en stack système, CTA lien-texte orange, footer séparé par une bordure.
+ * Le fond bordeaux du modèle est retiré → le mail pose le **fond du projet** (`EMAIL.bg`) en
+ * clair comme en sombre.
  *
- * On ne compte **pas** sur le `dark:` variant de Tailwind (la classe `.dark` parent n'existe pas
- * dans un mail). Outlook desktop (pas de `prefers-color-scheme`) et Gmail web (strippe `<style>`)
- * restent en thème clair — fallback acceptable et attendu (§8) : aucun client ne se retrouve avec
- * un mail illisible.
+ * **Technique adaptative** (§5.5) : le **clair est la base inline** (couleurs posées en attributs
+ * `style="…"` sur chaque élément — lues par tous les clients, même ceux qui stripent `<style>`).
+ * Le **sombre est une surcharge** via un bloc `<style>` en `<head>` : `@media (prefers-color-scheme:
+ * dark)` inverse les classes adaptatives `.e-*` et les `.logo-*` avec `!important`. Les `!important`
+ * gagnent quand la media query s’applique ; sans elle, l’inline clair reste lu partout.
+ *
+ * **Fix dark mode** : `<meta name="color-scheme" content="light dark">` — sans ce meta, Apple
+ * Mail / iOS ne basculent pas en sombre (cause racine du bug « reste clair » de l’itération
+ * précédente). `supported-color-schemes` couvre les clients plus anciens.
+ *
+ * Outlook desktop (pas de `prefers-color-scheme`) et Gmail web (strippe `<style>`) restent en
+ * thème clair — fallback acceptable et attendu (§8) : aucun client ne se retrouve illisible.
+ *
+ * DM Sans est une **web-font variable** (un seul woff2 couvre tous les weights) — `@font-face` +
+ * `mso-font-alt` : Apple Mail/iOS rendent la police ; Outlook utilise le fallback `mso-font-alt`
+ * (Arial) ; Gmail web/Android ignorent `@font-face` et tombent sur la font-family chain.
  */
 
+const FONT_FACE = `@font-face {
+  font-family: 'DM Sans';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  mso-font-alt: 'Arial';
+  src: url(https://fonts.gstatic.com/s/dmsans/v17/rP2Yp2ywxg089UriI5-g4vlH9VoD8Cmcqbu0-K6z9mXg.woff2) format('woff2');
+}`;
+
 const DARK_STYLE = `@media (prefers-color-scheme: dark) {
-  .bg-body { background: #0a0a0a !important; }
-  .bg-card { background: #1a1a1a !important; }
-  .text-fg { color: #ffffff !important; }
-  .text-muted { color: #a1a1aa !important; }
-  .border-card { border-color: #27272a !important; }
-  .bg-code { background: #1a1a1a !important; }
-  .logo-dark { display: inline !important; }
+  .e-body { background: #090909 !important; }
+  .e-fg { color: #d8d3c5 !important; }
+  .e-muted { color: #98a1ad !important; }
+  .e-border { border-color: #1f2937 !important; }
+  .e-code { background: #161616 !important; border-color: #1f2937 !important; }
   .logo-light { display: none !important; }
+  .logo-dark { display: inline !important; }
 }`;
 
 export function EmailShell({
@@ -52,72 +67,57 @@ export function EmailShell({
   return (
     <Html lang="fr">
       <Head>
-        <style dangerouslySetInnerHTML={{ __html: DARK_STYLE }} />
+        <meta name="color-scheme" content="light dark" />
+        <meta name="supported-color-schemes" content="light dark" />
+        <style dangerouslySetInnerHTML={{ __html: `${FONT_FACE}\n${DARK_STYLE}` }} />
       </Head>
       <Preview>{preview}</Preview>
-      <Tailwind config={emailTailwindConfig}>
-        <Body
-          className="bg-body"
-          // Base claire inline (lue par tous les clients, même ceux qui stripent `<style>`).
+      <Body
+        className="e-body"
+        style={{ margin: 0, background: EMAIL.bg, fontFamily: EMAIL.bodyFont, color: EMAIL.fg }}
+      >
+        <Container
           style={{
-            margin: 0,
-            background: '#f6f6f8',
-            fontFamily:
-              "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif",
-            color: '#111111',
+            maxWidth: '560px',
+            margin: '0 auto',
+            padding: '40px 24px 32px',
           }}
         >
-          <Container
-            className="bg-card border-card"
+          {/* Logo en haut à gauche (modèle Skin). */}
+          <EmailLogo />
+
+          {/* Gros titre — DM Sans, weight 600. */}
+          <Text
+            className="e-fg"
             style={{
-              maxWidth: '465px',
-              margin: '32px auto',
-              background: '#ffffff',
-              border: '1px solid #e8e8ee',
-              borderRadius: '12px',
-              padding: '32px 24px',
+              fontFamily: EMAIL.titleFont,
+              color: EMAIL.fg,
+              fontSize: '26px',
+              lineHeight: '1.25',
+              fontWeight: 600,
+              textAlign: 'left',
+              margin: '28px 0 20px',
             }}
           >
-            {/* Logo centré */}
-            <Section style={{ textAlign: 'center', marginTop: '8px', marginBottom: '24px' }}>
-              <EmailLogo />
-            </Section>
+            {title}
+          </Text>
 
-            {/* Titre — 2xl, centré, font-normal */}
-            <Text
-              className="text-fg"
-              style={{
-                color: '#111111',
-                fontSize: '24px',
-                fontWeight: 400,
-                textAlign: 'center',
-                margin: '0 0 16px',
-              }}
-            >
-              {title}
-            </Text>
+          {/* Corps — les templates fournissent leurs propres <Text> / <EmailCta>. */}
+          {children}
 
-            {/* Corps — les templates fournissent leurs propres <Text> / <EmailButton>
-                (texte 14px, aligné à gauche). Les classes `.text-fg` sont posées par les templates. */}
-            {children}
+          <Hr className="e-border" style={{ borderColor: EMAIL.border, margin: '32px 0 16px' }} />
 
-            <Hr
-              className="border-card"
-              style={{ borderColor: '#e8e8ee', margin: '24px 0 16px' }}
-            />
-
-            {/* Footer */}
-            <Text
-              className="text-muted"
-              style={{ color: '#888888', fontSize: '12px', lineHeight: '1.5', margin: '0' }}
-            >
-              ShemaProject — Lecture de la Bible.
-              <br />
-              Si vous n&apos;êtes pas à l&apos;origine de cet e-mail, ignorez-le sans suite.
-            </Text>
-          </Container>
-        </Body>
-      </Tailwind>
+          {/* Footer — tagline + avis d’ignore. */}
+          <Text
+            className="e-muted"
+            style={{ color: EMAIL.muted, fontSize: '12px', lineHeight: '1.5', margin: '0' }}
+          >
+            ShemaProject — Lecture de la Bible.
+            <br />
+            Si vous n&apos;êtes pas à l&apos;origine de cet e-mail, ignorez-le sans suite.
+          </Text>
+        </Container>
+      </Body>
     </Html>
   );
 }
