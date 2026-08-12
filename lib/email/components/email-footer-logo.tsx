@@ -26,16 +26,14 @@ export function EmailFooterLogo() {
         alt="ShemaProject reader logo"
         width="65"
         height="30"
-        className="logo-light dark:hidden"
-        style={{ display: 'inline', margin: '0' }}
+        className="logo-light dark:hidden margin-0"
       />
       <Img
         src={DARK_LOGO}
         alt="Shema reader logo"
         width="65"
         height="30"
-        className="logo-dark hidden dark:inline-block"
-        style={{ display: 'none', margin: '0' }}
+        className="logo-dark hidden dark:inline-block margin-0"
       />
     </>
   );

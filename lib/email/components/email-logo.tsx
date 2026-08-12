@@ -28,7 +28,6 @@ export function EmailLogo() {
         width="48"
         height="48"
         className="logo-light dark:hidden"
-        style={{ display: 'inline', margin: '0' }}
       />
       <Img
         src={DARK_LOGO}
@@ -36,7 +35,6 @@ export function EmailLogo() {
         width="48"
         height="48"
         className="logo-dark hidden dark:inline-block"
-        style={{ display: 'none', margin: '0' }}
       />
     </>
   );
