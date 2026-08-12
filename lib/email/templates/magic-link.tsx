@@ -13,7 +13,7 @@ export function MagicLinkEmail({ email, url }: { email: string; url: string }) {
       title="Votre lien de connexion"
       preview="Cliquez pour vous connecter à ShemaProject."
     >
-      <Text className="e-fg" style={BODY_TEXT}>
+      <Text className={BODY_TEXT}>
         Bonjour,
         <br />
         <br />

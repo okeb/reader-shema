@@ -13,7 +13,7 @@ export function ResetPasswordEmail({ url }: { url: string }) {
       title="Réinitialisez votre mot de passe"
       preview="Vous avez demandé à réinitialiser votre mot de passe ShemaProject."
     >
-      <Text className="e-fg" style={BODY_TEXT}>
+      <Text className={BODY_TEXT}>
         Bonjour,
         <br />
         <br />
