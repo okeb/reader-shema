@@ -56,7 +56,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     await sendEmail({
       to: email,
       subject: 'Votre clé de récupération — ShemaProject',
-      html: recoveryKeyEmailHtml(body.recoveryKey),
+      html: await recoveryKeyEmailHtml(body.recoveryKey),
     });
     lastSent.set(guard.userId, now);
     return new NextResponse(null, { status: 204 });
