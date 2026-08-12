@@ -11,6 +11,12 @@ divulguée. La cohérence est vérifiée par `pnpm changelog:check`.
 
 - *Rien pour le moment.*
 
+## [0.3.1] : 2026-08-12
+
+### Corrigé
+
+- **Page « Nouveautés »** : la page ne montre plus que les changements visibles par l'utilisateur. Elle n'affichait jusqu'ici des détails d'implémentation et présentait à tort une refonte « en cours » alors qu'aucune évolution n'était engagée ; le bandeau trompeur disparaît quand aucune nouveauté n'est en cours.
+
 ## [0.3.0] : 2026-08-12
 
 ### Ajouté
