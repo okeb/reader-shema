@@ -79,7 +79,7 @@ export function EmailShell({
             <EmailLogo />
 
             {/* Gros titre — DM Sans, weight 700. */}
-            <Text className="font-title text-ink dm-fg text-[28px] leading-[1.25] tracking-[-0.05em] font-bold text-left mt-7 mb-5 mx-0">
+            <Text className="font-title text-ink dm-fg text-[38px] leading-[1.25] tracking-[-0.05em] font-bold text-left mt-7 mb-5 mx-0">
               {title}
             </Text>
 
@@ -143,25 +143,17 @@ export function EmailShell({
               {/*    </Column>*/}
               {/*  </Row>*/}
               {/*</Section>*/}
-            <Section className="text-center">
+            <Section className="text-center border border-t-orange-500/5">
               <table className="w-full">
                 <tr className="w-full">
                   <td align="center">
-                    <Img
-                      alt="React Email logo"
-                      height="42"
-                      src="https://react.email/static/logo-without-background.png"
-                      width="42"
-                    />
+                    <EmailFooterLogo />
                   </td>
                 </tr>
                 <tr className="w-full">
                   <td align="center">
-                    <Text className="my-[8px] font-semibold text-[16px] text-black leading-[24px]">
+                    <Text className="my-[8px] font-bold text-[16px] text-black leading-[24px] tracking-tighter">
                       The Shema Project
-                    </Text>
-                    <Text className="mt-[4px] mb-0 text-[16px] text-gray-500 leading-[24px]">
-                      Shema different
                     </Text>
                   </td>
                 </tr>
@@ -172,9 +164,9 @@ export function EmailShell({
                         <Link href="#">
                           <Img
                             alt="Facebook"
-                            height="36"
-                            src="https://api.iconify.design/hugeicons:facebook-01.svg?color=%23918f88"
-                            width="36"
+                            height="19"
+                            src="https://api.iconify.design/hugeicons:facebook-01.svg?color=%236b7280"
+                            width="19"
                           />
                         </Link>
                       </Column>
@@ -184,9 +176,9 @@ export function EmailShell({
 
                           <Img
                             alt="Instagram"
-                            height="36"
-                            src="https://api.iconify.design/hugeicons:instagram.svg?color=%23918f88"
-                            width="36"
+                            height="19"
+                            src="https://api.iconify.design/hugeicons:instagram.svg?color=%236b7280"
+                            width="19"
                           />
                         </Link>
                       </Column>
@@ -199,7 +191,7 @@ export function EmailShell({
                       Paris, FRANCE
                     </Text>
                     <Text className="mt-[4px] mb-0 font-semibold text-[13px] text-black leading-[13px]">
-                      mail@example.com +123456789
+                      hello@shemaproject.org
                     </Text>
                   </td>
                 </tr>

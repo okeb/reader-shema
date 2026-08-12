@@ -15,9 +15,12 @@ export function EmailCta({ href, label }: { href: string; label: string }) {
     <>
       <Button
         href={href}
-        className="font-title w-full mx-2 box-border p-3 font-semibold rounded-lg text-center bg-accent text-white no-underline rounded-2xl"
+        style={{
+          borderRadius: '10px',
+        }}
+        className="font-title w-full mx-2 box-border p-3 font-semibold text-center bg-accent text-white no-underline rounded-2xl"
       >
-        {label} →
+        {label}
       </Button>
       <Text className="text-muted dm-muted text-[12px] leading-[1.5] mt-3.5">
         Si le lien ne s&apos;affiche pas, copiez-collez celui-ci :
