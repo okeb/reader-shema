@@ -96,10 +96,12 @@ export function EmailShell({
                 </tr>
                 <tr className="w-full">
                   <td align="center">
-                    <Text className="mt-[4px] mb-[3px] font-bold text-[16px] font-serif text-black leading-[24px] tracking-tighter">
+                    <Text className="mt-[4px] mb-[3px] font-bold text-[16px] font-serif text-black leading-[18px] tracking-tighter">
                       The Shema Project
                     </Text>
                   </td>
+                </tr>
+                <tr className="w-full">
                   <td align="center">
                     <Text className="mt-[4px] mb-[3px] font-semibold text-[10px] font-serif text-black leading-[10px] tracking-tighter">
                       Rendre la Parole du Mashiah Yehoshoua plus accessible pour toutes et pour tous, tout simplement et gratuitement.
