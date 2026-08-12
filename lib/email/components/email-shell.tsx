@@ -79,7 +79,7 @@ export function EmailShell({
             <EmailLogo />
 
             {/* Gros titre — DM Sans, weight 700. */}
-            <Text className="font-title text-ink dm-fg text-[38px] leading-[1.1] tracking-[-0.05em] font-bold text-left mt-3 mb-5 mx-0">
+            <Text className="font-title text-ink dm-fg text-[38px] leading-[0.9] tracking-[-0.05em] font-bold text-left mt-3 mb-5 mx-0">
               {title}
             </Text>
 
@@ -87,63 +87,7 @@ export function EmailShell({
             {children}
 
             {/* Footer — logo, identité, social, contact. Fond gris clair / sombre. */}
-
-              {/*<Section>*/}
-              {/*  <Row>*/}
-              {/*    <Column colSpan={4}>*/}
-              {/*      <EmailFooterLogo />*/}
-              {/*      <Text className="text-ink dm-fg mt-2 mb-2 text-base leading-6 font-semibold">*/}
-              {/*        Shema Project*/}
-              {/*      </Text>*/}
-              {/*      <Text className="text-muted dm-muted mt-1 mb-0 text-base leading-6">*/}
-              {/*        Shema different*/}
-              {/*      </Text>*/}
-              {/*    </Column>*/}
-              {/*    <Column*/}
-              {/*      align="left"*/}
-              {/*      style={{ display: 'table-cell', verticalAlign: 'bottom' }}*/}
-              {/*    >*/}
-              {/*      <Row*/}
-              {/*        style={{*/}
-              {/*          display: 'table-cell',*/}
-              {/*          height: 44,*/}
-              {/*          width: 56,*/}
-              {/*          verticalAlign: 'bottom',*/}
-              {/*        }}*/}
-              {/*      >*/}
-              {/*        <Column style={{ paddingRight: 8 }}>*/}
-              {/*          <Link href="#">*/}
-              {/*            <Img*/}
-              {/*              alt="Facebook"*/}
-              {/*              height="36"*/}
-              {/*              src="https://react.email/static/facebook-logo.png"*/}
-              {/*              width="36"*/}
-              {/*            />*/}
-              {/*          </Link>*/}
-              {/*        </Column>*/}
-              {/*        <Column>*/}
-              {/*          <Link href="#">*/}
-              {/*            <Img*/}
-              {/*              alt="Instagram"*/}
-              {/*              height="36"*/}
-              {/*              src="https://react.email/static/instagram-logo.png"*/}
-              {/*              width="36"*/}
-              {/*            />*/}
-              {/*          </Link>*/}
-              {/*        </Column>*/}
-              {/*      </Row>*/}
-              {/*      <Row>*/}
-              {/*        <Text className="text-muted dm-muted mt-2 mb-2 text-base leading-6 font-semibold">*/}
-              {/*          Paris, FRANCE*/}
-              {/*        </Text>*/}
-              {/*        <Text className="text-muted dm-muted mt-1 mb-0 text-base leading-6 font-semibold">*/}
-              {/*          hello@shemaproject.org*/}
-              {/*        </Text>*/}
-              {/*      </Row>*/}
-              {/*    </Column>*/}
-              {/*  </Row>*/}
-              {/*</Section>*/}
-            <Section className="text-center border-t border-t-gray-300 dark:border-t-gray-800">
+            <Section className="text-center border-t border-t-gray-300 dark:border-t-gray-800 pt-7 mt-12">
               <table className="w-full">
                 <tr className="w-full mt-7">
                   <td align="center">
@@ -157,7 +101,7 @@ export function EmailShell({
                     </Text>
                   </td>
                   <td align="center">
-                    <Text className=" w-2/3 mt-[4px] mb-[3px] font-bold text-[10px] font-serif text-black leading-[24px] tracking-tighter">
+                    <Text className="mt-[4px] mb-[3px] font-semibold text-[10px] font-serif text-black leading-[10px] tracking-tighter">
                       Rendre la Parole du Mashiah Yehoshoua plus accessible pour toutes et pour tous, tout simplement et gratuitement.
                     </Text>
                   </td>
@@ -176,7 +120,7 @@ export function EmailShell({
                         </Link>
                       </Column>
 
-                      <Column>
+                      <Column className="pr-[8px]">
                         <Link href="https://t.me/qZfwYAG7VSszMjgO">
                           <Img
                             alt="Telegram"

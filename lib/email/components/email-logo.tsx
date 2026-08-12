@@ -32,7 +32,7 @@ export function EmailLogo() {
       />
       <Img
         src={DARK_LOGO}
-        alt=""
+        alt="ShemaProject"
         width="48"
         height="48"
         className="logo-dark hidden dark:inline-block"
