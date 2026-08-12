@@ -79,7 +79,7 @@ export function EmailShell({
             <EmailLogo />
 
             {/* Gros titre — DM Sans, weight 700. */}
-            <Text className="font-title text-ink dm-fg text-[38px] leading-[1.25] tracking-[-0.05em] font-bold text-left mt-7 mb-5 mx-0">
+            <Text className="font-title text-ink dm-fg text-[38px] leading-[1.1] tracking-[-0.05em] font-bold text-left mt-3 mb-5 mx-0">
               {title}
             </Text>
 
@@ -143,17 +143,22 @@ export function EmailShell({
               {/*    </Column>*/}
               {/*  </Row>*/}
               {/*</Section>*/}
-            <Section className="text-center border border-t-orange-500/5">
+            <Section className="text-center border-t border-t-gray-300 dark:border-t-gray-800">
               <table className="w-full">
-                <tr className="w-full">
+                <tr className="w-full mt-7">
                   <td align="center">
                     <EmailFooterLogo />
                   </td>
                 </tr>
                 <tr className="w-full">
                   <td align="center">
-                    <Text className="my-[8px] font-bold text-[16px] text-black leading-[24px] tracking-tighter">
+                    <Text className="mt-[4px] mb-[3px] font-bold text-[16px] font-serif text-black leading-[24px] tracking-tighter">
                       The Shema Project
+                    </Text>
+                  </td>
+                  <td align="center">
+                    <Text className=" w-2/3 mt-[4px] mb-[3px] font-bold text-[10px] font-serif text-black leading-[24px] tracking-tighter">
+                      Rendre la Parole du Mashiah Yehoshoua plus accessible pour toutes et pour tous, tout simplement et gratuitement.
                     </Text>
                   </td>
                 </tr>
@@ -165,7 +170,18 @@ export function EmailShell({
                           <Img
                             alt="Facebook"
                             height="19"
-                            src="https://api.iconify.design/hugeicons:facebook-01.svg?color=%236b7280"
+                            src="https://api.iconify.design/mage:facebook-circle.svg?color=%236b7280"
+                            width="19"
+                          />
+                        </Link>
+                      </Column>
+
+                      <Column>
+                        <Link href="https://t.me/qZfwYAG7VSszMjgO">
+                          <Img
+                            alt="Telegram"
+                            height="19"
+                            src="https://api.iconify.design/mage:telegram.svg?color=%236b7280"
                             width="19"
                           />
                         </Link>
@@ -173,11 +189,10 @@ export function EmailShell({
 
                       <Column>
                         <Link href="#">
-
                           <Img
                             alt="Instagram"
                             height="19"
-                            src="https://api.iconify.design/hugeicons:instagram.svg?color=%236b7280"
+                            src="https://api.iconify.design/mage:tiktok.svg?color=%236b7280"
                             width="19"
                           />
                         </Link>
@@ -187,10 +202,10 @@ export function EmailShell({
                 </tr>
                 <tr>
                   <td align="center">
-                    <Text className="my-[8px] font-semibold text-[13px] text-black leading-[13px]">
+                    <Text className="mt-[8px] text-[12px] text-black leading-[10px]">
                       Paris, FRANCE
                     </Text>
-                    <Text className="mt-[4px] mb-0 font-semibold text-[13px] text-black leading-[13px]">
+                    <Text className="mb-0 text-[12px] text-black leading-[10px]">
                       hello@shemaproject.org
                     </Text>
                   </td>

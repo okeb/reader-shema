@@ -23,18 +23,18 @@ export function EmailFooterLogo() {
     <>
       <Img
         src={LIGHT_LOGO}
-        alt="ShemaProject"
-        width="47"
-        height="21"
-        className="logo-light"
+        alt="ShemaProject reader logo"
+        width="65"
+        height="30"
+        className="logo-light dark:hidden"
         style={{ display: 'inline', margin: '0' }}
       />
       <Img
         src={DARK_LOGO}
-        alt=""
-        width="47"
-        height="21"
-        className="logo-dark"
+        alt="Shema reader logo"
+        width="65"
+        height="30"
+        className="logo-dark hidden dark:inline-block"
         style={{ display: 'none', margin: '0' }}
       />
     </>
