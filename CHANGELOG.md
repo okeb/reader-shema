@@ -6,6 +6,10 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/).
 
 ## [Unreleased]
 
+- *Rien pour le moment.*
+
+## [0.3.0] : 2026-08-12
+
 ### Ajouté
 
 - **Icône note dans la bulle de sélection (spec 30)** : l'action **note** est promue au premier niveau de la bulle d'action (entre Strong et `⋯`) au lieu d'être enfouie dans le sous-menu « plus d'actions ». Un clic ouvre directement l'éditeur de note de la sélection. L'icône passe à `note-edit` accentée quand une note existe déjà. Le menu `⋯` ne contient plus que Signet + Surligner.
