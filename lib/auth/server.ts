@@ -8,6 +8,7 @@ import {
   verificationEmailHtml,
   resetPasswordEmailHtml,
   magicLinkEmailHtml,
+  welcomeEmailHtml,
 } from '@/lib/email/templates';
 
 /**
@@ -77,7 +78,7 @@ export const auth = configured
           await sendEmail({
             to: user.email,
             subject: 'Réinitialisation de votre mot de passe — ShemaProject',
-            html: resetPasswordEmailHtml(url),
+            html: await resetPasswordEmailHtml(url),
           });
         },
       },
@@ -86,7 +87,7 @@ export const auth = configured
           await sendEmail({
             to: user.email,
             subject: 'Vérifiez votre e-mail — ShemaProject',
-            html: verificationEmailHtml(url),
+            html: await verificationEmailHtml(url),
           });
         },
         autoSignInAfterVerification: true,
@@ -100,10 +101,31 @@ export const auth = configured
             await sendEmail({
               to: email,
               subject: 'Votre lien de connexion — ShemaProject',
-              html: magicLinkEmailHtml(email, url),
+              html: await magicLinkEmailHtml(email, url),
             });
           },
         }),
       ],
+      // Mail de bienvenue post-inscription (spec 32) — déclenché une fois à la création du user.
+      // API vérifiée contre better-auth@1.4.18 : `databaseHooks.user.create.after(user, ctx)`.
+      // Idempotent par construction (le hook ne se déclenche qu'une fois par user). `name` peut
+      // être absent (compte magic-link sans profil) → chaîne vide. Le no-op transport dev
+      // (`RESEND_API_KEY` absent) préserve le flux sans casser l'inscription.
+      databaseHooks: {
+        user: {
+          create: {
+            after: async (user) => {
+              await sendEmail({
+                to: user.email,
+                subject: 'Bienvenue sur ShemaProject — Lecture de la Bible',
+                html: await welcomeEmailHtml(
+                  user.name ?? '',
+                  env.NEXT_PUBLIC_APP_URL ?? 'https://reader.shemaproject.org',
+                ),
+              });
+            },
+          },
+        },
+      },
     })
   : null;
