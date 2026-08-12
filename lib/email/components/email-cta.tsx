@@ -22,7 +22,7 @@ export function EmailCta({ href, label }: { href: string; label: string }) {
       >
         {label}
       </Button>
-      <Text className="text-muted dm-muted text-[12px] leading-[1.5] mt-3.5">
+      <Text className="text-muted dm-muted text-[12px] leading-[1.5] mt-7 mb-3.5">
         Si le lien ne s&apos;affiche pas, copiez-collez celui-ci :
         <br />
         <Link href={href} className="text-accent font-mono break-all">

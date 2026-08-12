@@ -9,6 +9,7 @@ import {
   Row,
   Column,
   Img,
+  Hr,
   Link,
 } from '@react-email/components';
 import { Tailwind } from '@react-email/tailwind';
@@ -87,7 +88,8 @@ export function EmailShell({
             {children}
 
             {/* Footer — logo, identité, social, contact. Fond gris clair / sombre. */}
-            <Section className="text-center border-t border-t-gray-300 dark:border-t-gray-800 pt-7 mt-12">
+            <Hr className="bg-[#6b7280] text-[#6b7280] px-8 w-full"/>
+            <Section className="text-center border-t pt-7 mt-12">
               <table className="w-full">
                 <tr className="w-full mt-7">
                   <td align="center">
@@ -101,9 +103,9 @@ export function EmailShell({
                     </Text>
                   </td>
                 </tr>
-                <tr className="w-full">
+                <tr className="w-full mb-[10px]">
                   <td align="center">
-                    <Text className="mt-[4px] mb-[3px] font-semibold text-[10px] font-serif text-black leading-[10px] tracking-tighter">
+                    <Text className="w-1/2 mt-[4px] font-semibold text-[10px] font-serif text-black leading-[10px] tracking-tighter">
                       Rendre la Parole du Mashiah Yehoshoua plus accessible pour toutes et pour tous, tout simplement et gratuitement.
                     </Text>
                   </td>
@@ -147,11 +149,11 @@ export function EmailShell({
                   </td>
                 </tr>
                 <tr>
-                  <td align="center">
-                    <Text className="mt-[8px] text-[12px] text-black leading-[10px]">
+                  <td align="center" className="mt-[10px]">
+                    <Text className="text-[12px] mb-0 text-black leading-[10px]">
                       Paris, FRANCE
                     </Text>
-                    <Text className="mb-0 text-[12px] text-black leading-[10px]">
+                    <Text className="mt-2 mb-7 text-[12px] text-black leading-[10px]">
                       hello@shemaproject.org
                     </Text>
                   </td>
