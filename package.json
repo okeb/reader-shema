@@ -1,6 +1,6 @@
 {
   "name": "reader-shema",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "private": true,
   "type": "module",
   "author": "Oliver KEB <oliver.keb@icloud.com>",
@@ -12,7 +12,9 @@
     "start": "next start",
     "lint": "next lint",
     "prettier": "prettier --write .",
-    "preview": "next build && next start"
+    "preview": "next build && next start",
+    "arch:check": "node .claude/skills/arch-check/check-arch.mjs",
+    "changelog:check": "node .claude/skills/changelog-check/check-changelog.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

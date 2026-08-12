@@ -66,7 +66,7 @@ export function ReaderDock({
       className={cn(
         'fixed bottom-5 left-1/2 z-30 flex max-w-[calc(100vw-1.5rem)] -translate-x-1/2 items-center gap-1 rounded-full px-1.5 py-1',
         GLASS_PILL,
-        'border border-foreground/5 shadow-lg',
+        'border border-foreground/5',
         clusterMode ? 'overflow-visible' : 'overflow-x-auto',
       )}
     >

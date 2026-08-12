@@ -1,0 +1,7 @@
+[
+  { "kind": "version", "match": "0.1.4", "reason": "historique livré avant la gouvernance SemVer — features sous bump patch" },
+  { "kind": "version", "match": "0.1.5", "reason": "historique livré avant la gouvernance SemVer — features sous bump patch" },
+  { "kind": "version", "match": "0.1.6", "reason": "historique livré avant la gouvernance SemVer — features sous bump patch" },
+  { "kind": "version", "match": "0.1.11", "reason": "historique livré avant la gouvernance SemVer — features sous bump patch" },
+  { "kind": "version", "match": "0.1.1", "reason": "historique livré avant la gouvernance SemVer — features sous bump patch" }
+]

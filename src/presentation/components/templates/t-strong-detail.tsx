@@ -43,6 +43,22 @@ export function TStrongDetail({ code }: { code: string }) {
     router.push(`/${locale}/read?livre=${occ.bookId}&chap=${occ.chapter}&v=${occ.verse}`);
   };
 
+  // « Retour à la lecture » : cible le passage mémorisé avant de quitter le lecteur (`bookId`/
+  // `chapter` enregistrés par `navigateStrong` du lecteur). Lecture non-consommante du store — seule
+  // la consommation au montage du lecteur efface le resume. `&v=` dérive du verset du token actif
+  // (ou du 1er sélectionné), parsé sur le suffixe `:n` du verseId (`bookId:chapter:n`); omis si non
+  // numérique (mode refs, vieille entrée). Repli `/read` si resume absent ou incomplet. Spec 31.
+  const resume = useStrongResume.getState().resume;
+  let backHref: '/read' | { pathname: '/read'; query: { livre: string; chap: number; v?: number } } = '/read';
+  if (resume?.bookId && resume?.chapter != null) {
+    const verseId = resume.activeToken?.verseId ?? resume.selectedIds[0];
+    const suffix = verseId?.split(':').pop();
+    const vNum = suffix ? parseInt(suffix, 10) : NaN;
+    backHref = Number.isFinite(vNum)
+      ? { pathname: '/read', query: { livre: resume.bookId, chap: resume.chapter, v: vNum } }
+      : { pathname: '/read', query: { livre: resume.bookId, chap: resume.chapter } };
+  }
+
   const hasLexicon = Boolean(lexicon && (lexicon.translit || lexicon.lemma || lexicon.definition));
   const isEmpty = status === 'loaded' && total === 0 && !hasLexicon;
 
@@ -50,7 +66,7 @@ export function TStrongDetail({ code }: { code: string }) {
     <div className="min-h-screen bg-background text-foreground">
       <header className="mx-auto max-w-[68ch] px-4 pt-10">
         <Link
-          href="/read"
+          href={backHref}
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground underline-offset-4 transition-colors hover:text-primary hover:underline"
         >
           <Icon icon="hugeicons:arrow-left-01" className="h-4 w-4" />
