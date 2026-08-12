@@ -32,7 +32,8 @@ export default async function ConfidentialitePage({ params }: Props) {
       <ProseSection title="Données stockées sur votre appareil">
         <p>
           Vos réglages et contenus personnels sont enregistrés dans le stockage local
-          (<code>localStorage</code>) de votre navigateur. Sans compte, ils n&apos;en sortent
+          (<code>localStorage</code> et, pour la clé de déverrouillage persistée,{' '}
+          <code>IndexedDB</code>) de votre navigateur. Sans compte, ils n&apos;en sortent
           jamais. Avec un compte (facultatif), les données marquées <em>(sync)</em> sont
           chiffrées bout-en-bout sur votre appareil puis synchronisées sous forme de blobs
           opaques (voir « Compte &amp; synchronisation ») :
@@ -62,12 +63,31 @@ export default async function ConfidentialitePage({ params }: Props) {
           ouvrez les requêtes réseau dans DevTools, vous ne verrez que du chiffré.
         </p>
         <p>
-          <strong>Clé de récupération.</strong> Elle est générée localement et affichée{' '}
-          <strong>une seule fois</strong> à la création du compte. Elle reste{' '}
-          <strong>purement sur vos appareils</strong> : nous ne la stockons jamais. Elle est
-          nécessaire pour déchiffrer vos données sur un nouvel appareil.{' '}
-          <strong>Si vous la perdez, vos données synchronisées sont irrécupérables</strong> —
-          nous ne pouvons pas les réinitialiser. Notez-la hors ligne, sans la perdre.
+          <strong>Déverrouillage par mot de passe (routine).</strong> Au quotidien, vous
+          déverrouillez votre synchronisation avec votre <strong>mot de passe</strong> : une
+          clé de chiffrement (DEK) est wrappée par une clé dérivée de votre mot de passe (et
+          conservée sur le serveur dans une enveloppe opaque). Le serveur ne voit jamais votre
+          mot de passe ni la DEK.
+        </p>
+        <p>
+          <strong>Clé de récupération (secours d&apos;urgence).</strong> Une clé de récupération
+          est générée localement à la création du compte, <strong>affichée une fois</strong> à
+          l&apos;écran et <strong>envoyée par e-mail</strong> à l&apos;adresse du compte (elle
+          transite donc fugacement par notre prestataire e-mail, mais n&apos;est jamais
+          persistée côté serveur). Elle sert à retrouver vos données si vous perdez votre mot de
+          passe, et au déverrouillage routine des comptes sans mot de passe (lien magique).{' '}
+          <strong>Si vous perdez cette clé, vos données synchronisées sont irrécupérables</strong>{' '}
+          — nous ne pouvons pas les réinitialiser. Conservez-la en lieu sûr.
+        </p>
+        <p>
+          <strong>Se souvenir de cet appareil (30 jours).</strong> À l&apos;ouverture de la
+          modale, vous pouvez cocher « se souvenir de cet appareil » : la clé de déverrouillage
+          (DEK) est alors persistée sur cet appareil dans <code>IndexedDB</code> sous la forme
+          d&apos;un handle crypto <strong>non-extractable</strong> (aucun octet brut sur disque),
+          avec une expiration de 30 jours. Au rechargement, vos données se déverrouillent alors
+          sans redemander votre mot de passe. Quiconque accède à cet appareil pendant cette
+          fenêtre peut utiliser la sync ; c&apos;est un compromis friction/sécurité assumé et
+          opt-in. Se déconnecter ou supprimer le compte oublie cette clé.
         </p>
         <p>
           <strong>Hébergement.</strong> Les blobs chiffrés sont stockés sur {SYNC_HOSTING.provider}{' '}
@@ -92,9 +112,9 @@ export default async function ConfidentialitePage({ params }: Props) {
         <p>
           <strong>Mot de passe oublié ≠ accès aux données.</strong> Réinitialiser votre mot de
           passe restaure l&apos;accès à votre <em>compte</em> (connexion), pas à vos{' '}
-          <em>données</em> : sur un nouvel appareil, la clé de récupération reste nécessaire pour
-          déchiffrer vos blobs. La connexion au seul mot de passe — sans clé de récupération — est
-          un raffinement à venir.
+          <em>données</em> : la clé de récupération reste le filet pour déchiffrer vos blobs.
+          Après l&apos;avoir déverrouillée via la clé de récupération, vous pouvez re-lier votre
+          nouveau mot de passe pour retrouver le déverrouillage routine.
         </p>
         <p>
           <strong>Lecture anonyme préservée.</strong> Le compte ne ferme jamais le lecteur :

@@ -16,6 +16,7 @@ import {
 import { useReaderPreferences } from '@/src/presentation/stores/reader-preferences.store';
 import { useActiveVersion } from '@/src/presentation/stores/active-version.store';
 import { useReadingPosition } from '@/src/presentation/stores/reading-position.store';
+import { useStrongResume } from '@/src/presentation/stores/strong-resume.store';
 import { useNavigationHistory } from '@/src/presentation/stores/navigation-history.store';
 import { useFavorites } from '@/src/presentation/stores/favorites.store';
 import { useBookmarks } from '@/src/presentation/stores/bookmarks.store';
@@ -110,6 +111,8 @@ export function TReader({
   const [infoOpen, setInfoOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [strongsOpen, setStrongsOpen] = useState(false);
+  // Token Strong à réactiver au montage (reprise après retour d'une fiche /strong/[code]). Spec 29.
+  const [resumeActiveToken, setResumeActiveToken] = useState<{ verseId: string; strongCode: string } | null>(null);
   const [activeCardId, setActiveCardId] = useState<string | null>(null);
   // Renvois d'un verset source ouverts en pop (mode read). Null = pop fermé.
   const [refsTarget, setRefsTarget] = useState<{ verse: number; refs: CrossRef[] } | null>(null);
@@ -136,6 +139,7 @@ export function TReader({
   const highlightRef = useRef<HTMLElement | null>(null);
   const appliedVersionRef = useRef(false);
   const resumedRef = useRef(false);
+  const strongResumeRef = useRef(false);
   const bookmarksOpenedRef = useRef(false);
 
   // --- Navigation ------------------------------------------------------------- @nolint
@@ -375,6 +379,24 @@ export function TReader({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openBookmarksOnMount]);
 
+  // Reprise Strong : au retour d'une fiche /strong/[code] (bouton retour), restaure la sélection,
+  // rouvre le panneau Strong et réactive le token mémorisé avant la navigation. One-shot, consomme
+  // le contexte du store (sessionStorage). L'effet de vidage-sélection au changement de passage
+  // tourne avant celui-ci (no-op au montage) → la sélection restaurée n'est pas écrasée. Spec 29.
+  useEffect(() => {
+    if (strongResumeRef.current) return;
+    const resume = useStrongResume.getState().consume();
+    if (!resume || resume.selectedIds.length === 0) {
+      strongResumeRef.current = true;
+      return;
+    }
+    strongResumeRef.current = true;
+    selection.set(resume.selectedIds);
+    setResumeActiveToken(resume.activeToken);
+    setStrongsOpen(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // --- Raccourcis clavier ----------------------------------------------------- @nolint
 
   const openFavorites = useCallback(() => {
@@ -475,6 +497,20 @@ export function TReader({
       if (coarse) closeConcordance();
     },
     [router, locale, coarse, closeConcordance],
+  );
+
+  // Navigue vers la fiche détail d'un code Strong (depuis une référence d'`origine` dans le panneau
+  // Strong). `push` (pas `replace`) pour que le bouton retour revienne au lecteur. Avant de quitter,
+  // mémorise la sélection + le token actif dans le store de reprise (consommé au remontage). Spec 29.
+  const navigateStrong = useCallback(
+    (code: string, source?: { verseId: string; strongCode?: string }) => {
+      useStrongResume.getState().setResume({
+        selectedIds: [...selection.selectedIds],
+        activeToken: source?.strongCode ? { verseId: source.verseId, strongCode: source.strongCode } : null,
+      });
+      router.push(`/${locale}/strong/${code}`);
+    },
+    [router, locale, selection.selectedIds],
   );
 
   // --- Quiz (Phase 6) --------------------------------------------------------- @nolint
@@ -810,6 +846,8 @@ export function TReader({
         version={primary}
         onVersion={(id) => setPrimary(id)}
         onSeeOccurrences={openConcordance}
+        onNavigateStrong={navigateStrong}
+        initialActiveStrong={resumeActiveToken ?? undefined}
         covered={concordance != null}
         onClose={() => setStrongsOpen(false)}
       />

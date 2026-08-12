@@ -5,6 +5,7 @@ import { useReadingPosition } from '@/src/presentation/stores/reading-position.s
 import { useBookmarks } from '@/src/presentation/stores/bookmarks.store';
 import { useAnnotations } from '@/src/presentation/stores/annotations.store';
 import { useReaderPreferences } from '@/src/presentation/stores/reader-preferences.store';
+import { useNavigationHistory } from '@/src/presentation/stores/navigation-history.store';
 import { notifyLocalChange } from './sync-engine';
 
 /**
@@ -63,12 +64,22 @@ export function attachSyncSubscribers(): () => void {
     }
   });
 
+  // Historique de navigation — spec 22 §4.5. Kind « ensemble » : le pull FUSIONNE au lieu
+  // de remplacer (historyAdapter), donc on enfile à chaque mutation locale pour republier
+  // l'ensemble complet. L'écho au pull est neutralisé par `suppress` côté moteur.
+  const unsubHistory = useNavigationHistory.subscribe((s, prev) => {
+    if (prev.hydrated && s.history !== prev.history) {
+      notifyLocalChange('history');
+    }
+  });
+
   return () => {
     unsubFavorites();
     unsubPosition();
     unsubBookmarks();
     unsubAnnotations();
     unsubReaderPrefs();
+    unsubHistory();
     attached = false;
   };
 }

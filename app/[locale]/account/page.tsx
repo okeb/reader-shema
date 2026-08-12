@@ -9,6 +9,7 @@ import { useAccount } from '@/src/presentation/stores/account.store';
 import { useCryptoSession } from '@/src/presentation/stores/crypto-session.store';
 import { useAccountAvailability } from '@/src/presentation/components/organisms/o-account-provider';
 import { deleteAccount } from '@/src/presentation/lib/sync/sync-engine';
+import { clearDeviceDek } from '@/src/presentation/lib/sync/device-key-store';
 import { downloadBackup } from '@/src/presentation/lib/data-transfer';
 import { SiteFooter } from '@/src/presentation/components/molecules/m-footer';
 
@@ -17,15 +18,16 @@ import { SiteFooter } from '@/src/presentation/components/molecules/m-footer';
  *
  * Lieu unique de gestion d'un compte déjà authentifié : email, bascules de synchronisation,
  * export JSON, suppression du compte (deux temps) et déconnexion. La modal `m-account-dialog`
- * reste l'unique point d'entrée pour se connecter et déverrouiller (recovery key) ; cette page
- * suppose une session (gated par `proxy.ts` → redirect vers `/` si non authentifié).
+ * reste l'unique point d'entrée pour se connecter et déverrouiller (mot de passe routine, clé
+ * de récupération en secours — spec 28) ; cette page suppose une session (gated par `proxy.ts`
+ * → redirect vers `/` si non authentifié).
  *
  * États :
  *  - non authentifié (défensif, la proxy aurait dû rediriger) : CTA ouvrant la modal ;
  *  - authentifié + master key déverrouillée : gestion complète, sync active ;
- *  - authentifié + master key verrouillée : bannière « Déverrouiller » + actions locales
- *    (export, suppression, déconnexion) ; les bascules restent réglables mais sans effet
- *    tant que la recovery key n'est pas saisie.
+ *  - authentifié + master key verrouillée : bannière « Déverrouiller » (mot de passe) + lien
+ *    « utiliser ma clé de récupération » + actions locales (export, suppression, déconnexion) ;
+ *    les bascules restent réglables mais sans effet tant que le déverrouillage n'est pas fait.
  *
  * Source unique des bascules `syncEnabled` / `settingsSyncOptIn` (spec 25 §4.4) : ni la modal
  * `done` ni le popup de réglages n'en portent.
@@ -86,6 +88,7 @@ export default function AccountPage() {
   async function doDelete() {
     setDeleting(true);
     try {
+      if (user?.id) await clearDeviceDek(user.id); // spec 28 : oublie le DEK de cet appareil.
       await deleteAccount();
       await authClient.signOut();
       resetAccount();
@@ -99,6 +102,7 @@ export default function AccountPage() {
   }
 
   async function signOut() {
+    if (user?.id) await clearDeviceDek(user.id); // spec 28 : oublie le DEK de cet appareil.
     await authClient.signOut();
     useCryptoSession.getState().lock();
     router.replace('/read');
@@ -122,17 +126,29 @@ export default function AccountPage() {
               <Icon icon="hugeicons:lock-key" className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
               <div className="flex-1">
                 <p className="text-[13px] leading-snug text-foreground/90">
-                  Synchronisation verrouillée — saisissez votre clé de récupération pour reprendre la
-                  sync.
+                  Synchronisation verrouillée — saisissez votre mot de passe pour reprendre la sync.
                 </p>
-                <button
-                  type="button"
-                  onClick={() => window.dispatchEvent(new Event('bym:open-account'))}
-                  className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-input px-3 py-1.5 text-[13px] transition-colors hover:bg-foreground/5"
-                >
-                  <Icon icon="hugeicons:key-02" className="h-4 w-4" />
-                  Déverrouiller
-                </button>
+                <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                  <button
+                    type="button"
+                    onClick={() => window.dispatchEvent(new Event('bym:open-account'))}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-input px-3 py-1.5 text-[13px] transition-colors hover:bg-foreground/5"
+                  >
+                    <Icon icon="hugeicons:lock-key" className="h-4 w-4" />
+                    Déverrouiller
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      window.dispatchEvent(
+                        new CustomEvent('bym:open-account', { detail: { recovery: true } }),
+                      )
+                    }
+                    className="text-[12px] text-muted-foreground underline underline-offset-2 transition-colors hover:text-foreground"
+                  >
+                    Utiliser ma clé de récupération
+                  </button>
+                </div>
               </div>
             </div>
           )}

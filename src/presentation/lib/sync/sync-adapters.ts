@@ -8,12 +8,15 @@ import type {
   NoteMap,
   FavoriteVerse,
   ReadingPosition,
+  NavHistoryEntry,
 } from '@/src/domain/entities';
+import { HISTORY_MAX } from '@/src/domain/entities';
 import type { ReaderPreferences } from '@/src/shared/constants/reader-preferences';
 import { useFavorites } from '@/src/presentation/stores/favorites.store';
 import { useReadingPosition } from '@/src/presentation/stores/reading-position.store';
 import { useBookmarks } from '@/src/presentation/stores/bookmarks.store';
 import { useAnnotations } from '@/src/presentation/stores/annotations.store';
+import { useNavigationHistory } from '@/src/presentation/stores/navigation-history.store';
 import { applyReaderPrefs, getReaderPrefs } from '@/src/presentation/stores/reader-preferences.store';
 
 /**
@@ -138,6 +141,39 @@ const highlightsAdapter: SyncAdapter = {
   },
 };
 
+// --- historique de navigation ---------------------------------------------------
+//
+// Kind « ensemble » : au pull, on FUSIONNE le blob distant avec l'historique local
+// (union par `id`, doublon → on garde l'entrée au `at` le plus récent, tri desc, cap
+// HISTORY_MAX) au lieu de remplacer. Sinon, en écriture concurrente multi-appareil, le
+// LWW par kind écarterait les entrées de l'autre appareil. La fusion converge : chaque
+// appareil republie ensuite l'ensemble complet.
+
+const historyAdapter: SyncAdapter = {
+  kind: 'history',
+  serialize() {
+    return JSON.stringify(useNavigationHistory.getState().history);
+  },
+  hydrate(parsed) {
+    const remote = Array.isArray(parsed) ? (parsed as NavHistoryEntry[]) : [];
+    const local = useNavigationHistory.getState().history;
+    const byId = new Map<string, NavHistoryEntry>();
+    for (const e of local) byId.set(e.id, e);
+    for (const e of remote) {
+      if (!e || typeof e.id !== 'string') continue; // entrée malformée → ignorée
+      const ex = byId.get(e.id);
+      if (!ex || (typeof e.at === 'number' && e.at > (ex.at ?? -1))) byId.set(e.id, e);
+    }
+    const merged = [...byId.values()]
+      .sort((a, b) => (b.at ?? 0) - (a.at ?? 0))
+      .slice(0, HISTORY_MAX);
+    useNavigationHistory.setState({ history: merged });
+  },
+  hasLocal() {
+    return useNavigationHistory.getState().history.length > 0;
+  },
+};
+
 // --- réglages de lecture (opt-in) ----------------------------------------------
 
 const readerPrefsAdapter: SyncAdapter = {
@@ -166,5 +202,6 @@ export const syncAdapters: Partial<Record<SyncKind, SyncAdapter>> = {
   bookmarks: bookmarksAdapter,
   notes: notesAdapter,
   highlights: highlightsAdapter,
+  history: historyAdapter,
   readerPrefs: readerPrefsAdapter,
 };

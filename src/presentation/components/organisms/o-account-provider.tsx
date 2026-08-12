@@ -4,8 +4,10 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import { AccountDialog } from '@/src/presentation/components/molecules/m-account-dialog';
 import { authClient } from '@/lib/auth/client';
 import { useAccount } from '@/src/presentation/stores/account.store';
-import { attachSyncListeners } from '@/src/presentation/lib/sync/sync-engine';
+import { useCryptoSession } from '@/src/presentation/stores/crypto-session.store';
+import { attachSyncListeners, pullAndMerge } from '@/src/presentation/lib/sync/sync-engine';
 import { attachSyncSubscribers } from '@/src/presentation/lib/sync/sync-subscribers';
+import { loadDeviceDek } from '@/src/presentation/lib/sync/device-key-store';
 
 /**
  * Fournit la disponibilité du compte (auth+DB configurées) au reste de l'arbre —
@@ -32,15 +34,51 @@ interface AccountProviderProps {
 
 export function AccountProvider({ authEnabled, children }: AccountProviderProps) {
   const [open, setOpen] = useState(false);
+  // spec 28 : hint d'ouverture « recovery » pour atterrir directement sur `unlock-recovery` (lien
+  // « utiliser ma clé de récupération » de la page /account). `null` = comportement par défaut.
+  const [openHint, setOpenHint] = useState<'recovery' | null>(null);
   const syncEnabled = useAccount((s) => s.syncEnabled);
+  const session = authClient.useSession();
 
-  // Ouverture cross-panels via event (miroir de `bym:open-search`).
+  // Ouverture cross-panels via event (miroir de `bym:open-search`). `detail.recovery=true` force
+  // l'étape `unlock-recovery` (lien secondaire page /account).
   useEffect(() => {
     if (!authEnabled) return;
-    const onOpen = () => setOpen(true);
+    const onOpen = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { recovery?: boolean } | undefined;
+      setOpenHint(detail?.recovery ? 'recovery' : null);
+      setOpen(true);
+    };
     window.addEventListener('bym:open-account', onOpen);
     return () => window.removeEventListener('bym:open-account', onOpen);
   }, [authEnabled]);
+
+  // Hydratation « se souvenir de cet appareil » (spec 28) : au chargement, si une session est
+  // présente, la master key absente et qu'un DEK persisté valide existe pour cet utilisateur, on le
+  // restaure silencieusement (setMasterKey + pullAndMerge) — déverrouillage transparent sans
+  // redemander le mot de passe. DEK absent/expiré → l'étape `unlock-password` à l'ouverture de la
+  // modale. Best-effort : tout échec est silencieux (le dialog reste le filet).
+  useEffect(() => {
+    if (!authEnabled) return;
+    const userId = session.data?.user?.id;
+    if (!userId || session.isPending) return;
+    if (useCryptoSession.getState().unlocked) return;
+    let cancelled = false;
+    void (async () => {
+      const dek = await loadDeviceDek(userId);
+      if (cancelled || !dek) return;
+      if (useCryptoSession.getState().unlocked) return; // déverrouillé entre-temps (dialog)
+      useCryptoSession.getState().setMasterKey(dek);
+      try {
+        await pullAndMerge();
+      } catch {
+        console.warn('sync: hydratation DEK device — pullAndMerge échoué');
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [authEnabled, session.data?.user?.id, session.isPending]);
 
   // Sync : branche abonnés (mutations locales) + écouteurs (online / visibility) uniquement
   // quand la sync est activée. Détache (sans perte) si l'utilisateur désactive le toggle.
@@ -57,7 +95,16 @@ export function AccountProvider({ authEnabled, children }: AccountProviderProps)
   return (
     <AccountAvailabilityContext.Provider value={{ authEnabled }}>
       {children}
-      {authEnabled && <AccountDialog open={open} onClose={() => setOpen(false)} />}
+      {authEnabled && (
+        <AccountDialog
+          open={open}
+          openHint={openHint}
+          onClose={() => {
+            setOpen(false);
+            setOpenHint(null);
+          }}
+        />
+      )}
     </AccountAvailabilityContext.Provider>
   );
 }

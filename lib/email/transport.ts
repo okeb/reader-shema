@@ -9,7 +9,7 @@ import { env } from '@/env.mjs';
  *
  * `RESEND_API_KEY` est optionnelle : en dev (clé absente) `sendEmail` no-op + `console.warn`
  * plutôt que de planter les flux d'auth. En prod, le domaine expéditeur
- * (`shemaproject.org`) doit être vérifié dans Resend.
+ * (`send.shemaproject.org`) doit être vérifié dans Resend.
  */
 
 let _resend: Resend | null = null;
@@ -27,8 +27,8 @@ export interface OutgoingEmail {
   html: string;
 }
 
-/** Expéditeur transactionnel. Domaine à vérifier dans Resend. */
-const FROM = 'ShemaProject <noreply@shemaproject.org>';
+/** Expéditeur transactionnel. Domaine `send.shemaproject.org` à vérifier dans Resend. */
+const FROM = 'ShemaProject <noreply@send.shemaproject.org>';
 
 export async function sendEmail(msg: OutgoingEmail): Promise<void> {
   if (!env.RESEND_API_KEY) {

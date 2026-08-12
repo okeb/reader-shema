@@ -6,6 +6,30 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/).
 
 ## [Unreleased]
 
+- *Rien pour le moment.*
+
+## [0.3.0] : 2026-08-12
+
+### Ajouté
+
+- **Icône note dans la bulle de sélection (spec 30)** : l'action **note** est promue au premier niveau de la bulle d'action (entre Strong et `⋯`) au lieu d'être enfouie dans le sous-menu « plus d'actions ». Un clic ouvre directement l'éditeur de note de la sélection. L'icône passe à `note-edit` accentée quand une note existe déjà. Le menu `⋯` ne contient plus que Signet + Surligner.
+- **Détail Strong (spec 29)** : affichage des champs `phonetique`, `type` et `origine` dans le détail inline d'une strong. Les références Strong présentes dans `origine` sont cliquables et ouvrent une **nouvelle page détail dédiée** `/[locale]/strong/[code]` (lexique complet + concordance des occurrences, pagination « Charger plus », navigation vers le lecteur). Refactor du tiroir concordance : extraction de `useConcordancePages` + des molécules `StrongOccurrenceList` / `StrongLexiconCard` partagées avec la page détail.
+- **Compte & synchronisation (spec 28)** : déverrouillage routine de la sync par **mot de passe** via enveloppe DEK/KEK. La **clé de récupération** devient un secours d'urgence (mot de passe oublié, comptes lien magique) et est **e-mailée à l'inscription** pour ne plus jamais être perdue. Option « se souvenir de cet appareil (30 jours) » : la clé de déverrouillage est persistée sur l'appareil (IndexedDB, handle crypto non-extractable) pour un déverrouillage silencieux au reload. Migration sans perte des comptes pré-spec-28 qui ont encore leur ancienne clé (`upgradeLegacyToEnvelope`) ; reset définitif possible pour ceux qui l'ont perdue.
+- **Sync de l'historique de navigation** : l'historique des passages/recherches récents (`bym:nav-history`) est désormais synchronisé entre appareils. Fusion par `id` au pull (union, doublon → entrée la plus récente, cap 25) plutôt que replace pur — évite la perte d'entrées en écriture concurrente multi-appareil inhérente au LWW par kind.
+
+### Modifié
+
+- **Topbar (menu Apparence)** : bouton « Se connecter » mis en avant en CTA primaire (sans libellé « Compte & synchronisation » devant) quand l'utilisateur est déconnecté.
+- **Dock de lecture** : padding vertical réduit (`py-1.5` → `py-1`).
+
+### Corrigé
+
+- **Champ `type` rendu en HTML brut (spec 29)** : l'API renvoie parfois le `type` grammatical avec un lien HTML embarqué (ex. G4061 → `Nom féminin (voir <a href="Strong-Hebreu-4139.htm">04139</a>)`), qui s'affichait tel quel avec les balises. Le parser `origine-parser` gère désormais les liens `<a href="Strong-(Hebreu|Grec)-NNNN.htm">` : il lit la langue de la référence dans le href (une ref hébraïque peut apparaître dans la fiche d'un mot grec), strippe les autres tags et décode les entités. Le champ `type` est rendu via `OrigineText` (refs cliquables) dans le détail inline et la fiche détail.
+- **Retour depuis une fiche Strong (spec 29)** : au retour (bouton précédent) depuis `/strong/[code]`, le lecteur restaurait une page vierge — verset non sélectionné, panneau Strong fermé, mot perdu. On mémorise désormais la sélection + le token actif (store transitoire `sessionStorage`) juste avant la navigation, et on les restaure au remontage : le verset est à nouveau sélectionné, le panneau Strong rouvert et le mot réactivé. La navigation vers une occurrence depuis la fiche efface cette reprise (l'utilisateur cible un verset précis, pas un retour). Références `origine` zero-padded de largeur variable (`0433`) désormais reconnues (cliquables + route).
+- **Sync multi-appareil (spec 22)** : horloge LWW — `pushKind` ne pousse plus un horodatage nul. La migration premier-login enfile les kinds sans « bumper » le méta local (`meta[kind] === 0`) ; le blob partait alors daté `0` et était ignoré au pull sur un autre appareil (`remote.updatedAt > localTs` → `0 > 0` = faux). On date maintenant au moment du push quand l'horloge locale est vide, pour que les données migrées ressortent sur le 2ᵉ appareil.
+- **Auth + e-mail sur Vercel** : `baseURL` (serveur + client Better Auth) dérivé de l'origine servie (alias `reader-shema.vercel.app`, previews `$VERCEL_URL`, domaine final) au lieu d'une URL fixe — corrige « invalid origin » en test sur l'alias. Expéditeur Resend aligné sur le domaine vérifié `send.shemaproject.org`.
+- **Bouton « Charger plus » masqué (concordance)** : dans le tiroir concordance d'une strong, le bouton de pagination restait invisible — estompé sous l'overlay de fondu fixe (`h-16`) en bas du panneau. Padding bas du corps scrollable renforcé (`pb-20`) pour dégager le bouton au-dessus du fondu.
+
 ## [0.2.0] : 2026-08-09
 
 ### Processus

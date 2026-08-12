@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Icon } from '@iconify/react';
 import { cn } from '@/lib/utils';
 import type { StrongToken } from '@/src/domain/entities';
+import { OrigineText } from '@/src/presentation/components/atoms/a-origine-text';
 
 export interface StrongVerseView {
   /** Id logique du verset (ex. "jean:3:16"). */
@@ -29,14 +30,31 @@ function bubbleColor(lang?: string) {
 export function StrongVerse({
   verse,
   onSeeOccurrences,
+  onNavigateStrong,
+  initialActiveStrong,
 }: {
   verse: StrongVerseView;
   /** Ouvre la concordance du token (toutes les occurrences du même Strong). */
   onSeeOccurrences?: (token: StrongToken) => void;
+  /** Navigue vers la fiche détail d'un code Strong (depuis une référence d'`origine`). Transmet
+   *  le token source (verset + code Strong actif) pour mémoriser le contexte de reprise. */
+  onNavigateStrong?: (targetCode: string, source: { verseId: string; strongCode?: string }) => void;
+  /** Code Strong du token à activer au montage (reprise après retour d'une fiche /strong/[code]). */
+  initialActiveStrong?: string;
 }) {
   // Indice du token actif (dernier clic).
   const [activeIdx, setActiveIdx] = useState<number | null>(null);
   const activeToken = activeIdx != null ? verse.tokens[activeIdx] : null;
+
+  // Reprise : active le token dont le code Strong correspond à `initialActiveStrong` au montage
+  // (one-shot) — restaure le mot sélectionné après un retour depuis une fiche Strong. Spec 29.
+  const restoredRef = useRef(false);
+  useEffect(() => {
+    if (restoredRef.current || !initialActiveStrong) return;
+    restoredRef.current = true;
+    const idx = verse.tokens.findIndex((t) => t.strong === initialActiveStrong);
+    if (idx >= 0) setActiveIdx(idx);
+  }, [initialActiveStrong, verse.tokens]);
 
   return (
     <section className="border-t border-input/50 px-4 py-7">
@@ -109,12 +127,42 @@ export function StrongVerse({
               >
                 {activeToken.strong.replace('H', '').replace('G', '')}
               </span>
+              {activeToken.type && (
+                <span className="rounded bg-foreground/5 px-1.5 py-0 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                  <OrigineText
+                    origine={activeToken.type}
+                    lang={activeToken.lang}
+                    className="not-italic"
+                    onNavigate={(target) =>
+                      onNavigateStrong?.(target, { verseId: verse.id, strongCode: activeToken.strong ?? undefined })
+                    }
+                  />
+                </span>
+              )}
+              {activeToken.phonetique && (
+                <p className="-mt-1.5 w-full font-mono text-[12px] text-muted-foreground">
+                  {activeToken.phonetique}
+                </p>
+              )}
             </div>
           </div>
 
           {activeToken.definition && (
             <p className="animate-fade-in whitespace-pre-line text-foreground/85">
               {activeToken.definition}
+            </p>
+          )}
+
+          {/* Origine étymologique — les références Strong qu'elle contient sont cliquables (spec 29). */}
+          {activeToken.origine && (
+            <p className="mt-2 text-[12px] italic leading-relaxed text-muted-foreground">
+              <OrigineText
+                origine={activeToken.origine}
+                lang={activeToken.lang}
+                onNavigate={(target) =>
+                  onNavigateStrong?.(target, { verseId: verse.id, strongCode: activeToken.strong ?? undefined })
+                }
+              />
             </p>
           )}
 

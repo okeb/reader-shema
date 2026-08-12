@@ -57,3 +57,25 @@ export function magicLinkEmailHtml(email: string, url: string): string {
      ${button(url, 'Se connecter')}`,
   );
 }
+
+/**
+ * Clé de récupération de secours (spec 28) — e-mailée à l'inscription (et au re-keying legacy).
+ *
+ * Affichée une fois à l'écran ET envoyée par e-mail (filet pour ne jamais la perdre). C'est la clé
+ * d'URGENCE : sert à récupérer l'accès aux données si le mot de passe est perdu (ou pour les
+ * comptes magic-link, de déverrouillage routine). Pas de bouton : c'est un code à conserver.
+ */
+export function recoveryKeyEmailHtml(recoveryKey: string): string {
+  return shell(
+    'Votre clé de récupération',
+    `<p style="margin:0 0 14px">Conservez cette clé de récupération en lieu sûr. Elle vous permet de
+     retrouver vos données synchronisées si vous perdez votre mot de passe.</p>
+     <p style="margin:0 0 10px;font-size:12px;color:#888">Sans cette clé, vos données sont irrécupérables.
+     Nous ne la stockons pas.</p>
+     <p style="margin:0 0 14px;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;
+     font-size:15px;letter-spacing:.5px;background:#f2f2f5;border:1px solid #e8e8ee;border-radius:8px;
+     padding:14px 16px;word-break:break-all">${recoveryKey}</p>
+     <p style="margin:0;font-size:12px;color:#888">À utiliser uniquement en cas de besoin.
+     En cas de perte, nous ne pourrons pas la régénérer.</p>`,
+  );
+}
