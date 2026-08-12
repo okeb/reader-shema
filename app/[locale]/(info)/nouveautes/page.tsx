@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { setRequestLocale } from 'next-intl/server';
 import { InfoPage } from '@/src/presentation/components/templates/t-info-page';
 import { ProseSection } from '@/src/presentation/components/atoms/a-prose-section';
-import { APP_VERSION, BUG_EMAIL } from '@/src/shared/constants/legal';
+import { APP_VERSION, BUG_EMAIL, type ChangelogEntry } from '@/src/shared/constants/legal';
 import { getChangelog } from '@/src/shared/constants/changelog';
 
 export const metadata: Metadata = {
@@ -22,10 +22,18 @@ function renderChangelogItem(text: string) {
   });
 }
 
+/** Un item « réel » : pas un placeholder italique du type *Rien pour le moment.* */
+const PLACEHOLDER_RE = /^\*[^*]+\*$/;
+function hasRealItems(entry: ChangelogEntry): boolean {
+  return entry.sections.some((s) => s.items.some((i) => !PLACEHOLDER_RE.test(i.trim())));
+}
+
 export default async function NouveautesPage({ params }: Props) {
   const { locale } = await params;
   setRequestLocale(locale);
-  const entries = await getChangelog();
+  const all = await getChangelog();
+  // Masque la section [Unreleased] tant qu'elle n'a aucun changement réel.
+  const entries = all.filter((e) => e.version !== 'Unreleased' || hasRealItems(e));
 
   return (
     <InfoPage title="Nouveautés">
@@ -34,7 +42,7 @@ export default async function NouveautesPage({ params }: Props) {
           key={entry.version}
           title={
             entry.version === 'Unreleased'
-              ? 'Refonte reader_shema (en cours)'
+              ? 'Prochaine version'
               : `v${entry.version}${entry.date ? ` : ${entry.date}` : ''}`
           }
         >

@@ -50,8 +50,12 @@ il isole chaque évolution, garde `master` exclusivement pour les releases tagg�
 6. **Nettoyer** (après validation par l'utilisateur / passage en prod) :
    `git branch -d feature/<slug>`.
 7. **CHANGELOG** : à chaque merge de feature, ajouter une ligne sous `## [Unreleased]` dans
-   `CHANGELOG.md` (section `### Ajouté` / `### Modifié` / `### Corrigé`). L'agent le fait au
-   moment du merge — la release ne fait que *finaliser* cette section.
+   `CHANGELOG.md` (section `### Ajouté` / `### Modifié` / `### Corrigé` / `### Retiré` / `### Sécurisé`).
+   **Ton utilisateur uniquement** — voir §11 (rédaction du CHANGELOG). L'agent le fait au moment
+   du merge ; la release ne fait que *finaliser* cette section.
+8. **`pnpm changelog:check`** avant tout push sur `develop` (et avant toute release) : le
+   linter `changelog-check` valide le format, la cohérence SemVer et l'absence de fuite
+   d'information interne. Sortie non nulle = corriger avant de pousser.
 
 ### Règles strictes
 - ❌ Ne jamais committer directement sur `master`.
@@ -198,3 +202,64 @@ plus description et footer, ainsi que les regles de typographie
 
 > Les **commits de merge** Git Flow suivent un format libre :
 > `Merge feature/<slug> into develop` (cf. §4 étape 4).
+
+## 11. Rédaction du CHANGELOG (obligatoire)
+
+Le `CHANGELOG.md` est rendu **tel quel** sur la page publique `/nouveautes`. Il ne doit donc
+contenir **que des changements perceptibles par l'utilisateur** — jamais d'information interne
+ou de sécurité. La conformité est vérifiée par `pnpm changelog:check`
+(skill `changelog-check`, cf. `.claude/skills/changelog-check/SKILL.md`).
+
+### Ton : utilisateur uniquement
+
+- Décrire **ce que voit l'utilisateur** (feature, UX, correctif visible), pas le « comment ».
+- Un item se lit en une phrase, sans jargon d'implémentation.
+
+### Contenu interdit (fuite d'information)
+
+❌ Aucun de ces éléments ne doit apparaître dans une entrée changelog :
+
+- **Crypto** : `PBKDF2`, `AES-GCM`, `SHA-256`, `256-bit`, `non-extractable`, `DEK`, `KEK`,
+  `enveloppe`, `master key`, `nonce`, `ciphertext`.
+- **DB / schéma** : `BYTEA`, `neon_auth`, `user_data`, `schéma public`, `ON CONFLICT`,
+  `updated_at`, `FK`, `pg.Pool`, `pooler`.
+- **API** : routes internes (`/api/sync`, `/api/account`, `GET/PUT/POST/DELETE /api…`).
+- **Identifiants internes** : noms de fonctions (`upgradeLegacyToEnvelope`, `pushKind`…),
+  clés `localStorage` (`bym:nav-history`, `bibleReaderPrefs`), mécanique sync (`LWW`,
+  `meta[kind]`, `dated 0`).
+- **Récit de bug interne** (postmortem) : « ne pousse plus », « était ignoré »… → reformuler
+  en correctif utilisateur (« certaines données n'apparaissaient pas sur un second appareil ;
+  corrigé »).
+- **Provider / env** : `send.shemaproject.org`, `BETTER_AUTH_SECRET`, `DATABASE_URL`,
+  `RESEND_API_KEY`, `baseURL dérivé`…
+- **Références spec** : `spec 22`, `(spec 28)`… — un numéro de spec est un repère interne,
+  jamais visible côté utilisateur.
+
+✅ Sont **user-facing** et donc autorisés : « clé de récupération », « mot de passe »,
+« synchronisation chiffrée », « compte facultatif », « concordance Strong »…
+
+### Sections autorisées
+
+`### Ajouté` · `### Modifié` · `### Corrigé` · `### Retiré` · `### Sécurisé` (+ alias EN
+`Added`/`Changed`/`Fixed`/`Removed`/`Security`). Tout autre titre (`Processus`, `Architecture`,
+`Fonctionnalités`, `… (spec NN)`, `Changements`, `Ajouts`, `Correctifs`) est **interdit**.
+
+### SemVer vs contenu
+
+Le bump doit refléter le contenu de la section (vérifié par `changelog:check`, règle S2) :
+
+| Contenu de la section | Bump attendu |
+|---|---|
+| `Ajouté` (nouvelle feature) | `MINEUR` (ou `MAJEUR` si breaking) |
+| seulement `Corrigé` | `CORRECTIF` |
+| `Retiré` / `Sécurisé` / item breaking | `MAJEUR` |
+| seulement `Modifié` (cosmétique) | `CORRECTIF` ou `MINEUR` |
+
+### Boucle de travail
+
+- À chaque merge de feature : ajouter l'item sous `## [Unreleased]` dans la bonne section.
+- Lancer `pnpm changelog:check` avant de pousser sur `develop`.
+- À la release (§5) : renommer `## [Unreleased]` en `## [X.Y.Z] : YYYY-MM-DD`, recréer un
+  `## [Unreleased]` vide, puis `pnpm changelog:check` avant le tag.
+- Exception historique figée (version déjà publiée non retaggable) : documentée dans
+  `.changelog-allowlist.json` avec un `reason`.
