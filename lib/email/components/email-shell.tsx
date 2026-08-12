@@ -87,63 +87,124 @@ export function EmailShell({
             {children}
 
             {/* Footer — logo, identité, social, contact. Fond gris clair / sombre. */}
-            <Container className="rounded-lg px-3 py-2 bg-[#bdbdbd] dm-footer-bg">
-              <Section>
-                <Row>
-                  <Column colSpan={4}>
-                    <EmailFooterLogo />
-                    <Text className="text-ink dm-fg mt-2 mb-2 text-base leading-6 font-semibold">
-                      Shema Project
+
+              {/*<Section>*/}
+              {/*  <Row>*/}
+              {/*    <Column colSpan={4}>*/}
+              {/*      <EmailFooterLogo />*/}
+              {/*      <Text className="text-ink dm-fg mt-2 mb-2 text-base leading-6 font-semibold">*/}
+              {/*        Shema Project*/}
+              {/*      </Text>*/}
+              {/*      <Text className="text-muted dm-muted mt-1 mb-0 text-base leading-6">*/}
+              {/*        Shema different*/}
+              {/*      </Text>*/}
+              {/*    </Column>*/}
+              {/*    <Column*/}
+              {/*      align="left"*/}
+              {/*      style={{ display: 'table-cell', verticalAlign: 'bottom' }}*/}
+              {/*    >*/}
+              {/*      <Row*/}
+              {/*        style={{*/}
+              {/*          display: 'table-cell',*/}
+              {/*          height: 44,*/}
+              {/*          width: 56,*/}
+              {/*          verticalAlign: 'bottom',*/}
+              {/*        }}*/}
+              {/*      >*/}
+              {/*        <Column style={{ paddingRight: 8 }}>*/}
+              {/*          <Link href="#">*/}
+              {/*            <Img*/}
+              {/*              alt="Facebook"*/}
+              {/*              height="36"*/}
+              {/*              src="https://react.email/static/facebook-logo.png"*/}
+              {/*              width="36"*/}
+              {/*            />*/}
+              {/*          </Link>*/}
+              {/*        </Column>*/}
+              {/*        <Column>*/}
+              {/*          <Link href="#">*/}
+              {/*            <Img*/}
+              {/*              alt="Instagram"*/}
+              {/*              height="36"*/}
+              {/*              src="https://react.email/static/instagram-logo.png"*/}
+              {/*              width="36"*/}
+              {/*            />*/}
+              {/*          </Link>*/}
+              {/*        </Column>*/}
+              {/*      </Row>*/}
+              {/*      <Row>*/}
+              {/*        <Text className="text-muted dm-muted mt-2 mb-2 text-base leading-6 font-semibold">*/}
+              {/*          Paris, FRANCE*/}
+              {/*        </Text>*/}
+              {/*        <Text className="text-muted dm-muted mt-1 mb-0 text-base leading-6 font-semibold">*/}
+              {/*          hello@shemaproject.org*/}
+              {/*        </Text>*/}
+              {/*      </Row>*/}
+              {/*    </Column>*/}
+              {/*  </Row>*/}
+              {/*</Section>*/}
+            <Section className="text-center">
+              <table className="w-full">
+                <tr className="w-full">
+                  <td align="center">
+                    <Img
+                      alt="React Email logo"
+                      height="42"
+                      src="https://react.email/static/logo-without-background.png"
+                      width="42"
+                    />
+                  </td>
+                </tr>
+                <tr className="w-full">
+                  <td align="center">
+                    <Text className="my-[8px] font-semibold text-[16px] text-black leading-[24px]">
+                      The Shema Project
                     </Text>
-                    <Text className="text-muted dm-muted mt-1 mb-0 text-base leading-6">
+                    <Text className="mt-[4px] mb-0 text-[16px] text-gray-500 leading-[24px]">
                       Shema different
                     </Text>
-                  </Column>
-                  <Column
-                    align="left"
-                    style={{ display: 'table-cell', verticalAlign: 'bottom' }}
-                  >
-                    <Row
-                      style={{
-                        display: 'table-cell',
-                        height: 44,
-                        width: 56,
-                        verticalAlign: 'bottom',
-                      }}
-                    >
-                      <Column style={{ paddingRight: 8 }}>
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center">
+                    <Row className="table-cell h-[44px] w-[56px] align-bottom">
+                      <Column className="pr-[8px]">
                         <Link href="#">
                           <Img
                             alt="Facebook"
                             height="36"
-                            src="https://react.email/static/facebook-logo.png"
+                            src="https://api.iconify.design/hugeicons:facebook-01.svg?color=%23918f88"
                             width="36"
                           />
                         </Link>
                       </Column>
+
                       <Column>
                         <Link href="#">
+
                           <Img
                             alt="Instagram"
                             height="36"
-                            src="https://react.email/static/instagram-logo.png"
+                            src="https://api.iconify.design/hugeicons:instagram.svg?color=%23918f88"
                             width="36"
                           />
                         </Link>
                       </Column>
                     </Row>
-                    <Row>
-                      <Text className="text-muted dm-muted mt-2 mb-2 text-base leading-6 font-semibold">
-                        Paris, FRANCE
-                      </Text>
-                      <Text className="text-muted dm-muted mt-1 mb-0 text-base leading-6 font-semibold">
-                        hello@shemaproject.org
-                      </Text>
-                    </Row>
-                  </Column>
-                </Row>
-              </Section>
-            </Container>
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center">
+                    <Text className="my-[8px] font-semibold text-[13px] text-black leading-[13px]">
+                      Paris, FRANCE
+                    </Text>
+                    <Text className="mt-[4px] mb-0 font-semibold text-[13px] text-black leading-[13px]">
+                      mail@example.com +123456789
+                    </Text>
+                  </td>
+                </tr>
+              </table>
+            </Section>
           </Container>
         </Body>
       </Html>

@@ -100,7 +100,7 @@ export const DARK_STYLE = `@media (prefers-color-scheme: dark) {
 
 /** Classes partagées du corps de texte (paragraphe standard des templates). */
 export const BODY_TEXT =
-  'text-ink dm-fg text-[17px] leading-[1.5] mb-4';
+  'text-ink dm-fg text-[15px] leading-[1.3] mb-4';
 
 /** Classes partagées d'une ligne muted (note, rappel). */
 export const MUTED_TEXT =

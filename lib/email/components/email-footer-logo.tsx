@@ -15,9 +15,8 @@ import { env } from '@/env.mjs';
  * PNG générés depuis `shema_reader-icon_{light,dark}.svg` (icône monochrome 734×734) → 128×128
  * (rendu net à l’affichage 40px). URLs dérivées de `NEXT_PUBLIC_APP_URL`.
  */
-const base = env.NEXT_PUBLIC_APP_URL.replace(/\/$/, '');
-const LIGHT_LOGO = `${base}/logo/shema_reader-logo_light.png`;
-const DARK_LOGO = `${base}/logo/shema_reader-logo_dark.png`;
+const LIGHT_LOGO = `https://reader.shemaproject.org/logo/shema_reader-logo_dark.webp`;
+const DARK_LOGO = `https://reader.shemaproject.org/logo/shema_reader-logo_dark.webp`;
 
 export function EmailFooterLogo() {
   return (
