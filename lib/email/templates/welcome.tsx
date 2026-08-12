@@ -1,13 +1,14 @@
-import { Text, Section } from '@react-email/components';
+import { Text } from '@react-email/components';
 import { EmailShell } from '@/lib/email/components/email-shell';
-import { EmailButton } from '@/lib/email/components/email-button';
+import { EmailCta } from '@/lib/email/components/email-cta';
+import { BODY_TEXT, MUTED_TEXT } from '@/lib/email/theme';
 
 /**
  * Mail de bienvenue post-inscription (spec 32 — nouveau).
  *
  * Déclenché une fois par la création du user (hook Better Auth `databaseHooks.user.create.after`
  * — idempotent par construction : le hook ne se déclenche qu'une fois par user). Pas de bouton
- * critique : un CTA « Reprendre la lecture » pointant vers `${baseUrl}/fr/read` (locale par
+ * critique : un CTA « Reprendre la lecture → » pointant vers `${baseUrl}/fr/read` (locale par
  * défaut de l'app — le user n'a pas encore de locale connue à la création du compte).
  *
  * Rappelle de conserver la clé de récupération (e-mailée séparément) — signal de warmth sans
@@ -20,17 +21,17 @@ export function WelcomeEmail({ name, baseUrl }: { name: string; baseUrl: string 
       title="Bienvenue sur ShemaProject"
       preview="Nous sommes ravis de vous compter parmi nos lecteurs."
     >
-      <Text className="text-fg" style={{ color: '#111111', fontSize: '14px', lineHeight: '1.5', margin: '0 0 16px' }}>
+      <Text className="e-fg" style={BODY_TEXT}>
         Bienvenue sur <strong>ShemaProject</strong>{name ? `, ${name}` : ''} !
         <br />
         <br />
         Nous sommes ravis de vous compter parmi nos lecteurs. Votre compte est créé : vos notes,
         favoris et signets seront synchronisés sur vos appareils.
       </Text>
-      <Section style={{ textAlign: 'center', margin: '8px 0 16px' }}>
-        <EmailButton href={readUrl} label="Reprendre la lecture" />
-      </Section>
-      <Text className="text-muted" style={{ color: '#888888', fontSize: '12px', lineHeight: '1.5', margin: '0' }}>
+      <Text style={{ margin: '8px 0 16px' }}>
+        <EmailCta href={readUrl} label="Reprendre la lecture" />
+      </Text>
+      <Text className="e-muted" style={MUTED_TEXT}>
         En cas de besoin, conservez précieusement votre clé de récupération (e-mailée séparément).
       </Text>
     </EmailShell>

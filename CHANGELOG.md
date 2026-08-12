@@ -15,7 +15,7 @@ divulguée. La cohérence est vérifiée par `pnpm changelog:check`.
 
 ### Modifié
 
-- **E-mails transactionnels repensés** : les messages de vérification d'adresse, de réinitialisation de mot de passe, de lien de connexion et de clé de récupération adoptent un nouveau design aux couleurs de ShemaProject, qui s'adapte au thème clair ou sombre de votre application de messagerie.
+- **E-mails transactionnels repensés** : les messages de vérification d'adresse, de réinitialisation de mot de passe, de lien de connexion et de clé de récupération adoptent un nouveau design aux couleurs de ShemaProject, avec le logo de l'app et des titres en DM Sans, qui s'adapte au thème clair ou sombre de votre application de messagerie.
 
 ## [0.3.1] : 2026-08-12
 
