@@ -41,7 +41,10 @@ la doctrine gagne.
 | 28 | [Déverrouillage par mot de passe (enveloppe DEK/KEK)](28-deverouillage-mdp-enveloppe.md) | 🔴 Haute | M | ✅ Implémenté | spec 22 (sync E2EE), spec 26 (Better Auth + Resend), spec 25 (page /account) |
 | 29 | [Détail Strong (champs phonetique/origine/type + page /strong/[code])](29-detail-strong.md) | 🟠 Moyenne | M | ✅ Implémenté | spec 02 (concordance Strong) |
 | 30 | [Icône note dans la bulle d'action de sélection](30-icone-note-bulle.md) | 🟢 Basse | S | ✅ Implémenté | spec 12 (bulle d'action), spec 21 (notes) |
-| 23 | [Version du projet & signalement de bug](23-version-signalement-bug.md) | 🟠 Moyenne | S | Proposé | spec 15 (footer, `lib/legal.ts`) |
+| 31 | [Retour à la lecture depuis une fiche Strong : reprise sans perte](31-retour-lecture-reprise-strong.md) | 🔴 Haute | S | ✅ Implémenté | spec 29 (détail Strong, `useStrongResume`) |
+| 32 | [Refonte des e-mails transactionnels avec react.email](32-refonte-mails-react-email.md) | 🟠 Moyenne | M | Proposé | spec 26 (Better Auth + Resend), spec 28 (recovery key) |
+| 33 | [Conformité RGPD complète (registre, conservation, effacement, droits, sous-traitants, violations)](33-conformite-rgpd-complete.md) | 🔴 Haute | M | Proposé | spec 15 (socle légal), spec 22 (compte/sync/E2EE), spec 26 (Better Auth), spec 28 (déverrouillage) |
+| 34 | [Index des notes de la sélection (viewer avant l'éditeur)](34-index-notes-selection.md) | 🟠 Moyenne | S–M | Proposé | spec 10 (notes), spec 12 (dock), spec 24 (`NoteViewer`), spec 30 (icône note) |
 
 **Légende effort** : S = quelques heures · M = 1–2 jours · L = 3 jours et +.
 
