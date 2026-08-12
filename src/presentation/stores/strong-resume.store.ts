@@ -17,6 +17,13 @@ export interface StrongResume {
   selectedIds: string[];
   /** Token actif à restaurer (verset + code Strong du mot), ou null si aucun token n'était actif. */
   activeToken: { verseId: string; strongCode: string } | null;
+  /**
+   * Passage du lecteur au moment de la navigation vers la fiche, pour que le bouton « Retour à la
+   * lecture » pointe vers le même passage (`?livre=…&chap=…`). Spec 31. Absent des vieilles entrées
+   * sessionStorage → repli `/read` côté fiche.
+   */
+  bookId: string;
+  chapter: number;
 }
 
 interface StrongResumeState {

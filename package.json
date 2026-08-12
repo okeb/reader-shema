@@ -12,7 +12,8 @@
     "start": "next start",
     "lint": "next lint",
     "prettier": "prettier --write .",
-    "preview": "next build && next start"
+    "preview": "next build && next start",
+    "arch:check": "node .claude/skills/arch-check/check-arch.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
