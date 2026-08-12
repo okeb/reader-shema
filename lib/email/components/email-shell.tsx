@@ -5,31 +5,41 @@ import {
   Body,
   Container,
   Text,
-  Hr,
+  Section,
+  Row,
+  Column,
+  Img,
+  Link,
 } from '@react-email/components';
-import { EMAIL } from '@/lib/email/theme';
+import { Tailwind } from '@react-email/tailwind';
+import { emailTailwindConfig, DARK_STYLE } from '@/lib/email/theme';
 import { EmailLogo } from './email-logo';
+import { EmailFooterLogo } from '@/lib/email/components/email-footer-logo';
 
 /**
  * Shell partagé des 5 e-mails transactionnels (spec 32 §5.2 / §5.5) — **adaptatif clair/sombre**.
  *
  * Reprise du modèle « Skin » (reset-password) : layout à plat, logo en haut à gauche, gros titre
  * en **DM Sans**, corps en stack système, CTA lien-texte orange, footer séparé par une bordure.
- * Le fond bordeaux du modèle est retiré → le mail pose le **fond du projet** (`EMAIL.bg`) en
- * clair comme en sombre.
+ * Le fond bordeaux du modèle est retiré → le mail pose le **fond du projet** en clair comme en sombre.
  *
- * **Technique adaptative** (§5.5) : le **clair est la base inline** (couleurs posées en attributs
- * `style="…"` sur chaque élément — lues par tous les clients, même ceux qui stripent `<style>`).
- * Le **sombre est une surcharge** via un bloc `<style>` en `<head>` : `@media (prefers-color-scheme:
- * dark)` inverse les classes adaptatives `.e-*` et les `.logo-*` avec `!important`. Les `!important`
- * gagnent quand la media query s’applique ; sans elle, l’inline clair reste lu partout.
+ * **Technique adaptative** (§5.5) — hybride Tailwind :
+ *  - **Clair** = classes Tailwind inlinées par `<Tailwind>` en `style="…"` (lues par tous les
+ *    clients, même ceux qui stripent `<style>`).
+ *  - **Sombre** = surcharge `DARK_STYLE` (`@media (prefers-color-scheme: dark)` + classes `dm-*` +
+ *    `!important`) posée en `<head>`. On n'utilise pas les variantes `dark:` de Tailwind :
+ *    `@react-email/tailwind@2.0.7` les inline comme base (bug — voir `theme.ts`).
  *
  * **Fix dark mode** : `<meta name="color-scheme" content="light dark">` — sans ce meta, Apple
- * Mail / iOS ne basculent pas en sombre (cause racine du bug « reste clair » de l’itération
- * précédente). `supported-color-schemes` couvre les clients plus anciens.
+ * Mail / iOS ne basculent pas en sombre. `supported-color-schemes` couvre les clients plus anciens.
+ * Le `<td>` interne d'`<Body>` (qui reçoit le `style` mais pas le `className`) est ciblé
+ * structurellement par `DARK_STYLE` pour que le fond bascule aussi (cf. `theme.ts`).
  *
  * Outlook desktop (pas de `prefers-color-scheme`) et Gmail web (strippe `<style>`) restent en
  * thème clair — fallback acceptable et attendu (§8) : aucun client ne se retrouve illisible.
+ *
+ * **Logo** : la bascule dual-`<img>` (`.logo-light` / `.logo-dark`) est pilotée par `DARK_STYLE`
+ * (display toggling avec `!important` — le `display` doit battre l'inline de base).
  *
  * DM Sans est une **web-font variable** (un seul woff2 couvre tous les weights) — `@font-face` +
  * `mso-font-alt` : Apple Mail/iOS rendent la police ; Outlook utilise le fallback `mso-font-alt`
@@ -45,16 +55,6 @@ const FONT_FACE = `@font-face {
   src: url(https://fonts.gstatic.com/s/dmsans/v17/rP2Yp2ywxg089UriI5-g4vlH9VoD8Cmcqbu0-K6z9mXg.woff2) format('woff2');
 }`;
 
-const DARK_STYLE = `@media (prefers-color-scheme: dark) {
-  .e-body { background: #090909 !important; }
-  .e-fg { color: #d8d3c5 !important; }
-  .e-muted { color: #98a1ad !important; }
-  .e-border { border-color: #1f2937 !important; }
-  .e-code { background: #161616 !important; border-color: #1f2937 !important; }
-  .logo-light { display: none !important; }
-  .logo-dark { display: inline !important; }
-}`;
-
 export function EmailShell({
   title,
   preview,
@@ -65,59 +65,100 @@ export function EmailShell({
   children: React.ReactNode;
 }) {
   return (
-    <Html lang="fr">
-      <Head>
-        <meta name="color-scheme" content="light dark" />
-        <meta name="supported-color-schemes" content="light dark" />
-        <style dangerouslySetInnerHTML={{ __html: `${FONT_FACE}\n${DARK_STYLE}` }} />
-      </Head>
-      <Preview>{preview}</Preview>
-      <Body
-        className="e-body"
-        style={{ margin: 0, background: EMAIL.bg, fontFamily: EMAIL.bodyFont, color: EMAIL.fg }}
-      >
-        <Container
-          style={{
-            maxWidth: '560px',
-            margin: '0 auto',
-            padding: '40px 24px 32px',
-          }}
-        >
-          {/* Logo en haut à gauche (modèle Skin). */}
-          <EmailLogo />
+    <Tailwind config={emailTailwindConfig}>
+      <Html lang="fr">
+        <Head>
+          <meta name="color-scheme" content="light dark" />
+          <meta name="supported-color-schemes" content="light dark" />
+          <style dangerouslySetInnerHTML={{ __html: `${FONT_FACE}\n${DARK_STYLE}` }} />
+        </Head>
+        <Preview>{preview}</Preview>
+        <Body className="bg-paper font-body" style={{ margin: 0 }}>
+          <Container className="max-w-[560px] mx-auto pt-10 pr-6 pb-8 pl-6">
+            {/* Logo en haut à gauche (modèle Skin). */}
+            <EmailLogo />
 
-          {/* Gros titre — DM Sans, weight 600. */}
-          <Text
-            className="e-fg"
-            style={{
-              fontFamily: EMAIL.titleFont,
-              color: EMAIL.fg,
-              fontSize: '26px',
-              lineHeight: '1.25',
-              fontWeight: 600,
-              textAlign: 'left',
-              margin: '28px 0 20px',
-            }}
-          >
-            {title}
-          </Text>
+            {/* Gros titre — DM Sans, weight 700. */}
+            <Text className="font-title text-ink dm-fg text-[38px] leading-[0.9] tracking-[-0.05em] font-bold text-left mt-3 mb-5 mx-0">
+              {title}
+            </Text>
 
-          {/* Corps — les templates fournissent leurs propres <Text> / <EmailCta>. */}
-          {children}
+            {/* Corps — les templates fournissent leurs propres <Text> / <EmailCta>. */}
+            {children}
 
-          <Hr className="e-border" style={{ borderColor: EMAIL.border, margin: '32px 0 16px' }} />
+            {/* Footer — logo, identité, social, contact. Fond gris clair / sombre. */}
+            <Section className="text-center border-t border-t-gray-300 dark:border-t-gray-800 pt-7 mt-12">
+              <table className="w-full">
+                <tr className="w-full mt-7">
+                  <td align="center">
+                    <EmailFooterLogo />
+                  </td>
+                </tr>
+                <tr className="w-full">
+                  <td align="center">
+                    <Text className="mt-[4px] mb-[3px] font-bold text-[16px] font-serif text-black leading-[24px] tracking-tighter">
+                      The Shema Project
+                    </Text>
+                  </td>
+                  <td align="center">
+                    <Text className="mt-[4px] mb-[3px] font-semibold text-[10px] font-serif text-black leading-[10px] tracking-tighter">
+                      Rendre la Parole du Mashiah Yehoshoua plus accessible pour toutes et pour tous, tout simplement et gratuitement.
+                    </Text>
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center">
+                    <Row className="table-cell h-[44px] w-[56px] align-bottom">
+                      <Column className="pr-[8px]">
+                        <Link href="#">
+                          <Img
+                            alt="Facebook"
+                            height="19"
+                            src="https://api.iconify.design/mage:facebook-circle.svg?color=%236b7280"
+                            width="19"
+                          />
+                        </Link>
+                      </Column>
 
-          {/* Footer — tagline + avis d’ignore. */}
-          <Text
-            className="e-muted"
-            style={{ color: EMAIL.muted, fontSize: '12px', lineHeight: '1.5', margin: '0' }}
-          >
-            ShemaProject — Lecture de la Bible.
-            <br />
-            Si vous n&apos;êtes pas à l&apos;origine de cet e-mail, ignorez-le sans suite.
-          </Text>
-        </Container>
-      </Body>
-    </Html>
+                      <Column className="pr-[8px]">
+                        <Link href="https://t.me/qZfwYAG7VSszMjgO">
+                          <Img
+                            alt="Telegram"
+                            height="19"
+                            src="https://api.iconify.design/mage:telegram.svg?color=%236b7280"
+                            width="19"
+                          />
+                        </Link>
+                      </Column>
+
+                      <Column>
+                        <Link href="#">
+                          <Img
+                            alt="Instagram"
+                            height="19"
+                            src="https://api.iconify.design/mage:tiktok.svg?color=%236b7280"
+                            width="19"
+                          />
+                        </Link>
+                      </Column>
+                    </Row>
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center">
+                    <Text className="mt-[8px] text-[12px] text-black leading-[10px]">
+                      Paris, FRANCE
+                    </Text>
+                    <Text className="mb-0 text-[12px] text-black leading-[10px]">
+                      hello@shemaproject.org
+                    </Text>
+                  </td>
+                </tr>
+              </table>
+            </Section>
+          </Container>
+        </Body>
+      </Html>
+    </Tailwind>
   );
 }

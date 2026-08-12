@@ -21,7 +21,7 @@ export function WelcomeEmail({ name, baseUrl }: { name: string; baseUrl: string 
       title="Bienvenue sur ShemaProject"
       preview="Nous sommes ravis de vous compter parmi nos lecteurs."
     >
-      <Text className="e-fg" style={BODY_TEXT}>
+      <Text className={BODY_TEXT}>
         Bienvenue sur <strong>ShemaProject</strong>{name ? `, ${name}` : ''} !
         <br />
         <br />
@@ -31,7 +31,7 @@ export function WelcomeEmail({ name, baseUrl }: { name: string; baseUrl: string 
       <Text style={{ margin: '8px 0 16px' }}>
         <EmailCta href={readUrl} label="Reprendre la lecture" />
       </Text>
-      <Text className="e-muted" style={MUTED_TEXT}>
+      <Text className={MUTED_TEXT}>
         En cas de besoin, conservez précieusement votre clé de récupération (e-mailée séparément).
       </Text>
     </EmailShell>

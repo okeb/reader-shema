@@ -15,7 +15,7 @@ export function VerificationEmail({ url }: { url: string }) {
       title="Vérifiez votre e-mail"
       preview="Confirmez votre adresse e-mail pour activer votre compte ShemaProject."
     >
-      <Text className="e-fg" style={BODY_TEXT}>
+      <Text className={BODY_TEXT}>
         Bonjour,
         <br />
         <br />

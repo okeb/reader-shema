@@ -15,26 +15,25 @@ import { env } from '@/env.mjs';
  * PNG générés depuis `shema_reader-icon_{light,dark}.svg` (icône monochrome 734×734) → 128×128
  * (rendu net à l’affichage 40px). URLs dérivées de `NEXT_PUBLIC_APP_URL`.
  */
-const base = env.NEXT_PUBLIC_APP_URL.replace(/\/$/, '');
-const LIGHT_LOGO = `https://reader-shema.vercel.app/logo/shema_reader-icon_light.png`;
-const DARK_LOGO = `https://reader-shema.vercel.app/logo/shema_reader-icon_dark.png`;
+const LIGHT_LOGO = `https://reader.shemaproject.org/logo/shema_reader-logo_dark.webp`;
+const DARK_LOGO = `https://reader.shemaproject.org/logo/shema_reader-logo_dark.webp`;
 
-export function EmailLogo() {
+export function EmailFooterLogo() {
   return (
     <>
       <Img
         src={LIGHT_LOGO}
-        alt="ShemaProject"
-        width="48"
-        height="48"
+        alt="ShemaProject reader logo"
+        width="65"
+        height="30"
         className="logo-light dark:hidden"
         style={{ display: 'inline', margin: '0' }}
       />
       <Img
         src={DARK_LOGO}
-        alt="ShemaProject"
-        width="48"
-        height="48"
+        alt="Shema reader logo"
+        width="65"
+        height="30"
         className="logo-dark hidden dark:inline-block"
         style={{ display: 'none', margin: '0' }}
       />
