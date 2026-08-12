@@ -501,16 +501,19 @@ export function TReader({
 
   // Navigue vers la fiche détail d'un code Strong (depuis une référence d'`origine` dans le panneau
   // Strong). `push` (pas `replace`) pour que le bouton retour revienne au lecteur. Avant de quitter,
-  // mémorise la sélection + le token actif dans le store de reprise (consommé au remontage). Spec 29.
+  // mémorise la sélection + le token actif + le passage courant dans le store de reprise (consommé
+  // au remontage). Spec 29 ; étendu par la spec 31 (bookId/chapter pour le bouton retour).
   const navigateStrong = useCallback(
     (code: string, source?: { verseId: string; strongCode?: string }) => {
       useStrongResume.getState().setResume({
         selectedIds: [...selection.selectedIds],
         activeToken: source?.strongCode ? { verseId: source.verseId, strongCode: source.strongCode } : null,
+        bookId,
+        chapter,
       });
       router.push(`/${locale}/strong/${code}`);
     },
-    [router, locale, selection.selectedIds],
+    [router, locale, selection.selectedIds, bookId, chapter],
   );
 
   // --- Quiz (Phase 6) --------------------------------------------------------- @nolint
