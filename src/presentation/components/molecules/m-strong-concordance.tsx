@@ -91,8 +91,9 @@ export function StrongConcordance({
           </button>
         </div>
 
-        {/* Corps */}
-        <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-2">
+        {/* Corps — padding bas renforcé (pb-20) pour dégager le bouton « Charger plus »
+            de l'overlay de fondu fixe (h-16) qui sinon l'estompe en bas de panneau. */}
+        <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-2 pb-20">
           {status === 'loading' ? (
             <ConcordanceSkeleton />
           ) : status === 'error' ? (
