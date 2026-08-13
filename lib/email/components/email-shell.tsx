@@ -6,7 +6,7 @@ import {
   Container,
   Text,
   // Section,
-  Hr,
+  // Hr,
   Link,
 } from '@react-email/components';
 import { Tailwind } from '@react-email/tailwind';
@@ -74,50 +74,49 @@ export function EmailShell({
             </Container>
 
             {/* Footer — logo, identité, social, contact. Fond gris clair / sombre. */}
-            <Hr className="px-8 w-full"/>
-            <Container className="text-center pt-7 bg-neutral-300">
-              <table className="w-full">
-                <tbody>
-                  <tr className="w-full mt-7">
-                    <td align="center">
-                      <EmailFooterLogo />
-                    </td>
-                  </tr>
-                  <tr className="w-full">
-                    <td align="center">
-                      <Text className="mt-[4px] mb-[3px] font-bold text-[16px] font-serif text-neutral400 leading-[18px] tracking-tighter">
-                        The Shema Project
-                      </Text>
-                    </td>
-                  </tr>
-                  <tr className="w-full">
-                    <td align="center">
-                      <Text className="w-2/3 mt-[4px] font-semibold text-[10px] font-sans text-neutral-500 leading-[10px] tracking-tighter">
-                        Rendre la Parole du Mashiah Yehoshoua plus accessible pour toutes et pour tous, tout simplement et gratuitement.
-                      </Text>
-                    </td>
-                  </tr>
-                  <EmailSocialLink />
-                  <tr>
-                    <td align="center" className="mt-[7px]">
-                      <Text className="text-[12px] mb-0 text-neutral-300 leading-[10px]">
-                        Paris, FRANCE
-                      </Text>
-                      <Text className="mb-7 mt-0 text-[12px] text-neutral-200 leading-[10px]">
-                        hello@shemaproject.org
-                      </Text>
-                      {unsubscribeUrl ? (
-                        <Text className="mb-0 text-[11px] text-neutral-400 leading-[14px]">
-                          <Link href={unsubscribeUrl} className="text-neutral-400 underline">
-                            Se désinscrire
-                          </Link>{' '}des e-mails ShemaProject.
-                        </Text>
-                      ) : null}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </Container>
+          </Container>
+          <Container className="text-center py-7 bg-neutral-900 rounded-xl">
+            <table className="w-full">
+              <tbody>
+              <tr className="w-full mt-7">
+                <td align="center">
+                  <EmailFooterLogo />
+                </td>
+              </tr>
+              <tr className="w-full">
+                <td align="center">
+                  <Text className="mt-[4px] mb-[3px] font-bold text-[16px] font-serif text-neutral400 leading-[18px] tracking-tighter">
+                    The Shema Project
+                  </Text>
+                </td>
+              </tr>
+              <tr className="w-full">
+                <td align="center">
+                  <Text className="w-2/3 mt-[4px] font-semibold text-[10px] font-sans text-neutral-500 leading-[10px] tracking-tighter">
+                    Rendre la Parole du Mashiah Yehoshoua plus accessible pour toutes et pour tous, tout simplement et gratuitement.
+                  </Text>
+                </td>
+              </tr>
+              <EmailSocialLink />
+              <tr>
+                <td align="center" className="mt-[7px]">
+                  <Text className="text-[12px] mb-0 text-neutral-300 leading-[10px]">
+                    Paris, FRANCE
+                  </Text>
+                  <Text className="mb-7 mt-0 text-[12px] text-neutral-200 leading-[10px]">
+                    hello@shemaproject.org
+                  </Text>
+                  {unsubscribeUrl ? (
+                    <Text className="mb-0 text-[11px] text-neutral-400 leading-[14px]">
+                      <Link href={unsubscribeUrl} className="text-neutral-400 underline">
+                        Se désinscrire
+                      </Link>{' '}des e-mails ShemaProject.
+                    </Text>
+                  ) : null}
+                </td>
+              </tr>
+              </tbody>
+            </table>
           </Container>
         </Body>
       </Html>
