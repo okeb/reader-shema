@@ -21,7 +21,7 @@ export function EmailSocialLink() {
     <tr>
       <td align="center">
         <Row className="table-cell h-[44px] w-[56px] align-bottom">
-          <Column className="pr-[8px]">
+          <Column className="pr-[9px]">
             <Link href="#">
               <Img
                 alt="Facebook"
@@ -32,12 +32,12 @@ export function EmailSocialLink() {
             </Link>
           </Column>
 
-          <Column className="pr-[8px]">
+          <Column className="pr-[9px]">
             <Link href="https://t.me/qZfwYAG7VSszMjgO">
               <Img
                 alt="Telegram"
-                height="19"
-                width="19"
+                height="20"
+                width="20"
                 src={TELEGRAM_ICON}
               />
             </Link>

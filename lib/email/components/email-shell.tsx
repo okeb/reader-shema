@@ -71,7 +71,7 @@ export function EmailShell({
 
             {/* Footer — logo, identité, social, contact. Fond gris clair / sombre. */}
             <Hr className="px-8 w-full"/>
-            <Section className="text-center pt-16">
+            <Section className="text-center pt-7">
               <table className="w-full">
                 <tbody>
                   <tr className="w-full mt-7">
@@ -86,9 +86,9 @@ export function EmailShell({
                       </Text>
                     </td>
                   </tr>
-                  <tr className="w-full mb-[3px]">
+                  <tr className="w-full">
                     <td align="center">
-                      <Text className="w-2/3 mt-[4px] font-semibold text-[10px] font-serif text-black leading-[10px] tracking-tighter">
+                      <Text className="w-2/3 mt-[4px] font-semibold text-[10px] font-sans text-black leading-[10px] tracking-tighter">
                         Rendre la Parole du Mashiah Yehoshoua plus accessible pour toutes et pour tous, tout simplement et gratuitement.
                       </Text>
                     </td>
@@ -99,7 +99,7 @@ export function EmailShell({
                       <Text className="text-[12px] mb-0 text-black leading-[10px]">
                         Paris, FRANCE
                       </Text>
-                      <Text className="mb-7  -mt-2 text-[12px] text-black leading-[10px]">
+                      <Text className="mb-7 mt-0 text-[12px] text-black leading-[10px]">
                         hello@shemaproject.org
                       </Text>
                     </td>

@@ -16,8 +16,8 @@ import { env } from '@/env.mjs';
  * (rendu net à l’affichage 40px). URLs dérivées de `NEXT_PUBLIC_APP_URL`.
  */
 const base = env.NEXT_PUBLIC_APP_URL.replace(/\/$/, '');
-const LIGHT_LOGO = `${base}/logo/shema_reader-icon_light.png`;
-const DARK_LOGO = `${base}/logo/shema_reader-icon_dark.png`;
+const LIGHT_LOGO = `${base}/logo/reader-shema_logo_email.webp`;
+// const DARK_LOGO = `${base}/logo/shema_reader-icon_dark.png`;
 
 export function EmailFooterLogo() {
   return (
@@ -25,17 +25,17 @@ export function EmailFooterLogo() {
       <Img
         src={LIGHT_LOGO}
         alt="ShemaProject"
-        width="28"
-        height="28"
-        className="dark:hidden inline-block"
+        width="32"
+        height="32"
+        className="mx-auto"
       />
-      <Img
-        src={DARK_LOGO}
-        alt="ShemaProject"
-        width="28"
-        height="28"
-        className="hidden dark:inline-block"
-      />
+      {/*<Img*/}
+      {/*  src={DARK_LOGO}*/}
+      {/*  alt="ShemaProject"*/}
+      {/*  width="28"*/}
+      {/*  height="28"*/}
+      {/*  className="hidden dark:inline-block  mx-auto"*/}
+      {/*/>*/}
     </>
   );
 }
