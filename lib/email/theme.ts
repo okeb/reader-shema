@@ -92,12 +92,12 @@ export const DARK_STYLE = `@media (prefers-color-scheme: dark) {
 
 /** Classes partagées du corps de texte (paragraphe standard des templates). */
 export const BODY_TEXT =
-  'text-ink dm-fg text-[15px] leading-[1.37] mb-7';
+  'text-ink dm-fg text-lg leading-[1.37] mb-7';
 
 /** Classes partagées d'une ligne muted (note, rappel). */
 export const MUTED_TEXT =
-  'text-muted dm-muted text-[14px] leading-[1.5] mb-5';
+  'text-muted dm-muted text-md leading-[1.5] mb-5';
 
 /** Classes partagées du bloc `<code>` (clé de récupération). */
 export const CODE_BLOCK =
-  'text-ink dm-fg font-mono text-[15px] tracking-[0.5px] bg-code dm-code-bg border border-line dm-border rounded-lg px-4 py-3.5 break-all mb-4';
+  'text-ink dm-fg font-mono text-md tracking-[0.5px] bg-code dm-code-bg border border-line dm-border rounded-lg px-4 py-3.5 break-all mb-4';

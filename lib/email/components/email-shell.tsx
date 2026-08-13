@@ -54,13 +54,13 @@ export function EmailShell({
           <style dangerouslySetInnerHTML={{ __html: `${FONT_FACE}\n${DARK_STYLE}` }} />
         </Head>
         <Preview>{preview}</Preview>
-        <Body className="bg-paper font-body" style={{ margin: 0 }}>
+        <Body className="bg-white  dark:bg-dark" style={{ margin: 0 }}>
           <Container className="max-w-[560px] mx-auto pt-10 pr-6 pb-8 pl-6">
             {/* Logo en haut à gauche (modèle Skin). */}
             <EmailHeaderLogo />
 
             {/* Gros titre — DM Sans, weight 700. */}
-            <Text className="font-title text-ink dm-fg text-[38px] leading-[0.9] tracking-[-0.05em] font-bold text-left mt-3 mb-5 mx-0">
+            <Text className="font-title text-ink dm-fg text-5xl leading-[0.9] tracking-[-0.05em] font-bold text-left mt-3 mb-5 mx-0">
               {title}
             </Text>
 
@@ -71,7 +71,7 @@ export function EmailShell({
 
             {/* Footer — logo, identité, social, contact. Fond gris clair / sombre. */}
             <Hr className="px-8 w-full"/>
-            <Section className="text-center pt-7">
+            <Section className="text-center pt-7 bg-neutral-800">
               <table className="w-full">
                 <tbody>
                   <tr className="w-full mt-7">
@@ -81,14 +81,14 @@ export function EmailShell({
                   </tr>
                   <tr className="w-full">
                     <td align="center">
-                      <Text className="mt-[4px] mb-[3px] font-bold text-[16px] font-serif text-black leading-[18px] tracking-tighter">
+                      <Text className="mt-[4px] mb-[3px] font-bold text-[16px] font-serif text-neutral400 leading-[18px] tracking-tighter">
                         The Shema Project
                       </Text>
                     </td>
                   </tr>
                   <tr className="w-full">
                     <td align="center">
-                      <Text className="w-2/3 mt-[4px] font-semibold text-[10px] font-sans text-black leading-[10px] tracking-tighter">
+                      <Text className="w-2/3 mt-[4px] font-semibold text-[10px] font-sans text-neutral-500 leading-[10px] tracking-tighter">
                         Rendre la Parole du Mashiah Yehoshoua plus accessible pour toutes et pour tous, tout simplement et gratuitement.
                       </Text>
                     </td>
@@ -96,10 +96,10 @@ export function EmailShell({
                   <EmailSocialLink />
                   <tr>
                     <td align="center" className="mt-[7px]">
-                      <Text className="text-[12px] mb-0 text-black leading-[10px]">
+                      <Text className="text-[12px] mb-0 text-neutral-300 leading-[10px]">
                         Paris, FRANCE
                       </Text>
-                      <Text className="mb-7 mt-0 text-[12px] text-black leading-[10px]">
+                      <Text className="mb-7 mt-0 text-[12px] text-neutral-200 leading-[10px]">
                         hello@shemaproject.org
                       </Text>
                     </td>
