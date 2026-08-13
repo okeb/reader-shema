@@ -14,8 +14,8 @@ import {
 } from '@react-email/components';
 import { Tailwind } from '@react-email/tailwind';
 import { emailTailwindConfig, DARK_STYLE } from '@/lib/email/theme';
-import { EmailLogo } from './email-logo';
-// import { EmailFooterLogo } from '@/lib/email/components/email-footer-logo';
+// import { EmailLogo } from './email-logo';
+import { EmailFooterLogo } from '@/lib/email/components/email-footer-logo';
 
 /**
  * Shell partagé des 5 e-mails transactionnels (spec 32 §5.2 / §5.5) — **adaptatif clair/sombre**.
@@ -77,7 +77,7 @@ export function EmailShell({
         <Body className="bg-paper font-body" style={{ margin: 0 }}>
           <Container className="max-w-[560px] mx-auto pt-10 pr-6 pb-8 pl-6">
             {/* Logo en haut à gauche (modèle Skin). */}
-            <EmailLogo />
+            <EmailFooterLogo />
 
             {/* Gros titre — DM Sans, weight 700. */}
             <Text className="font-title text-ink dm-fg text-[38px] leading-[0.9] tracking-[-0.05em] font-bold text-left mt-3 mb-5 mx-0">
@@ -88,13 +88,13 @@ export function EmailShell({
             {children}
 
             {/* Footer — logo, identité, social, contact. Fond gris clair / sombre. */}
-            <Hr className="px-8 w-full"/>
-            <Section className="text-center border-t pt-16 mt-20">
+            <Hr className="px-8 w-full mt-16"/>
+            <Section className="text-center mt-16">
               <table className="w-full">
                 <tbody>
                   <tr className="w-full mt-7">
                     <td align="center">
-                      <EmailLogo />
+                      <EmailFooterLogo />
                     </td>
                   </tr>
                   <tr className="w-full">
