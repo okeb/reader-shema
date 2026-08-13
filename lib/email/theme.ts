@@ -87,15 +87,7 @@ export const emailTailwindConfig = {
  * Outlook desktop ignore `prefers-color-scheme` → fallback clair attendu, §8).
  */
 export const DARK_STYLE = `@media (prefers-color-scheme: dark) {
-  body { background-color: #121212 !important; }
-  body > table > tbody > tr > td { background-color: #090909 !important; }
-  .dm-fg { color: #d8d3c5 !important; }
-  .dm-muted { color: #98a1ad !important; }
-  .dm-border { border-color: #1f2937 !important; }
-  .dm-code-bg { background-color: #161616 !important; }
-  .dm-footer-bg { background-color: #1e1d1c !important; }
-  .logo-light { display: none !important; }
-  .logo-dark { display: inline !important; }
+''
 }`;
 
 /** Classes partagées du corps de texte (paragraphe standard des templates). */
