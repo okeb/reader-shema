@@ -16,7 +16,7 @@ export function EmailCta({ href, label }: { href: string; label: string }) {
       <Button
         href={href}
         style={{
-          borderRadius: '10px',
+          borderRadius: '12px',
         }}
         className="font-title w-fit max-w-fit mx-2 box-border py-3 px-6 font-semibold text-center bg-accent !text-white no-underline rounded-2xl"
       >

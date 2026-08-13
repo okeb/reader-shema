@@ -7,6 +7,7 @@ import {
   Text,
   Section,
   Hr,
+  Link,
 } from '@react-email/components';
 import { Tailwind } from '@react-email/tailwind';
 import { emailTailwindConfig, DARK_STYLE } from '@/lib/email/theme';
@@ -40,10 +41,13 @@ export function EmailShell({
   title,
   preview,
   children,
+  unsubscribeUrl,
 }: {
   title: string;
   preview: string;
   children: React.ReactNode;
+  /** URL signée vers `/api/email/unsubscribe?token=…`. Absent → pas de lien de désinscription. */
+  unsubscribeUrl?: string;
 }) {
   return (
     <Tailwind config={emailTailwindConfig}>
@@ -54,7 +58,7 @@ export function EmailShell({
           <style dangerouslySetInnerHTML={{ __html: `${FONT_FACE}\n${DARK_STYLE}` }} />
         </Head>
         <Preview>{preview}</Preview>
-        <Body className="bg-white  dark:bg-dark" style={{ margin: 0 }}>
+        <Body className="bg-white dark:bg-dark" style={{ margin: 0 }}>
           <Container className="max-w-[560px] mx-auto pt-10 pr-6 pb-8 pl-6">
             {/* Logo en haut à gauche (modèle Skin). */}
             <EmailHeaderLogo />
@@ -102,6 +106,13 @@ export function EmailShell({
                       <Text className="mb-7 mt-0 text-[12px] text-neutral-200 leading-[10px]">
                         hello@shemaproject.org
                       </Text>
+                      {unsubscribeUrl ? (
+                        <Text className="mb-0 text-[11px] text-neutral-400 leading-[14px]">
+                          <Link href={unsubscribeUrl} className="text-neutral-400 underline">
+                            Se désinscrire
+                          </Link>{' '}des e-mails ShemaProject.
+                        </Text>
+                      ) : null}
                     </td>
                   </tr>
                 </tbody>

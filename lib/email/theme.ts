@@ -58,6 +58,9 @@ export const emailTailwindConfig = {
         ink: '#3f3e3b',
         // Background (fond) — clair inline par Tailwind, sombre via body/td (DARK_STYLE)
         paper: '#fcfcfc',
+        // Carte haute (modèle Tech) — fond légèrement plus clair que `paper` pour détacher le
+        // bloc logo+titre+corps du fond extérieur. Clair inline par Tailwind.
+        card: '#ffffff',
         // Muted (notes, rappels) — clair inline, sombre via .dm-muted
         muted: '#6b7280',
         // Border — clair inline, sombre via .dm-border

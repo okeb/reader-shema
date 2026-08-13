@@ -29,29 +29,29 @@ import { WelcomeEmail } from '@/lib/email/templates/welcome';
 export { VerificationEmail, ResetPasswordEmail, MagicLinkEmail, RecoveryKeyEmail, WelcomeEmail };
 
 /** E-mail de vérification d'adresse (click → `/api/auth/verify-email?token=…`). */
-export async function verificationEmailHtml(url: string): Promise<string> {
-  return renderEmail(<VerificationEmail url={url} />);
+export async function verificationEmailHtml(url: string, unsubscribeUrl?: string): Promise<string> {
+  return renderEmail(<VerificationEmail url={url} unsubscribeUrl={unsubscribeUrl} />);
 }
 
 /** E-mail de réinitialisation de mot de passe (click → `/api/auth/reset-password/:token?…`). */
-export async function resetPasswordEmailHtml(url: string): Promise<string> {
-  return renderEmail(<ResetPasswordEmail url={url} />);
+export async function resetPasswordEmailHtml(url: string, unsubscribeUrl?: string): Promise<string> {
+  return renderEmail(<ResetPasswordEmail url={url} unsubscribeUrl={unsubscribeUrl} />);
 }
 
 /** Lien magique de connexion (click → `/api/auth/magic-link/verify?token=…`). */
-export async function magicLinkEmailHtml(email: string, url: string): Promise<string> {
-  return renderEmail(<MagicLinkEmail email={email} url={url} />);
+export async function magicLinkEmailHtml(email: string, url: string, unsubscribeUrl?: string): Promise<string> {
+  return renderEmail(<MagicLinkEmail email={email} url={url} unsubscribeUrl={unsubscribeUrl} />);
 }
 
 /**
  * Clé de récupération de secours (spec 28) — e-mailée à l'inscription (et au re-keying legacy).
  * Bloc `<code>` monospace adaptatif, sans bouton (code à conserver, pas à cliquer).
  */
-export async function recoveryKeyEmailHtml(recoveryKey: string): Promise<string> {
-  return renderEmail(<RecoveryKeyEmail recoveryKey={recoveryKey} />);
+export async function recoveryKeyEmailHtml(recoveryKey: string, unsubscribeUrl?: string): Promise<string> {
+  return renderEmail(<RecoveryKeyEmail recoveryKey={recoveryKey} unsubscribeUrl={unsubscribeUrl} />);
 }
 
 /** Mail de bienvenue post-inscription (nouveau, spec 32) — déclenché par le hook Better Auth. */
-export async function welcomeEmailHtml(name: string, baseUrl: string): Promise<string> {
-  return renderEmail(<WelcomeEmail name={name} baseUrl={baseUrl} />);
+export async function welcomeEmailHtml(name: string, baseUrl: string, unsubscribeUrl?: string): Promise<string> {
+  return renderEmail(<WelcomeEmail name={name} baseUrl={baseUrl} unsubscribeUrl={unsubscribeUrl} />);
 }

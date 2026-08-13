@@ -4,6 +4,7 @@ import { magicLink } from 'better-auth/plugins/magic-link';
 import { env } from '@/env.mjs';
 import { pool } from '@/src/infrastructure/database/pg-pool';
 import { sendEmail } from '@/lib/email/transport';
+import { createUnsubscribeUrl } from '@/lib/email/unsubscribe';
 import {
   verificationEmailHtml,
   resetPasswordEmailHtml,
@@ -78,7 +79,7 @@ export const auth = configured
           await sendEmail({
             to: user.email,
             subject: 'Réinitialisation de votre mot de passe — ShemaProject',
-            html: await resetPasswordEmailHtml(url),
+            html: await resetPasswordEmailHtml(url, createUnsubscribeUrl(user.email)),
           });
         },
       },
@@ -87,7 +88,7 @@ export const auth = configured
           await sendEmail({
             to: user.email,
             subject: 'Vérifiez votre e-mail — ShemaProject',
-            html: await verificationEmailHtml(url),
+            html: await verificationEmailHtml(url, createUnsubscribeUrl(user.email)),
           });
         },
         autoSignInAfterVerification: true,
@@ -101,7 +102,7 @@ export const auth = configured
             await sendEmail({
               to: email,
               subject: 'Votre lien de connexion — ShemaProject',
-              html: await magicLinkEmailHtml(email, url),
+              html: await magicLinkEmailHtml(email, url, createUnsubscribeUrl(email)),
             });
           },
         }),
@@ -121,6 +122,7 @@ export const auth = configured
                 html: await welcomeEmailHtml(
                   user.name ?? '',
                   env.NEXT_PUBLIC_APP_URL ?? 'https://reader.shemaproject.org',
+                  createUnsubscribeUrl(user.email),
                 ),
               });
             },

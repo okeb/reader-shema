@@ -7,11 +7,12 @@ import { BODY_TEXT } from '@/lib/email/theme';
  * E-mail de réinitialisation de mot de passe (spec 32) — click →
  * `/api/auth/reset-password/:token?…`. Lien à usage unique, expiration rapide (rappel copie).
  */
-export function ResetPasswordEmail({ url }: { url: string }) {
+export function ResetPasswordEmail({ url, unsubscribeUrl }: { url: string; unsubscribeUrl?: string }) {
   return (
     <EmailShell
       title="Réinitialisez votre mot de passe"
       preview="Vous avez demandé à réinitialiser votre mot de passe ShemaProject."
+      unsubscribeUrl={unsubscribeUrl}
     >
       <Text className={BODY_TEXT}>
         Bonjour,
