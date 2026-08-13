@@ -75,8 +75,8 @@ export function EmailShell({
 
             {/* Footer — logo, identité, social, contact. Fond gris clair / sombre. */}
           </Container>
-          <Container className="px-6 pb-8">
-            <Section className="w-full text-center py-7 bg-neutral-900 rounded-xl">
+          <Container className="px-2 pb-8">
+            <Section className="w-full text-center py-7 bg-neutral-900 rounded-2xl">
               <table className="w-full">
                 <tbody>
                 <tr className="w-full mt-7">
@@ -86,7 +86,7 @@ export function EmailShell({
                 </tr>
                 <tr className="w-full">
                   <td align="center">
-                    <Text className="mt-[4px] mb-[3px] font-bold text-[16px] font-serif text-neutral400 leading-[18px] tracking-tighter">
+                    <Text className="mt-[4px] mb-[3px] font-bold text-[16px] font-serif text-neutral-400 leading-[18px] tracking-tighter">
                       The Shema Project
                     </Text>
                   </td>
