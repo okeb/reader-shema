@@ -68,13 +68,11 @@ export async function generateMetadata({
     metadataBase: new URL('https://reader.shemaproject.org'),
     title: 'ShemaProject — Lecture de la Bible',
     description: 'Lecteur de la Bible de Yéhoshoua Ha Mashiah',
-    // Favicon thématique basculé par prefers-color-scheme (cf. ancien app/layout.tsx).
-    icons: {
-      icon: [
-        { url: '/logo/shema_reader-icon_light.svg', media: '(prefers-color-scheme: light)' },
-        { url: '/logo/shema_reader-icon_dark.svg', media: '(prefers-color-scheme: dark)' },
-      ],
-    },
+    // Favicon **aléatoire** (spec 32 §5.5) : la route dynamique `/brand-icon` servit un PNG
+    // différent parmi les 5 déclinaisons colorées (or, laine, pelouse, plume, sable) à chaque
+    // requête navigateur (`Cache-Control: no-store`). Cf. `app/brand-icon/route.ts`. L'icône
+    // d'accueil (`o-home.tsx`) suit le même tirage côté client.
+    icons: { icon: '/brand-icon' },
     openGraph: { locale: locale === 'en' ? 'en_US' : 'fr_FR' },
   };
 }
