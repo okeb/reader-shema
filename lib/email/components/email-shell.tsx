@@ -13,6 +13,7 @@ import { emailTailwindConfig, DARK_STYLE } from '@/lib/email/theme';
 import { EmailHeaderLogo } from '@/lib/email/components/email-header-logo';
 import {EmailSocialLink} from "@/lib/email/components/email-social-link";
 import { env } from '@/env.mjs';
+import {EmailFooterLogo} from "@/lib/email/components/email-footer-logo";
 
 /**
  * @font-face DM Sans — servie depuis nos propres fichiers (`public/fonts/`), plus depuis le CDN
@@ -64,16 +65,18 @@ export function EmailShell({
             </Text>
 
             {/* Corps — les templates fournissent leurs propres <Text> / <EmailCta>. */}
-            {children}
+            <Container className="mb-12">
+              {children}
+            </Container>
 
             {/* Footer — logo, identité, social, contact. Fond gris clair / sombre. */}
-            <Hr className="px-8 w-full mt-16"/>
-            <Section className="text-center mt-16">
+            <Hr className="px-8 w-full"/>
+            <Section className="text-center pt-16">
               <table className="w-full">
                 <tbody>
                   <tr className="w-full mt-7">
                     <td align="center">
-                      <EmailHeaderLogo />
+                      <EmailFooterLogo />
                     </td>
                   </tr>
                   <tr className="w-full">
@@ -83,7 +86,7 @@ export function EmailShell({
                       </Text>
                     </td>
                   </tr>
-                  <tr className="w-full mb-[7px]">
+                  <tr className="w-full mb-[3px]">
                     <td align="center">
                       <Text className="w-2/3 mt-[4px] font-semibold text-[10px] font-serif text-black leading-[10px] tracking-tighter">
                         Rendre la Parole du Mashiah Yehoshoua plus accessible pour toutes et pour tous, tout simplement et gratuitement.
@@ -96,7 +99,7 @@ export function EmailShell({
                       <Text className="text-[12px] mb-0 text-black leading-[10px]">
                         Paris, FRANCE
                       </Text>
-                      <Text className="mb-7 text-[12px] text-black leading-[10px]">
+                      <Text className="mb-7  -mt-2 text-[12px] text-black leading-[10px]">
                         hello@shemaproject.org
                       </Text>
                     </td>

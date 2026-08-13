@@ -27,7 +27,7 @@ export function EmailFooterLogo() {
         alt="ShemaProject"
         width="28"
         height="28"
-        className="dark:hidden"
+        className="dark:hidden inline-block"
       />
       <Img
         src={DARK_LOGO}
