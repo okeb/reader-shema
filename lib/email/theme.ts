@@ -87,7 +87,7 @@ export const emailTailwindConfig = {
  * Outlook desktop ignore `prefers-color-scheme` → fallback clair attendu, §8).
  */
 export const DARK_STYLE = `@media (prefers-color-scheme: dark) {
-  body { background-color: #090909 !important; }
+  body { background-color: #121212 !important; }
   body > table > tbody > tr > td { background-color: #090909 !important; }
   .dm-fg { color: #d8d3c5 !important; }
   .dm-muted { color: #98a1ad !important; }
@@ -100,11 +100,11 @@ export const DARK_STYLE = `@media (prefers-color-scheme: dark) {
 
 /** Classes partagées du corps de texte (paragraphe standard des templates). */
 export const BODY_TEXT =
-  'text-ink dm-fg text-[15px] leading-[1.37] mb-5';
+  'text-ink dm-fg text-[15px] leading-[1.37] mb-7';
 
 /** Classes partagées d'une ligne muted (note, rappel). */
 export const MUTED_TEXT =
-  'text-muted dm-muted text-[14px] leading-[1.5] mb-3';
+  'text-muted dm-muted text-[14px] leading-[1.5] mb-5';
 
 /** Classes partagées du bloc `<code>` (clé de récupération). */
 export const CODE_BLOCK =

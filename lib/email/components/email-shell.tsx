@@ -15,7 +15,7 @@ import {
 import { Tailwind } from '@react-email/tailwind';
 import { emailTailwindConfig, DARK_STYLE } from '@/lib/email/theme';
 import { EmailLogo } from './email-logo';
-import { EmailFooterLogo } from '@/lib/email/components/email-footer-logo';
+// import { EmailFooterLogo } from '@/lib/email/components/email-footer-logo';
 
 /**
  * Shell partagé des 5 e-mails transactionnels (spec 32 §5.2 / §5.5) — **adaptatif clair/sombre**.
@@ -88,76 +88,78 @@ export function EmailShell({
             {children}
 
             {/* Footer — logo, identité, social, contact. Fond gris clair / sombre. */}
-            <Hr className="bg-[#6b7280] text-[#6b7280] px-8 w-full"/>
-            <Section className="text-center border-t pt-7 mt-12">
+            <Hr className="px-8 w-full"/>
+            <Section className="text-center border-t pt-16 mt-20">
               <table className="w-full">
-                <tr className="w-full mt-7">
-                  <td align="center">
-                    <EmailFooterLogo />
-                  </td>
-                </tr>
-                <tr className="w-full">
-                  <td align="center">
-                    <Text className="mt-[4px] mb-[3px] font-bold text-[16px] font-serif text-black leading-[18px] tracking-tighter">
-                      The Shema Project
-                    </Text>
-                  </td>
-                </tr>
-                <tr className="w-full mb-[10px]">
-                  <td align="center">
-                    <Text className="w-1/2 mt-[4px] font-semibold text-[10px] font-serif text-black leading-[10px] tracking-tighter">
-                      Rendre la Parole du Mashiah Yehoshoua plus accessible pour toutes et pour tous, tout simplement et gratuitement.
-                    </Text>
-                  </td>
-                </tr>
-                <tr>
-                  <td align="center">
-                    <Row className="table-cell h-[44px] w-[56px] align-bottom">
-                      <Column className="pr-[8px]">
-                        <Link href="#">
-                          <Img
-                            alt="Facebook"
-                            height="19"
-                            src="https://api.iconify.design/mage:facebook-circle.svg?color=%236b7280"
-                            width="19"
-                          />
-                        </Link>
-                      </Column>
+                <tbody>
+                  <tr className="w-full mt-7">
+                    <td align="center">
+                      <EmailLogo />
+                    </td>
+                  </tr>
+                  <tr className="w-full">
+                    <td align="center">
+                      <Text className="mt-[4px] mb-[3px] font-bold text-[16px] font-serif text-black leading-[18px] tracking-tighter">
+                        The Shema Project
+                      </Text>
+                    </td>
+                  </tr>
+                  <tr className="w-full mb-[7px]">
+                    <td align="center">
+                      <Text className="w-2/3 mt-[4px] font-semibold text-[10px] font-serif text-black leading-[10px] tracking-tighter">
+                        Rendre la Parole du Mashiah Yehoshoua plus accessible pour toutes et pour tous, tout simplement et gratuitement.
+                      </Text>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td align="center">
+                      <Row className="table-cell h-[44px] w-[56px] align-bottom">
+                        <Column className="pr-[8px]">
+                          <Link href="#">
+                            <Img
+                              alt="Facebook"
+                              height="19"
+                              src="https://api.iconify.design/mage:facebook-circle.svg?color=%236b7280"
+                              width="19"
+                            />
+                          </Link>
+                        </Column>
 
-                      <Column className="pr-[8px]">
-                        <Link href="https://t.me/qZfwYAG7VSszMjgO">
-                          <Img
-                            alt="Telegram"
-                            height="19"
-                            src="https://api.iconify.design/mage:telegram.svg?color=%236b7280"
-                            width="19"
-                          />
-                        </Link>
-                      </Column>
+                        <Column className="pr-[8px]">
+                          <Link href="https://t.me/qZfwYAG7VSszMjgO">
+                            <Img
+                              alt="Telegram"
+                              height="19"
+                              src="https://api.iconify.design/mage:telegram.svg?color=%236b7280"
+                              width="19"
+                            />
+                          </Link>
+                        </Column>
 
-                      <Column>
-                        <Link href="#">
-                          <Img
-                            alt="Instagram"
-                            height="19"
-                            src="https://api.iconify.design/mage:tiktok.svg?color=%236b7280"
-                            width="19"
-                          />
-                        </Link>
-                      </Column>
-                    </Row>
-                  </td>
-                </tr>
-                <tr>
-                  <td align="center" className="mt-[10px]">
-                    <Text className="text-[12px] mb-0 text-black leading-[10px]">
-                      Paris, FRANCE
-                    </Text>
-                    <Text className="mt-2 mb-7 text-[12px] text-black leading-[10px]">
-                      hello@shemaproject.org
-                    </Text>
-                  </td>
-                </tr>
+                        <Column>
+                          <Link href="#">
+                            <Img
+                              alt="Instagram"
+                              height="19"
+                              src="https://api.iconify.design/mage:tiktok.svg?color=%236b7280"
+                              width="19"
+                            />
+                          </Link>
+                        </Column>
+                      </Row>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td align="center" className="mt-[7px]">
+                      <Text className="text-[12px] mb-0 text-black leading-[10px]">
+                        Paris, FRANCE
+                      </Text>
+                      <Text className="mb-7 text-[12px] text-black leading-[10px]">
+                        hello@shemaproject.org
+                      </Text>
+                    </td>
+                  </tr>
+                </tbody>
               </table>
             </Section>
           </Container>

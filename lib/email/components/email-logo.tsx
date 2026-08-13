@@ -1,5 +1,5 @@
 import { Img } from '@react-email/components';
-import { env } from '@/env.mjs';
+// import { env } from '@/env.mjs';
 
 /**
  * Logo ShemaProject pour les e-mails (spec 32 §5.5) — **PNG** (le SVG ne rend pas dans Gmail /
@@ -15,7 +15,7 @@ import { env } from '@/env.mjs';
  * PNG générés depuis `shema_reader-icon_{light,dark}.svg` (icône monochrome 734×734) → 128×128
  * (rendu net à l’affichage 40px). URLs dérivées de `NEXT_PUBLIC_APP_URL`.
  */
-const base = env.NEXT_PUBLIC_APP_URL.replace(/\/$/, '');
+// const base = env.NEXT_PUBLIC_APP_URL.replace(/\/$/, '');
 const LIGHT_LOGO = `https://reader-shema.vercel.app/logo/shema_reader-icon_light.png`;
 const DARK_LOGO = `https://reader-shema.vercel.app/logo/shema_reader-icon_dark.png`;
 
@@ -25,16 +25,16 @@ export function EmailLogo() {
       <Img
         src={LIGHT_LOGO}
         alt="ShemaProject"
-        width="48"
-        height="48"
-        className="logo-light dark:hidden"
+        width="28"
+        height="28"
+        className="dark:hidden"
       />
       <Img
         src={DARK_LOGO}
         alt="ShemaProject"
-        width="48"
-        height="48"
-        className="logo-dark hidden dark:inline-block"
+        width="28"
+        height="28"
+        className="hidden dark:inline-block"
       />
     </>
   );

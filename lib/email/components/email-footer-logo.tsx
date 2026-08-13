@@ -1,5 +1,5 @@
 import { Img } from '@react-email/components';
-import { env } from '@/env.mjs';
+// import { env } from '@/env.mjs';
 
 /**
  * Logo ShemaProject pour les e-mails (spec 32 §5.5) — **PNG** (le SVG ne rend pas dans Gmail /
@@ -24,16 +24,16 @@ export function EmailFooterLogo() {
       <Img
         src={LIGHT_LOGO}
         alt="ShemaProject reader logo"
-        width="65"
-        height="30"
-        className="logo-light dark:hidden margin-0"
+        width="97"
+        height="45"
+        className="!dark:hidden margin-0 !inline-block"
       />
       <Img
         src={DARK_LOGO}
         alt="Shema reader logo"
-        width="65"
-        height="30"
-        className="logo-dark hidden dark:inline-block margin-0"
+        width="97"
+        height="45"
+        className="!hidden !dark:inline-block margin-0"
       />
     </>
   );
