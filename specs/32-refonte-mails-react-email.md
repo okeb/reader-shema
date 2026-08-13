@@ -185,7 +185,7 @@ Corps (extrait Welcome) :
   `prefers-color-scheme: dark`, cf. §5.5) en `<head>`, et pose les classes adaptatives
   (`.bg-body`/`.bg-card`/`.text-fg`/`.text-muted`/`.border-card`/`.bg-code`) sur les cellules — en
   **doublon** des styles inline (le inline = base clair, la media query = sombre).
-- `lib/email/components/email-logo.tsx` — `<EmailLogo>` : **deux `<Img>` empilés** —
+- `lib/email/components/email-footer-logo.tsx` — `<EmailFooterLogo>` : **deux `<Img>` empilés** —
   `.logo-light` (`shema_reader-icon_light.svg`, encre sombre, visible sur carte blanche) et
   `.logo-dark` (`shema_reader-icon_dark.svg`, encre claire, visible sur carte noire) — la media
   query bascule `display` (cf. §5.5). `alt="ShemaProject"`, `width="56" height="56" className="mx-auto"`.
