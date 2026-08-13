@@ -27,7 +27,7 @@ export function EmailSocialLink() {
   return (
     <tr>
       <td align="center">
-        <Row className="table-cell h-[44px] w-[56px] align-bottom">
+        <Row className="table-cell h-[37px] w-[56px] align-bottom">
           {/*<Column className="pr-[9px]">*/}
           {/*  <Link href="#">*/}
           {/*    <Img*/}
