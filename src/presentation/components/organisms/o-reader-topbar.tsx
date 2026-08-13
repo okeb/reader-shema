@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import { Icon } from '@iconify/react';
 import { cn } from '@/lib/utils';
@@ -12,6 +13,8 @@ import { ReferenceChips } from '@/src/presentation/components/molecules/m-refere
 import { AppearanceMenu } from '@/src/presentation/components/molecules/m-appearance-menu';
 import { DoodleCard } from '@/src/presentation/components/molecules/m-doodle-card';
 import { useDoodle } from '@/src/presentation/hooks/use-doodle';
+import { useReaderPreferences } from '@/src/presentation/stores/reader-preferences.store';
+import { appIconPath } from '@/src/shared/constants/brand-logos';
 import type { BiblicalVerse } from '@/src/domain/entities';
 import type { ReaderMode } from '@/src/presentation/lib/reader-helpers';
 import type { LogoStyle } from '@/src/shared/constants/reader-preferences';
@@ -78,6 +81,10 @@ export function ReaderTopbar({
   onOpenHelp,
 }: ReaderTopbarProps) {
   const { doodle } = useDoodle();
+  // Icône-app choisie (spec 32 §5.5) : une variante nommée remplace le logo SVG themed de la
+  // topbar ; `'auto'` conserve le `<Logo>` habituel. Les doodles restent prioritaires (plus bas).
+  const appIcon = useReaderPreferences((s) => s.appIcon);
+  const brandIconSrc = appIconPath(appIcon);
   const [cardOpen, setCardOpen] = useState(false);
   const [doodleFailed, setDoodleFailed] = useState(false);
   const logoWrapRef = useRef<HTMLSpanElement>(null);
@@ -150,7 +157,18 @@ export function ReaderTopbar({
               !focusMode && 'hover:opacity-80',
             )}
           >
-            <Logo className="h-9 md:h-10" logoStyle={logoStyle} focus={focusMode} coarse={coarse} />
+            {brandIconSrc ? (
+              // Variante d'icône-app choisie (spec 32 §5.5) : PNG coloré à la place du logo themed.
+              <Image
+                src={brandIconSrc}
+                alt=""
+                width={1254}
+                height={1254}
+                className="h-9 w-9 md:h-10 md:w-10"
+              />
+            ) : (
+              <Logo className="h-9 md:h-10" logoStyle={logoStyle} focus={focusMode} coarse={coarse} />
+            )}
           </Link>
         )}
 

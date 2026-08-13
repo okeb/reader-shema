@@ -20,6 +20,7 @@ import {
   type MeasureKey,
   type CrossRefsMode,
   type LogoStyle,
+  type AppIconKey,
   type AccentKey,
   type ReadingTint,
   type AvatarStyle,
@@ -92,6 +93,7 @@ interface ReaderPrefsState extends ReaderPreferences {
   setMeasure: (measure: MeasureKey) => void;
   setCrossRefsMode: (mode: CrossRefsMode) => void;
   setLogoStyle: (style: LogoStyle) => void;
+  setAppIcon: (icon: AppIconKey) => void;
   setAccent: (accent: AccentKey) => void;
   setReadingTint: (tint: ReadingTint) => void;
   setReduceMotion: (on: boolean) => void;
@@ -115,6 +117,7 @@ function pickPrefs(s: ReaderPreferences): ReaderPreferences {
     focusMode: s.focusMode,
     crossRefsMode: s.crossRefsMode,
     logoStyle: s.logoStyle,
+    appIcon: s.appIcon,
     accent: s.accent,
     readingTint: s.readingTint,
     reduceMotion: s.reduceMotion,
@@ -141,6 +144,7 @@ export const useReaderPreferences = create<ReaderPrefsState>()(
       setMeasure: (measure) => set((s) => { s.measure = measure; }),
       setCrossRefsMode: (crossRefsMode) => set((s) => { s.crossRefsMode = crossRefsMode; }),
       setLogoStyle: (logoStyle) => set((s) => { s.logoStyle = logoStyle; }),
+      setAppIcon: (appIcon) => set((s) => { s.appIcon = appIcon; }),
       setAccent: (accent) => { applyAccentVar(accent); set((s) => { s.accent = accent; }); },
       setReadingTint: (readingTint) => { applyReadingTint(readingTint); set((s) => { s.readingTint = readingTint; }); },
       setReduceMotion: (reduceMotion) => { applyReduceMotion(reduceMotion); set((s) => { s.reduceMotion = reduceMotion; }); },

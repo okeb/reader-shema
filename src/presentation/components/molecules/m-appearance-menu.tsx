@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import Image from 'next/image';
 import { Icon } from '@iconify/react';
 import { cn } from '@/lib/utils';
 import { GLASS_PILL } from '@/src/presentation/components/atoms/a-floating-button';
@@ -9,9 +10,11 @@ import { useThemeCycle } from '@/src/presentation/hooks/use-theme-cycle';
 import {
   ACCENT_OPTIONS,
   LOGO_STYLE_OPTIONS,
+  APP_ICON_OPTIONS,
   AVATAR_STYLE_OPTIONS,
   PLAYFUL_VARIANT_OPTIONS,
 } from '@/src/shared/constants/reader-preferences';
+import { appIconPath } from '@/src/shared/constants/brand-logos';
 import { useSessionIndicator } from '@/src/presentation/components/organisms/o-account-provider';
 import { Avatar } from '@/src/presentation/components/atoms/a-avatar';
 import type { Theme } from '@/src/shared/constants/theme';
@@ -284,6 +287,52 @@ export function AppearanceMenu({ onOpenHelp, className }: AppearanceMenuProps) {
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* Icône-app (spec 32 §5.5) — variante colorée du logo (favicon, accueil, topbar).
+              `'auto'` = tirage aléatoire à chaque visite ; les 5 autres fixent une variante.
+              Pastilles circulaires (chaque pastille montre l'icône qu'elle représente), visible
+              sur tous les viewports (contrairement à « Logo » qui est desktop-only). */}
+          <div className="mx-3 h-px bg-border" />
+          <p className="px-3 pb-1 pt-2.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/60">
+            Icône
+          </p>
+          <div className="flex justify-between px-3 pb-3 pt-0.5">
+            {APP_ICON_OPTIONS.map((o) => {
+              const p = appIconPath(o.key);
+              return (
+                <button
+                  key={o.key}
+                  type="button"
+                  role="menuitemradio"
+                  aria-checked={o.key === prefs.appIcon}
+                  title={o.label}
+                  aria-label={o.label}
+                  onClick={() => {
+                    prefs.setAppIcon(o.key);
+                    setOpen(false);
+                  }}
+                  className={cn(
+                    'flex h-7 w-7 items-center justify-center rounded-full transition-transform hover:scale-110',
+                    o.key === prefs.appIcon
+                      ? 'ring-2 ring-foreground ring-offset-2 ring-offset-background'
+                      : 'ring-1 ring-black/10 dark:ring-white/15',
+                  )}
+                >
+                  {p ? (
+                    <Image
+                      src={p}
+                      alt=""
+                      width={48}
+                      height={48}
+                      className="h-full w-full rounded-full object-contain"
+                    />
+                  ) : (
+                    <Icon icon="hugeicons:shuffle" className="h-4 w-4 text-muted-foreground" />
+                  )}
+                </button>
+              );
+            })}
           </div>
 
           {/* Réduire les animations */}

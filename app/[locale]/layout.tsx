@@ -19,6 +19,7 @@ import { ThemeProvider } from '@/src/presentation/providers/theme-provider';
 import { QueryProvider } from '@/src/presentation/providers/query-client-provider';
 import { StoreHydrationProvider } from '@/src/presentation/providers/store-hydration-provider';
 import { CommandPalette } from '@/src/presentation/components/organisms/o-command-palette';
+import { FaviconSync } from '@/src/presentation/components/atoms/a-favicon-sync';
 import { AccountProvider } from '@/src/presentation/components/organisms/o-account-provider';
 import { isAuthConfigured } from '@/lib/auth/server';
 import { isDbConfigured } from '@/src/infrastructure/database/neon-client';
@@ -103,6 +104,8 @@ export default async function LocaleLayout({ children, params }: Props) {
                   {/* Palette de recherche globale (⌘/Ctrl + K) — montée en permanence, présente sur
                       toutes les pages (lecteur, accueil, favoris). Cf. spec 19. */}
                   <CommandPalette />
+                  {/* Sync du favicon avec la préférence `appIcon` (spec 32 §5.5). */}
+                  <FaviconSync />
                 </AccountProvider>
               </StoreHydrationProvider>
             </QueryProvider>
