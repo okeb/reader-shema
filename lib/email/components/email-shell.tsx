@@ -5,7 +5,7 @@ import {
   Body,
   Container,
   Text,
-  Section,
+  // Section,
   Hr,
   Link,
 } from '@react-email/components';
@@ -75,7 +75,7 @@ export function EmailShell({
 
             {/* Footer — logo, identité, social, contact. Fond gris clair / sombre. */}
             <Hr className="px-8 w-full"/>
-            <Section className="text-center pt-7 bg-neutral-800">
+            <Container className="text-center pt-7 bg-neutral-300">
               <table className="w-full">
                 <tbody>
                   <tr className="w-full mt-7">
@@ -117,7 +117,7 @@ export function EmailShell({
                   </tr>
                 </tbody>
               </table>
-            </Section>
+            </Container>
           </Container>
         </Body>
       </Html>

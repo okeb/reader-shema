@@ -16,7 +16,7 @@ import { env } from '@/env.mjs';
  * (rendu net à l’affichage 40px). URLs dérivées de `NEXT_PUBLIC_APP_URL`.
  */
 const base = env.NEXT_PUBLIC_APP_URL.replace(/\/$/, '');
-const LIGHT_LOGO = `${base}/logo/shema_reader-logo_light.webp`;
+const LIGHT_LOGO = `${base}/logo/reader-shema_logo_or.webp`;
 const DARK_LOGO = `${base}/logo/shema_reader-logo_dark.webp`;
 
 export function EmailHeaderLogo() {
@@ -25,14 +25,14 @@ export function EmailHeaderLogo() {
       <Img
         src={LIGHT_LOGO}
         alt="ShemaProject reader logo"
-        width="97"
+        width="45"
         height="45"
         className="!dark:hidden margin-0 !inline-block"
       />
       <Img
         src={DARK_LOGO}
         alt="Shema reader logo"
-        width="97"
+        width="45"
         height="45"
         className="!hidden !dark:inline-block margin-0"
       />

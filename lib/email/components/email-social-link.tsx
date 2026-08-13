@@ -12,7 +12,7 @@ import { env } from '@/env.mjs';
  * `text-muted` en clair / `.dm-muted` en sombre (surcharge `DARK_STYLE`).
  */
 const base = env.NEXT_PUBLIC_APP_URL.replace(/\/$/, '');
-const FACEBOOK_ICON = `${base}/logo/facebook_icon.png`;
+// const FACEBOOK_ICON = `${base}/logo/facebook_icon.png`;
 const TELEGRAM_ICON = `${base}/logo/telegram_icon.png`;
 const TIKTOK_ICON = `${base}/logo/tiktok_icon.png`;
 
@@ -28,23 +28,23 @@ export function EmailSocialLink() {
     <tr>
       <td align="center">
         <Row className="table-cell h-[44px] w-[56px] align-bottom">
-          <Column className="pr-[9px]">
-            <Link href="#">
-              <Img
-                alt="Facebook"
-                height="19"
-                width="19"
-                src={FACEBOOK_ICON}
-              />
-            </Link>
-          </Column>
+          {/*<Column className="pr-[9px]">*/}
+          {/*  <Link href="#">*/}
+          {/*    <Img*/}
+          {/*      alt="Facebook"*/}
+          {/*      height="21"*/}
+          {/*      width="21"*/}
+          {/*      src={FACEBOOK_ICON}*/}
+          {/*    />*/}
+          {/*  </Link>*/}
+          {/*</Column>*/}
 
           <Column className="pr-[9px]">
             <Link href={TELEGRAM_URL}>
               <Img
                 alt="Telegram"
-                height="20"
-                width="20"
+                height="21"
+                width="21"
                 src={TELEGRAM_ICON}
               />
             </Link>
@@ -54,8 +54,8 @@ export function EmailSocialLink() {
             <Link href="#">
               <Img
                 alt="Tiktok"
-                height="19"
-                width="19"
+                height="21"
+                width="21"
                 src={TIKTOK_ICON}
               />
             </Link>
