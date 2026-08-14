@@ -130,10 +130,14 @@ export function TReader({
     initialNoteId: string | null;
   } | null>(null);
   // Lecteur de note (lecture seule) : verset ancre + notes à afficher.
+  // `selectionVerses` n'est fourni que pour le flux « action Note de la sélection »
+  // (spec 34) : il active l'index/état vide + bouton « Créer ». Les flux marge (spec 24)
+  // ne le fournissent pas → comportement inchangé (liste+détail inline, pas de création).
   const [noteViewer, setNoteViewer] = useState<{
     anchorVerse: VerseRef;
     notes: Note[];
     activeNoteId: string | null;
+    selectionVerses?: VerseRef[];
   } | null>(null);
 
   const highlightRef = useRef<HTMLElement | null>(null);
@@ -559,8 +563,9 @@ export function TReader({
     [selectionData, bmIdFor],
   );
 
-  // Ouvre l'éditeur de note sur la sélection (action « Noter » du cluster). Nouvelle note
-  // associée à tous les versets sélectionnés (spec : multi-versets par note).
+  // Ouvre le lecteur de note (index) sur la sélection (action « Note » du cluster, spec 34).
+  // On affiche d'abord les notes déjà liées à la sélection (intersection) avant écriture ;
+  // la création se fait depuis le viewer via `createNoteFromSelection`.
   const openNoteForSelection = useCallback(() => {
     const nt = verseActions.noteTarget;
     if (!nt) return;
@@ -575,12 +580,15 @@ export function TReader({
     const selected = selection.selectedIds
       .map(verseRefFromSelId)
       .filter((v): v is VerseRef => v !== null);
-    setNoteEditor({
+    const verses = selected.length > 0 ? selected : [anchorVerse];
+    const notes = annotations.notesForVerses(verses.map((v) => v.verseId));
+    setNoteViewer({
       anchorVerse,
-      initialVerses: selected.length > 0 ? selected : [anchorVerse],
-      initialNoteId: null,
+      notes,
+      activeNoteId: null,
+      selectionVerses: verses,
     });
-  }, [verseActions.noteTarget, selection.selectedIds, verseRefFromSelId]);
+  }, [verseActions.noteTarget, selection.selectedIds, verseRefFromSelId, annotations]);
 
   // Ouvre le lecteur de note (lecture seule) depuis l'indicateur en marge d'un verset.
   const openNoteForVerse = useCallback(
@@ -621,6 +629,22 @@ export function TReader({
     },
     [annotations, noteViewer],
   );
+
+  // Création depuis le viewer de sélection (bouton « Créer… », spec 34) : ferme le viewer
+  // et ouvre l'éditeur vierge pré-rempli avec les versets sélectionnés.
+  const createNoteFromSelection = useCallback(() => {
+    if (!noteViewer) return;
+    const verses =
+      noteViewer.selectionVerses && noteViewer.selectionVerses.length > 0
+        ? noteViewer.selectionVerses
+        : [noteViewer.anchorVerse];
+    setNoteViewer(null);
+    setNoteEditor({
+      anchorVerse: noteViewer.anchorVerse,
+      initialVerses: verses,
+      initialNoteId: null,
+    });
+  }, [noteViewer]);
 
   // Clic sur une note (panneau) : bascule la lecture sur le verset ancre et ouvre le viewer.
   const goToNote = useCallback(
@@ -916,12 +940,19 @@ export function TReader({
 
       {/* Lecteur de note (lecture seule). */}
       <NoteViewer
+        key={noteViewer ? 'nv-open' : 'nv-closed'}
         open={noteViewer != null}
         anchorVerse={noteViewer?.anchorVerse ?? null}
         notes={noteViewer?.notes ?? []}
         activeNoteId={noteViewer?.activeNoteId ?? null}
         onEdit={editNoteFromViewer}
         onClose={() => setNoteViewer(null)}
+        onCreate={
+          noteViewer?.selectionVerses != null ? createNoteFromSelection : undefined
+        }
+        selectionCount={noteViewer?.selectionVerses?.length ?? 1}
+        forceIndex={noteViewer?.selectionVerses != null}
+        selectionVerses={noteViewer?.selectionVerses}
       />
 
       {/* Éditeur de note plein écran (multi-versets). */}
