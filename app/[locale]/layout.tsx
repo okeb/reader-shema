@@ -74,7 +74,15 @@ export async function generateMetadata({
     // requête navigateur (`Cache-Control: no-store`). Cf. `app/brand-icon/route.ts`. L'icône
     // d'accueil (`o-home.tsx`) suit le même tirage côté client.
     icons: { icon: '/brand-icon' },
-    openGraph: { locale: locale === 'en' ? 'en_US' : 'fr_FR' },
+    // OG **par défaut** (spec 35) : carte de marque (logo aléatoire + « Shema Reader » + tagline,
+    // fond sombre) servie par la route dynamique `/api/og/brand`. Les pages `/read` et `/strong`
+    // surchargent `openGraph`/`images` dans leur propre `generateMetadata` ; les pages qui ne le
+    // font pas (accueil, etc.) héritent de cette image par défaut.
+    openGraph: {
+      locale: locale === 'en' ? 'en_US' : 'fr_FR',
+      images: [{ url: '/api/og/brand', width: 1200, height: 630, alt: 'Shema Reader' }],
+    },
+    twitter: { card: 'summary_large_image' },
   };
 }
 

@@ -18,10 +18,13 @@ const nextConfig: NextConfig = {
   sassOptions: {
     includePaths: [path.join(process.cwd(), 'styles')],
   },
-  // Force l'inclusion des assets de la vignette OG (polices Satori + logo) dans la
-  // fonction /api/og — lus via fs depuis process.cwd() (cf. app/api/og/route.tsx).
+  // Force l'inclusion des assets des vignettes OG (polices Satori + logos) dans les fonctions qui
+  // les lisent via fs depuis process.cwd() (cf. app/api/og/route.tsx et app/api/og/brand/route.tsx).
   outputFileTracingIncludes: {
     '/api/og': ['./app/api/og/*.ttf', './app/api/og/*.png'],
+    // Vignette de marque par défaut (spec 35) : réutilise les polices Noto Serif de `/api/og` +
+    // les 5 logos colorés de `public/logo/` (tirage aléatoire).
+    '/api/og/brand': ['./app/api/og/*.ttf', './public/logo/reader-shema_logo_*.png'],
   },
   // TODO(Phase 1): redirects permanents depuis l'ancienne route `/bym/*` — à valider après
   // l'interaction avec le middleware next-intl (localePrefix: 'always').
