@@ -12,6 +12,7 @@ divulguée. La cohérence est vérifiée par `pnpm changelog:check`.
 ### Ajouté
 
 - **E-mail de bienvenue** : un message de bienvenue vous est désormais envoyé à la création de votre compte, avec un raccourci pour reprendre la lecture.
+- **Texte original interlinéaire** : un bouton dans le panneau Strong affiche le lemme ou la translittération au-dessus de chaque mot traduit, avec une sélection synchronisée et un réglage mémorisé.
 
 ### Modifié
 

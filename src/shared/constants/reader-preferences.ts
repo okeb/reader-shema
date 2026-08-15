@@ -175,6 +175,8 @@ export interface ReaderPreferences {
   readingTint: ReadingTint;
   reduceMotion: boolean;
   quizEnabled: boolean;
+  /** Affiche le lemme/translittération au-dessus des tokens dans le panneau Strong. */
+  strongOriginalText: boolean;
   avatarStyle: AvatarStyle;
   avatarVariant: PlayfulVariant;
 }
@@ -194,6 +196,7 @@ export const READER_PREFS_DEFAULTS: ReaderPreferences = {
   readingTint: 'none',
   reduceMotion: false,
   quizEnabled: true,
+  strongOriginalText: false,
   avatarStyle: 'playful',
   avatarVariant: 'beam',
 };
