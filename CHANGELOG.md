@@ -9,6 +9,12 @@ divulguée. La cohérence est vérifiée par `pnpm changelog:check`.
 
 ## [Unreleased]
 
+## [0.5.0] : 2026-08-15
+
+### Modifié
+
+- **Texte original** : le panneau Strong affiche désormais la phrase source complète dans son ordre grec ou hébreu, y compris les mots sans correspondance dans la traduction.
+
 ## [0.4.3] : 2026-08-15
 
 ### Corrigé
