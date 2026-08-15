@@ -212,11 +212,12 @@ interface ApiConcordance {
 const concordanceCache = new Map<string, StrongConcordance>();
 
 /**
- * Récupère les occurrences d'un numéro Strong (concordance) via `/bym/strong/:code?page=&size=`.
+ * Récupère les occurrences d'un numéro Strong dans le corpus original via
+ * `/orig/strong/:code?page=&size=`.
  * Pagination 1-based. Retourne null si le code est introuvable (404).
  *
- * Note : l'index de concordance n'existe que sous `bym` (l'API renvoie « Livre introuvable » pour
- * `/lsg/strong/...`). La concordance affiche donc le texte BYM quelle que soit la version primaire.
+ * Le texte source des occurrences est remplacé par la version de lecture dans le hook de
+ * concordance ; ce endpoint reste la source canonique des emplacements et du lexique.
  */
 export async function getStrongOccurrences(
   code: string,
@@ -230,7 +231,7 @@ export async function getStrongOccurrences(
 
   try {
     const res = await apiClient.get<ApiConcordance>(
-      `/bym/strong/${encodeURIComponent(code)}?page=${page}&size=${size}`,
+      `/orig/strong/${encodeURIComponent(code)}?page=${page}&size=${size}`,
     );
     const data = res.data;
     const items: StrongOccurrence[] = (data.items ?? []).map((it) => {

@@ -100,6 +100,7 @@ interface ReaderPrefsState extends ReaderPreferences {
   setFocusMode: (on: boolean) => void;
   toggleFocus: () => void;
   toggleQuiz: () => void;
+  setStrongOriginalText: (on: boolean) => void;
   setAvatarStyle: (style: AvatarStyle) => void;
   setAvatarVariant: (variant: PlayfulVariant) => void;
 }
@@ -122,6 +123,7 @@ function pickPrefs(s: ReaderPreferences): ReaderPreferences {
     readingTint: s.readingTint,
     reduceMotion: s.reduceMotion,
     quizEnabled: s.quizEnabled,
+    strongOriginalText: s.strongOriginalText,
     avatarStyle: s.avatarStyle,
     avatarVariant: s.avatarVariant,
   };
@@ -151,6 +153,7 @@ export const useReaderPreferences = create<ReaderPrefsState>()(
       setFocusMode: (focusMode) => set((s) => { s.focusMode = focusMode; }),
       toggleFocus: () => set((s) => { s.focusMode = !s.focusMode; }),
       toggleQuiz: () => set((s) => { s.quizEnabled = !s.quizEnabled; }),
+      setStrongOriginalText: (strongOriginalText) => set((s) => { s.strongOriginalText = strongOriginalText; }),
       setAvatarStyle: (avatarStyle) => set((s) => { s.avatarStyle = avatarStyle; }),
       setAvatarVariant: (avatarVariant) => set((s) => { s.avatarVariant = avatarVariant; }),
     })),
