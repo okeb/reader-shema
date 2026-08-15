@@ -14,12 +14,13 @@ import { BODY_TEXT, MUTED_TEXT } from '@/lib/email/theme';
  * Rappelle de conserver la clé de récupération (e-mailée séparément) — signal de warmth sans
  * métrique (doctrine spec 00).
  */
-export function WelcomeEmail({ name, baseUrl }: { name: string; baseUrl: string }) {
+export function WelcomeEmail({ name, baseUrl, unsubscribeUrl }: { name: string; baseUrl: string; unsubscribeUrl?: string }) {
   const readUrl = `${baseUrl.replace(/\/$/, '')}/fr/read`;
   return (
     <EmailShell
       title="Bienvenue sur ShemaProject"
       preview="Nous sommes ravis de vous compter parmi nos lecteurs."
+      unsubscribeUrl={unsubscribeUrl}
     >
       <Text className={BODY_TEXT}>
         Bienvenue sur <strong>ShemaProject</strong>{name ? `, ${name}` : ''} !

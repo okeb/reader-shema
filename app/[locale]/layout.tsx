@@ -19,6 +19,7 @@ import { ThemeProvider } from '@/src/presentation/providers/theme-provider';
 import { QueryProvider } from '@/src/presentation/providers/query-client-provider';
 import { StoreHydrationProvider } from '@/src/presentation/providers/store-hydration-provider';
 import { CommandPalette } from '@/src/presentation/components/organisms/o-command-palette';
+import { FaviconSync } from '@/src/presentation/components/atoms/a-favicon-sync';
 import { AccountProvider } from '@/src/presentation/components/organisms/o-account-provider';
 import { isAuthConfigured } from '@/lib/auth/server';
 import { isDbConfigured } from '@/src/infrastructure/database/neon-client';
@@ -68,14 +69,20 @@ export async function generateMetadata({
     metadataBase: new URL('https://reader.shemaproject.org'),
     title: 'ShemaProject — Lecture de la Bible',
     description: 'Lecteur de la Bible de Yéhoshoua Ha Mashiah',
-    // Favicon thématique basculé par prefers-color-scheme (cf. ancien app/layout.tsx).
-    icons: {
-      icon: [
-        { url: '/logo/shema_reader-icon_light.svg', media: '(prefers-color-scheme: light)' },
-        { url: '/logo/shema_reader-icon_dark.svg', media: '(prefers-color-scheme: dark)' },
-      ],
+    // Favicon **aléatoire** (spec 32 §5.5) : la route dynamique `/brand-icon` servit un PNG
+    // différent parmi les 5 déclinaisons colorées (or, laine, pelouse, plume, sable) à chaque
+    // requête navigateur (`Cache-Control: no-store`). Cf. `app/brand-icon/route.ts`. L'icône
+    // d'accueil (`o-home.tsx`) suit le même tirage côté client.
+    icons: { icon: '/brand-icon' },
+    // OG **par défaut** (spec 35) : carte de marque (logo aléatoire + « Shema Reader » + tagline,
+    // fond sombre) servie par la route dynamique `/api/og/brand`. Les pages `/read` et `/strong`
+    // surchargent `openGraph`/`images` dans leur propre `generateMetadata` ; les pages qui ne le
+    // font pas (accueil, etc.) héritent de cette image par défaut.
+    openGraph: {
+      locale: locale === 'en' ? 'en_US' : 'fr_FR',
+      images: [{ url: '/api/og/brand', width: 1200, height: 630, alt: 'Shema Reader' }],
     },
-    openGraph: { locale: locale === 'en' ? 'en_US' : 'fr_FR' },
+    twitter: { card: 'summary_large_image' },
   };
 }
 
@@ -105,6 +112,8 @@ export default async function LocaleLayout({ children, params }: Props) {
                   {/* Palette de recherche globale (⌘/Ctrl + K) — montée en permanence, présente sur
                       toutes les pages (lecteur, accueil, favoris). Cf. spec 19. */}
                   <CommandPalette />
+                  {/* Sync du favicon avec la préférence `appIcon` (spec 32 §5.5). */}
+                  <FaviconSync />
                 </AccountProvider>
               </StoreHydrationProvider>
             </QueryProvider>

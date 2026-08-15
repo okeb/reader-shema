@@ -28,7 +28,7 @@ export interface OutgoingEmail {
 }
 
 /** Expéditeur transactionnel. Domaine `send.shemaproject.org` à vérifier dans Resend. */
-const FROM = 'ShemaProject <noreply@send.shemaproject.org>';
+const FROM = 'The Shema Email <hello@send.shemaproject.org>';
 
 export async function sendEmail(msg: OutgoingEmail): Promise<void> {
   if (!env.RESEND_API_KEY) {

@@ -43,7 +43,11 @@ export const config = {
   // `sitemap.xml` (et tout `.xml`) exclu : next-intl réécrirait `/sitemap.xml` → `/${locale}/sitemap.xml`
   // (404). Servi tel quel par `app/sitemap.ts`. `api` exclu : les routes `app/api/*` (auth, sync) se
   // gèrent elles-mêmes (handler Better Auth + requireUser() dans les routes sync).
+  // `brand-icon` exclu (spec 32 §5.5) : la route `app/brand-icon/route.ts` sert le favicon (PNG
+  // aléatoire ou variante choisie via `?icon=<key>`) depuis la racine, hors `[locale]`. Sans cette
+  // exclusion, next-intl réécrirait `/brand-icon` → `/${locale}/brand-icon` (307), qui 404 car
+  // aucune route n'existe sous `[locale]/brand-icon` — le favicon ne s'affichait plus.
   matcher: [
-    '/((?!api|_next/static|_next/image|favicon.ico|robots.txt|data|doodle|.*\\.(?:js|css|png|jpg|jpeg|gif|svg|ico|webp|woff|woff2|ttf|eot|map|riv|xml)$).*)',
+    '/((?!api|_next/static|_next/image|favicon.ico|robots.txt|data|doodle|brand-icon|.*\\.(?:js|css|png|jpg|jpeg|gif|svg|ico|webp|woff|woff2|ttf|eot|map|riv|xml)$).*)',
   ],
 };

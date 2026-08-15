@@ -11,11 +11,12 @@ import { BODY_TEXT, CODE_BLOCK, MUTED_TEXT } from '@/lib/email/theme';
  * aux données synchronisées si le mot de passe est perdu (ou déverrouillage routine pour les
  * comptes magic-link). Jamais persistée serveur.
  */
-export function RecoveryKeyEmail({ recoveryKey }: { recoveryKey: string }) {
+export function RecoveryKeyEmail({ recoveryKey, unsubscribeUrl }: { recoveryKey: string; unsubscribeUrl?: string }) {
   return (
     <EmailShell
       title="Votre clé de récupération"
       preview="Conservez cette clé de récupération en lieu sûr."
+      unsubscribeUrl={unsubscribeUrl}
     >
       <Text className={BODY_TEXT}>
         Bonjour,

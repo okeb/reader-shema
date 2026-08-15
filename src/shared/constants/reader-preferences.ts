@@ -115,6 +115,23 @@ export const LOGO_STYLE_OPTIONS: { key: LogoStyle; label: string }[] = [
 ];
 
 /**
+ * Icône-app (spec 32 §5.5) : variante colorée du logo affichée sur le favicon, le bloc marque de
+ * l'accueil et la topbar du reader. `'auto'` = tirage aléatoire à chaque visite (comportement
+ * d'origine, surprise) ; les 5 autres clés fixent une variante. Les clés nommées correspondent
+ * exactement aux `key` de `BRAND_ICONS` (`src/shared/constants/brand-logos.ts`). Préférence
+ * cosmétique locale, persistée dans `bibleReaderPrefs` et synchronisée (kind `readerPrefs`).
+ */
+export type AppIconKey = 'auto' | 'or' | 'laine' | 'pelouse' | 'plume' | 'sable';
+export const APP_ICON_OPTIONS: { key: AppIconKey; label: string }[] = [
+  { key: 'auto', label: 'Aléatoire' },
+  { key: 'or', label: 'Or' },
+  { key: 'laine', label: 'Laine' },
+  { key: 'pelouse', label: 'Pelouse' },
+  { key: 'plume', label: 'Plume' },
+  { key: 'sable', label: 'Sable' },
+];
+
+/**
  * Avatar utilisateur (spec 27) : générateur déterministe depuis `user.id`, rendu côté client.
  * `minidenticons` = identicons pixelisés (string SVG, pas de variante) ; `playful` = avatars
  * géométriques (`playful-avatars`, 6 variantes). Le choix est une préférence cosmétique locale
@@ -171,6 +188,7 @@ export interface ReaderPreferences {
   focusMode: boolean;
   crossRefsMode: CrossRefsMode;
   logoStyle: LogoStyle;
+  appIcon: AppIconKey;
   accent: AccentKey;
   readingTint: ReadingTint;
   reduceMotion: boolean;
@@ -192,6 +210,7 @@ export const READER_PREFS_DEFAULTS: ReaderPreferences = {
   focusMode: false,
   crossRefsMode: 'selection',
   logoStyle: 'logotype',
+  appIcon: 'auto',
   accent: DEFAULT_ACCENT,
   readingTint: 'none',
   reduceMotion: false,

@@ -7,11 +7,12 @@ import { BODY_TEXT } from '@/lib/email/theme';
  * Lien magique de connexion (spec 32) — click → `/api/auth/magic-link/verify?token=…`.
  * Lien à usage unique, expire dans 5 min (rappel copie).
  */
-export function MagicLinkEmail({ email, url }: { email: string; url: string }) {
+export function MagicLinkEmail({ email, url, unsubscribeUrl }: { email: string; url: string; unsubscribeUrl?: string }) {
   return (
     <EmailShell
       title="Votre lien de connexion"
       preview="Cliquez pour vous connecter à ShemaProject."
+      unsubscribeUrl={unsubscribeUrl}
     >
       <Text className={BODY_TEXT}>
         Bonjour,

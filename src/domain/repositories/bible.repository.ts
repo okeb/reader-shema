@@ -40,7 +40,7 @@ export interface IBibleRepository {
     items: StrongFetchItem[],
   ): Promise<Record<string, StrongToken[]>>;
 
-  /** Concordance paginée d'un code Strong (endpoint /orig/strong/:code). null si 404. */
+  /** Concordance paginée d'un code Strong (endpoint /bym/strong/:code). null si 404. */
   getStrongOccurrences(code: string, page: number, size: number): Promise<StrongConcordance | null>;
 
   /** Métadonnées d'un livre (endpoint /:version/:livre/info). null si introuvable. */

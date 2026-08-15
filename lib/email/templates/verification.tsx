@@ -9,11 +9,12 @@ import { BODY_TEXT } from '@/lib/email/theme';
  * `url` est pré-construite par Better Auth (déjà tokenisée) : on la réutilise telle quelle, aucun
  * rebuilding d'URL. Le lien expire dans 1 h (rappel dans la copie).
  */
-export function VerificationEmail({ url }: { url: string }) {
+export function VerificationEmail({ url, unsubscribeUrl }: { url: string; unsubscribeUrl?: string }) {
   return (
     <EmailShell
       title="Vérifiez votre e-mail"
       preview="Confirmez votre adresse e-mail pour activer votre compte ShemaProject."
+      unsubscribeUrl={unsubscribeUrl}
     >
       <Text className={BODY_TEXT}>
         Bonjour,

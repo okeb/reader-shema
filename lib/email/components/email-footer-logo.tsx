@@ -15,26 +15,27 @@ import { env } from '@/env.mjs';
  * PNG générés depuis `shema_reader-icon_{light,dark}.svg` (icône monochrome 734×734) → 128×128
  * (rendu net à l’affichage 40px). URLs dérivées de `NEXT_PUBLIC_APP_URL`.
  */
-const LIGHT_LOGO = `https://reader.shemaproject.org/logo/shema_reader-logo_dark.webp`;
-const DARK_LOGO = `https://reader.shemaproject.org/logo/shema_reader-logo_dark.webp`;
+const base = env.NEXT_PUBLIC_APP_URL.replace(/\/$/, '');
+const LIGHT_LOGO = `${base}/logo/shema_reader-logo_light.webp`;
+// const DARK_LOGO = `${base}/logo/shema_reader-icon_dark.png`;
 
 export function EmailFooterLogo() {
   return (
     <>
       <Img
         src={LIGHT_LOGO}
-        alt="ShemaProject reader logo"
-        width="65"
-        height="30"
-        className="logo-light dark:hidden margin-0"
+        alt="ShemaProject"
+        width="80"
+        height="37"
+        className="mx-auto"
       />
-      <Img
-        src={DARK_LOGO}
-        alt="Shema reader logo"
-        width="65"
-        height="30"
-        className="logo-dark hidden dark:inline-block margin-0"
-      />
+      {/*<Img*/}
+      {/*  src={DARK_LOGO}*/}
+      {/*  alt="ShemaProject"*/}
+      {/*  width="28"*/}
+      {/*  height="28"*/}
+      {/*  className="hidden dark:inline-block  mx-auto"*/}
+      {/*/>*/}
     </>
   );
 }

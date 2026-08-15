@@ -110,6 +110,9 @@ interface AnnotationsState {
   getNote: (id: string) => Note | undefined;
   notesList: () => Note[];
   notesForVerse: (verseId: string) => Note[];
+  // Notes liées à un ensemble de versets (intersection : au moins un verset de la
+  // note figure dans la sélection). Dédoublonnée par id, triée par updatedAt desc.
+  notesForVerses: (verseIds: string[]) => Note[];
   hasNote: (verseId: string) => boolean;
 }
 
@@ -183,6 +186,14 @@ export const useAnnotations = create<AnnotationsState>()(
         const all = get().notes;
         return Object.values(all).filter((n) => n.verses.some((v) => v.verseId === verseId));
       },
+      notesForVerses: (verseIds) =>
+        Array.from(
+          new Map(
+            Object.values(get().notes)
+              .filter((n) => n.verses.some((v) => verseIds.includes(v.verseId)))
+              .map((n) => [n.id, n] as const),
+          ).values(),
+        ).sort((a, b) => b.updatedAt - a.updatedAt),
       hasNote: (verseId) => Object.values(get().notes).some((n) => n.verses.some((v) => v.verseId === verseId)),
     })),
     {

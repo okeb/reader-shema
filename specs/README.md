@@ -45,6 +45,7 @@ la doctrine gagne.
 | 32 | [Refonte des e-mails transactionnels avec react.email](32-refonte-mails-react-email.md) | 🟠 Moyenne | M | Proposé | spec 26 (Better Auth + Resend), spec 28 (recovery key) |
 | 33 | [Conformité RGPD complète (registre, conservation, effacement, droits, sous-traitants, violations)](33-conformite-rgpd-complete.md) | 🔴 Haute | M | Proposé | spec 15 (socle légal), spec 22 (compte/sync/E2EE), spec 26 (Better Auth), spec 28 (déverrouillage) |
 | 34 | [Index des notes de la sélection (viewer avant l'éditeur)](34-index-notes-selection.md) | 🟠 Moyenne | S–M | Proposé | spec 10 (notes), spec 12 (dock), spec 24 (`NoteViewer`), spec 30 (icône note) |
+| 35 | [Texte original interlinéaire dans le panneau Strong](35-texte-original-interlineaire-strong.md) | 🟠 Moyenne | S–M | Proposé | spec 02 (concordance), spec 29 (détail Strong + `lemma` par token) |
 
 **Légende effort** : S = quelques heures · M = 1–2 jours · L = 3 jours et +.
 

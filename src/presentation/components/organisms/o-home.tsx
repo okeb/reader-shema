@@ -16,6 +16,8 @@ import { PassageLauncher } from '@/src/presentation/components/molecules/m-passa
 import { SiteFooter } from '@/src/presentation/components/molecules/m-footer';
 import { ShortcutsHelp } from '@/src/presentation/components/molecules/m-shortcuts-help';
 import { DoodleCard } from '@/src/presentation/components/molecules/m-doodle-card';
+import { BRAND_ICON_LOGOS, appIconPath } from '@/src/shared/constants/brand-logos';
+import { useReaderPreferences } from '@/src/presentation/stores/reader-preferences.store';
 
 // DoodleRenderer importé en `dynamic({ ssr:false })` : le runtime Rive (WASM) ne se monte que côté
 // client ; évite un flash/mismatch SSR (spec 18). Cf. même montage que `o-reader-topbar`.
@@ -24,9 +26,9 @@ const DoodleRenderer = dynamic(
   { ssr: false },
 );
 
-/** Ratio natif des fichiers icône (734 × 734, carré). */
-const ICON_W = 734;
-const ICON_H = 734;
+/** Ratio natif des fichiers icône (1254 × 1254, carré). */
+const ICON_W = 1254;
+const ICON_H = 1254;
 
 /**
  * Écran d'accueil (route `/accueil`) — version brandée. La Parole accueille en premier : un bloc
@@ -49,6 +51,27 @@ export function HomeScreen() {
   // Accordéon « Récemment consultés » — ouvert par défaut (descriptif, jamais accusateur) ;
   // repliable à la demande. Pas de persistance (spec 16 : aucune nouvelle écriture).
   const [historyOpen, setHistoryOpen] = useState(true);
+
+  // Icône marque (spec 32 §5.5) : si l'utilisateur a choisi une variante (`appIcon !== 'auto'`),
+  // on affiche celle-ci ; sinon (`'auto'`) tirage aléatoire côté client après hydratation
+  // (comportement d'origine, surprise). L'icône n'est rendue qu'une fois résolue — le rendu SSR et
+  // le premier rendu client renvoient tous deux `null` (pas de mismatch d'hydratation, pas de flash
+  // d'un logo déterministe), puis l'icône apparaît dans la tuile `h-28 w-28` qui réserve déjà
+  // l'espace (pas de layout shift). Miroir du favicon (`app/brand-icon/route.ts` + `FaviconSync`).
+  const appIcon = useReaderPreferences((s) => s.appIcon);
+  const prefsHydrated = useReaderPreferences((s) => s.hydrated);
+  const [randomIdx, setRandomIdx] = useState<number | null>(null);
+  useEffect(() => {
+    // Tirage aléatoire seulement en mode `'auto'` (rejoué quand on rebascule vers auto).
+    if (appIcon === 'auto') setRandomIdx(Math.floor(Math.random() * BRAND_ICON_LOGOS.length));
+  }, [appIcon]);
+
+  const logoSrc =
+    appIcon !== 'auto' && prefsHydrated
+      ? appIconPath(appIcon)
+      : appIcon === 'auto' && randomIdx !== null
+        ? BRAND_ICON_LOGOS[randomIdx]
+        : null;
 
   // Doodle (spec 18) : un doodle actif remplace l'icône du bloc marque par sa variante animée Rive.
   // Même montage que la topbar (`o-reader-topbar`) : résolution client (`useDoodle`), repli sur
@@ -139,24 +162,18 @@ export function HomeScreen() {
             </span>
           ) : (
             <div className="flex h-28 w-28 items-center justify-center">
-              {/* Icône carrée (cf. favicon) : `_light` = glyphe noir (mode clair), `_dark` = glyphe blanc
-                  (mode sombre) — convention inverse à celle des logos. */}
-              <Image
-                src="/logo/shema_reader-icon_light.svg"
-                alt=""
-                width={ICON_W}
-                height={ICON_H}
-                priority
-                className="h-19 w-19 md:h-21 md:w-21 dark:hidden"
-              />
-              <Image
-                src="/logo/shema_reader-icon_dark.svg"
-                alt=""
-                width={ICON_W}
-                height={ICON_H}
-                priority
-                className="hidden h-19 w-19 md:h-21 md:w-21 dark:block"
-              />
+              {/* Icône carrée colorée (cf. favicon `/brand-icon`) : variante choisie par
+                  l'utilisateur, ou tirage aléatoire si `appIcon === 'auto'`. */}
+              {logoSrc && (
+                <Image
+                  src={logoSrc}
+                  alt=""
+                  width={ICON_W}
+                  height={ICON_H}
+                  priority
+                  className="h-19 w-19 md:h-21 md:w-21"
+                />
+              )}
             </div>
           )}
           <h1 className="mt-6 font-serif text-3xl font-semibold tracking-tighter">Shema&nbsp;Reader</h1>

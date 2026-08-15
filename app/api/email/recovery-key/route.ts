@@ -3,6 +3,7 @@ import { headers } from 'next/headers';
 import { auth } from '@/lib/auth/server';
 import { requireUser } from '@/src/infrastructure/auth/auth-guard';
 import { sendEmail } from '@/lib/email/transport';
+import { createUnsubscribeUrl } from '@/lib/email/unsubscribe';
 import { recoveryKeyEmailHtml } from '@/lib/email/templates';
 
 /**
@@ -56,7 +57,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     await sendEmail({
       to: email,
       subject: 'Votre clé de récupération — ShemaProject',
-      html: await recoveryKeyEmailHtml(body.recoveryKey),
+      html: await recoveryKeyEmailHtml(body.recoveryKey, createUnsubscribeUrl(email)),
     });
     lastSent.set(guard.userId, now);
     return new NextResponse(null, { status: 204 });
