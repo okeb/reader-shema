@@ -144,7 +144,8 @@ Détail d'une paire active :
 
 - Toggle off (défaut) : rendu identique à aujourd'hui.
 - Toggle on : paires interlinéaires ; clic d'une paire active ses deux lignes + ouvre la définition.
-- Token sans `strong` : texte brut, non cliquable, pas de ligne original.
+- Token sans `strong` : texte brut, non cliquable ; il réserve une ligne originale vide afin que
+  toutes les traductions restent alignées sur le même axe horizontal.
 - Survol d'une paire : la bulle traduite prend son hover `bubbleColor` (inchangé) ; la ligne
   original prend un fond léger cohérent.
 - Focus clavier : une paire = un tab stop ; `Enter`/`Espace` active le token.
@@ -153,6 +154,8 @@ Détail d'une paire active :
 
 - Plein écran mobile / tiroir 440px desktop : les paires s'enroulent nativement (inline-flow), aucune
   largeur fixe, aucun débordement horizontal (`overflow-x` géré par le flux).
+- Chaque paire utilise les deux mêmes rangées de hauteur fixe : les mots originaux partagent un axe
+  horizontal et les traductions un second axe, y compris après un retour à la ligne.
 - L'écriture hébraïque (RTL) est rendue correctement à l'intérieur de sa ligne par le navigateur ;
   l'ordre des paires reste l'ordre de la traduction (LTR du UI français).
 

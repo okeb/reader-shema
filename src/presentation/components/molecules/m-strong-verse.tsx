@@ -66,11 +66,18 @@ export function StrongVerse({
       </div>
 
       {/* Verset tokenisé : les mots avec Strong sont des bulles cliquables. */}
-      <div className={cn('font-reader text-[15px]', showOriginal ? 'flex flex-wrap items-end gap-y-1 leading-normal' : 'leading-loose')}>
+      <div className={cn('font-reader text-[15px]', showOriginal ? 'flex flex-wrap items-start gap-y-2 leading-normal' : 'leading-loose')}>
         {verse.tokens.map((tok, i) => {
           const key = `${verse.id}-${i}`;
           if (!tok.strong) {
-            return <span key={key}>{tok.text}</span>;
+            return showOriginal ? (
+              <span key={key} className="inline-grid grid-rows-[1.75rem_2rem]">
+                <span aria-hidden />
+                <span className="flex items-center">{tok.text}</span>
+              </span>
+            ) : (
+              <span key={key}>{tok.text}</span>
+            );
           }
           const isActive = activeIdx === i;
           const original = tok.lemma || tok.translit || tok.strong.replace(/^[HG]/, '');
@@ -81,13 +88,13 @@ export function StrongVerse({
               onClick={() => setActiveIdx(i)}
               aria-label={`${tok.text.trim()} — ${original}`}
               title={`${tok.strong} — ${original}`}
-              className="mx-0.5 my-0.5 inline-flex min-h-11 flex-col items-center justify-end rounded-xl transition-colors"
+              className="mx-0.5 inline-grid grid-rows-[1.75rem_2rem] items-stretch rounded-xl transition-colors"
             >
               <span
                 lang={tok.lang === 'hebrew' ? 'he' : tok.lang === 'greek' ? 'el' : undefined}
                 dir={tok.lang === 'hebrew' ? 'rtl' : undefined}
                 className={cn(
-                  'rounded-md px-2 py-0.5 font-serif text-[12px] text-muted-foreground transition-colors',
+                  'flex items-end justify-center whitespace-nowrap rounded-md px-2 pb-0.5 font-serif text-[12px] text-muted-foreground transition-colors',
                   isActive && tok.lang === 'hebrew' && 'bg-primary/10 font-semibold text-primary',
                   isActive && tok.lang !== 'hebrew' && 'bg-purple-500/10 font-semibold text-purple-500',
                 )}
@@ -96,7 +103,7 @@ export function StrongVerse({
               </span>
               <span
                 className={cn(
-                  'rounded-2xl px-2 py-1 font-medium transition-all duration-400',
+                  'flex items-center justify-center rounded-2xl px-2 font-medium transition-all duration-400',
                   isActive && tok.lang === 'greek'
                     ? 'bg-purple-500 text-white'
                     : isActive && tok.lang === 'hebrew'
