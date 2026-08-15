@@ -1,12 +1,13 @@
 import { getVersion } from '@/src/shared/constants/bible-versions';
 
 /**
- * Value-object identifiant une version de la Bible (ex. "bym", "lsg", "darby").
+ * Value-object identifiant une version de la Bible (ex. "bym", "lsg", "darby"). `orig` est une
+ * source technique valide pour les textes originaux, sans être proposée comme version de lecture.
  * Valide à la construction via `getVersion` (retourne la version par défaut si inconnue).
  */
 export class VersionId {
   static isValid(value: string): boolean {
-    return getVersion(value) !== undefined && getVersion(value).id === value;
+    return value === 'orig' || (getVersion(value) !== undefined && getVersion(value).id === value);
   }
 
   private constructor(readonly value: string) {}

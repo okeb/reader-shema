@@ -109,7 +109,7 @@ export function useStrongData({
             id: `${id}:${v.number}`,
             reference: `${bookName} ${card.chapter}:${v.number}`,
             tokens,
-            originalTokens: originalsQ.data?.[`${id}:${v.number}`],
+            originalTokens: originalsQ.isError ? [] : originalsQ.data?.[`${id}:${v.number}`],
           });
         }
       }
@@ -122,7 +122,7 @@ export function useStrongData({
           id: it.id,
           reference: `${bookName} ${it.chapter}:${it.verse}`,
           tokens,
-          originalTokens: originalsQ.data?.[it.id],
+          originalTokens: originalsQ.isError ? [] : originalsQ.data?.[it.id],
         });
       }
       out.sort((a, b) => {
@@ -132,7 +132,7 @@ export function useStrongData({
       });
     }
     return out;
-  }, [strongsOpen, mode, selection.selectedIds, cards, strongsItems, strongsQ.data, originalsQ.data]);
+  }, [strongsOpen, mode, selection.selectedIds, cards, strongsItems, strongsQ.data, originalsQ.data, originalsQ.isError]);
 
   // Ouvre la concordance d'un token Strong (depuis le panneau Strong).
   const openConcordance = useCallback((token: StrongToken) => {

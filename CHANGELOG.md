@@ -9,6 +9,12 @@ divulguée. La cohérence est vérifiée par `pnpm changelog:check`.
 
 ## [Unreleased]
 
+## [0.5.1] : 2026-08-15
+
+### Corrigé
+
+- **Texte original** : la phrase grecque ou hébraïque apparaît désormais réellement à l'activation du bouton ; un message explicite remplace le silence en cas d'indisponibilité.
+
 ## [0.5.0] : 2026-08-15
 
 ### Modifié
