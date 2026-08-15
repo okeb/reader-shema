@@ -234,7 +234,8 @@ export async function getStrongsForVerses(
     Array.from(groups.values()).map(async (g) => {
       const selection = compressVerses(g.verses);
       if (!selection) return;
-      const path = `/${version}/${g.bookId}/${g.chapter}/${selection}?strongs=1`;
+      const query = version === 'orig' ? 'mode=interlinear&translit=1' : 'strongs=1';
+      const path = `/${version}/${g.bookId}/${g.chapter}/${selection}?${query}`;
       try {
         const res = await apiClient.get<Record<string, ApiVerse & { strongs?: unknown[] }>>(path);
         for (const v of Object.values(res.data)) {
