@@ -9,6 +9,12 @@ divulguée. La cohérence est vérifiée par `pnpm changelog:check`.
 
 ## [Unreleased]
 
+## [0.4.1] : 2026-08-15
+
+### Corrigé
+
+- **Fiches Strong** : leur contenu et leurs occurrences se chargent de nouveau correctement.
+
 ## [0.4.0] : 2026-08-15
 
 ### Ajouté
