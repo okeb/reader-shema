@@ -13,6 +13,8 @@ export interface StrongVerseView {
   reference: string;
   /** Tokens Strong reconstruisant le verset dans l'ordre. */
   tokens: StrongToken[];
+  /** Segments complets du texte source, conservés dans l'ordre grec/hébreu. */
+  originalTokens?: StrongToken[];
 }
 
 /** Couleur de la bulle selon la langue d'origine. */
@@ -47,7 +49,53 @@ export function StrongVerse({
 }) {
   // Indice du token actif (dernier clic).
   const [activeIdx, setActiveIdx] = useState<number | null>(null);
+  const [activeOriginalIdx, setActiveOriginalIdx] = useState<number | null>(null);
   const activeToken = activeIdx != null ? verse.tokens[activeIdx] : null;
+
+  const findOriginalIndex = (translatedIndex: number) => {
+    const strong = verse.tokens[translatedIndex]?.strong;
+    if (!strong) return -1;
+    const occurrence = verse.tokens
+      .slice(0, translatedIndex)
+      .filter((token) => token.strong === strong).length;
+    return (verse.originalTokens ?? []).reduce(
+      (match, token, index) => {
+        if (match.found >= 0 || token.strong !== strong) return match;
+        return match.seen === occurrence
+          ? { seen: match.seen, found: index }
+          : { seen: match.seen + 1, found: -1 };
+      },
+      { seen: 0, found: -1 },
+    ).found;
+  };
+
+  const findTranslatedIndex = (originalIndex: number) => {
+    const strong = verse.originalTokens?.[originalIndex]?.strong;
+    if (!strong) return -1;
+    const occurrence = (verse.originalTokens ?? [])
+      .slice(0, originalIndex)
+      .filter((token) => token.strong === strong).length;
+    return verse.tokens.reduce(
+      (match, token, index) => {
+        if (match.found >= 0 || token.strong !== strong) return match;
+        return match.seen === occurrence
+          ? { seen: match.seen, found: index }
+          : { seen: match.seen + 1, found: -1 };
+      },
+      { seen: 0, found: -1 },
+    ).found;
+  };
+
+  const activateTranslation = (index: number) => {
+    setActiveIdx(index);
+    const originalIndex = findOriginalIndex(index);
+    setActiveOriginalIdx(originalIndex >= 0 ? originalIndex : null);
+  };
+
+  const activateOriginal = (originalIndex: number, translatedIndex: number) => {
+    setActiveOriginalIdx(originalIndex);
+    setActiveIdx(translatedIndex);
+  };
 
   // Reprise : active le token dont le code Strong correspond à `initialActiveStrong` au montage
   // (one-shot) — restaure le mot sélectionné après un retour depuis une fiche Strong. Spec 29.
@@ -65,66 +113,68 @@ export function StrongVerse({
         {verse.reference}
       </div>
 
-      {/* Verset tokenisé : les mots avec Strong sont des bulles cliquables. */}
-      <div className={cn('font-reader text-[15px]', showOriginal ? 'flex flex-wrap items-start gap-y-2 leading-normal' : 'leading-loose')}>
+      {showOriginal && verse.originalTokens && verse.originalTokens.length > 0 && (
+        <div
+          className="mb-3 flex flex-wrap items-baseline gap-x-1 gap-y-1 font-serif text-[16px] leading-relaxed"
+          dir={verse.originalTokens.some((token) => token.lang === 'hebrew') ? 'rtl' : 'ltr'}
+          aria-label="Texte original complet"
+        >
+          {verse.originalTokens.map((token, originalIndex) => {
+            const text = typeof token.text === 'string' ? token.text.trim() : '';
+            if (!text) return null;
+            const translatedIndex = findTranslatedIndex(originalIndex);
+            const matched = translatedIndex >= 0;
+            const active = activeOriginalIdx === originalIndex;
+            if (!matched) {
+              return (
+                <span
+                  key={`${verse.id}-original-${originalIndex}`}
+                  className="rounded px-1 py-0.5 text-muted-foreground/55"
+                  title="Aucune correspondance dans la traduction"
+                >
+                  {text}
+                </span>
+              );
+            }
+            return (
+              <button
+                key={`${verse.id}-original-${originalIndex}`}
+                type="button"
+                onClick={() => activateOriginal(originalIndex, translatedIndex)}
+                className={cn(
+                  'rounded px-1 py-0.5 transition-colors',
+                  active && token.lang === 'hebrew'
+                    ? 'bg-primary/15 font-semibold text-primary'
+                    : active
+                      ? 'bg-purple-500/15 font-semibold text-purple-500'
+                      : 'text-foreground/80 hover:bg-foreground/5',
+                )}
+                title={`${token.strong} — ${token.translit ?? token.lemma ?? text}`}
+              >
+                {text}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Traduction tokenisée : les mots avec Strong sont des bulles cliquables. */}
+      <div className="font-reader text-[15px] leading-loose">
         {verse.tokens.map((tok, i) => {
           const key = `${verse.id}-${i}`;
           const tokenText = typeof tok.text === 'string' ? tok.text : '';
           const strong = typeof tok.strong === 'string' && /^[HG]\d{1,5}$/.test(tok.strong)
             ? tok.strong
             : null;
-          if (!strong) {
-            return showOriginal ? (
-              <span key={key} className="inline-grid grid-rows-[1.75rem_2rem]">
-                <span aria-hidden />
-                <span className="flex items-center">{tokenText}</span>
-              </span>
-            ) : (
-              <span key={key}>{tokenText}</span>
-            );
-          }
+          if (!strong) return <span key={key}>{tokenText}</span>;
           const isActive = activeIdx === i;
           const lemma = typeof tok.lemma === 'string' ? tok.lemma : '';
           const translit = typeof tok.translit === 'string' ? tok.translit : '';
-          const original = lemma || translit || strong.replace(/^[HG]/, '');
-          return showOriginal ? (
+          return (
             <button
               key={key}
               type="button"
-              onClick={() => setActiveIdx(i)}
-              aria-label={`${tokenText.trim()} — ${original}`}
-              title={`${strong} — ${original}`}
-              className="mx-0.5 inline-grid grid-rows-[1.75rem_2rem] items-stretch rounded-xl transition-colors"
-            >
-              <span
-                lang={tok.lang === 'hebrew' ? 'he' : tok.lang === 'greek' ? 'el' : undefined}
-                dir={tok.lang === 'hebrew' ? 'rtl' : undefined}
-                className={cn(
-                  'flex items-end justify-center whitespace-nowrap rounded-md px-2 pb-0.5 font-serif text-[12px] text-muted-foreground transition-colors',
-                  isActive && tok.lang === 'hebrew' && 'bg-primary/10 font-semibold text-primary',
-                  isActive && tok.lang !== 'hebrew' && 'bg-purple-500/10 font-semibold text-purple-500',
-                )}
-              >
-                {original}
-              </span>
-              <span
-                className={cn(
-                  'flex items-center justify-center rounded-2xl px-2 font-medium transition-all duration-400',
-                  isActive && tok.lang === 'greek'
-                    ? 'bg-purple-500 text-white'
-                    : isActive && tok.lang === 'hebrew'
-                      ? 'bg-primary text-white'
-                      : bubbleColor(tok.lang),
-                )}
-              >
-                {tokenText}
-              </span>
-            </button>
-          ) : (
-            <button
-              key={key}
-              type="button"
-              onClick={() => setActiveIdx(i)}
+              onClick={() => activateTranslation(i)}
               className={cn(
                 'mx-0.5 my-0.5 inline-block rounded-2xl px-2 font-medium transition-all duration-400',
                 isActive && tok.lang === 'greek'

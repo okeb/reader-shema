@@ -7,6 +7,7 @@ import type { StrongVerseView } from '@/src/presentation/components/molecules/m-
 import type { VerseSelection } from '@/src/presentation/hooks/use-verse-selection';
 import type { ReaderMode } from '@/src/presentation/lib/reader-helpers';
 import { useStrongsForVerses } from './use-strongs-for-verses';
+import { useReaderPreferences } from '@/src/presentation/stores/reader-preferences.store';
 
 /** Concordance d'un token Strong ouverte par-dessus le panneau, ou null. */
 export interface Concordance {
@@ -46,6 +47,7 @@ export function useStrongData({
   version,
 }: UseStrongDataArgs) {
   const [concordance, setConcordance] = useState<Concordance | null>(null);
+  const showOriginal = useReaderPreferences((state) => state.strongOriginalText);
 
   // Construit la liste des versets à résoudre en Strong depuis la sélection courante.
   const buildStrongsItems = useCallback((): StrongFetchItem[] => {
@@ -79,6 +81,10 @@ export function useStrongData({
     version,
     strongsOpen && selection.count > 0 ? strongsItems : [],
   );
+  const originalsQ = useStrongsForVerses(
+    'orig',
+    strongsOpen && showOriginal && selection.count > 0 ? strongsItems : [],
+  );
 
   // Referme le panneau quand la sélection se vide.
   useEffect(() => {
@@ -103,6 +109,7 @@ export function useStrongData({
             id: `${id}:${v.number}`,
             reference: `${bookName} ${card.chapter}:${v.number}`,
             tokens,
+            originalTokens: originalsQ.data?.[`${id}:${v.number}`],
           });
         }
       }
@@ -111,7 +118,12 @@ export function useStrongData({
         const tokens = data[it.id];
         if (!tokens) continue;
         const bookName = getBookById(it.bookId)?.name ?? it.bookId;
-        out.push({ id: it.id, reference: `${bookName} ${it.chapter}:${it.verse}`, tokens });
+        out.push({
+          id: it.id,
+          reference: `${bookName} ${it.chapter}:${it.verse}`,
+          tokens,
+          originalTokens: originalsQ.data?.[it.id],
+        });
       }
       out.sort((a, b) => {
         const va = strongsItems.find((i) => i.id === a.id)?.verse ?? 0;
@@ -120,7 +132,7 @@ export function useStrongData({
       });
     }
     return out;
-  }, [strongsOpen, mode, selection.selectedIds, cards, strongsItems, strongsQ.data]);
+  }, [strongsOpen, mode, selection.selectedIds, cards, strongsItems, strongsQ.data, originalsQ.data]);
 
   // Ouvre la concordance d'un token Strong (depuis le panneau Strong).
   const openConcordance = useCallback((token: StrongToken) => {

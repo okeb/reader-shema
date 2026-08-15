@@ -1,15 +1,15 @@
 # Spec 35 — Texte original interlinéaire dans le panneau Strong
 
-> **Statut** : Proposé · **Priorité** : 🟠 Moyenne · **Effort** : S–M · **Dépendances** : Spec 02
+> **Statut** : ✅ Implémenté · **Priorité** : 🟠 Moyenne · **Effort** : S–M · **Dépendances** : Spec 02
 > (concordance Strong), Spec 29 (détail Strong + champs `lemma`/`translit`/`lang` par token),
-> endpoint per-token `?strongs=1`.
+> endpoint `/orig/:livre/:chap/:selection?mode=interlinear&translit=1`.
 
 ## 1. Objectif
 
-Dans le panneau Strong, afficher — en regard de la traduction tokenisée — le **texte original**
-(hébreu/grec) du verset, mot à mot, de sorte qu'un mot sélectionné dans la traduction surligne son
-équivalent original (et réciproquement). L'usager peut **masquer ou afficher** ce texte original via
-un toggle de l'en-tête du panneau.
+Dans le panneau Strong, afficher la **phrase originale complète** (hébreu/grec) dans son ordre source,
+y compris les mots qui n'ont pas de correspondance dans la traduction tokenisée. Un mot apparié est
+sélectionnable dans les deux lignes ; un mot source non apparié reste visible mais neutre. L'usager
+peut **masquer ou afficher** ce texte original via un toggle de l'en-tête du panneau.
 
 ## 2. Valeur utilisateur
 
@@ -23,24 +23,19 @@ un toggle de l'en-tête du panneau.
 ## 3. Périmètre
 
 - **Inclus** :
-  - Affichage **interlinéaire par paires** dans `StrongVerse` : chaque token Strong devient une
-    unité verticale [lemme original / bulle traduite] qui s'enroule en ligne.
-  - Sélection **bidirectionnelle** par token (une unité = un clic = active les deux lignes).
+  - Affichage de la phrase source complète dans `StrongVerse`, au-dessus de la traduction.
+  - Sélection **bidirectionnelle** des mots appariés par code Strong et rang d'occurrence.
+  - Affichage neutre des segments source qui n'ont pas de paire traduite.
   - Toggle « texte original » dans l'en-tête du panneau Strong, **persisté** dans les préférences
     de lecture (localStorage + sync opt-in `readerPrefs`).
-  - Gestion des tokens sans `strong` (ponctuation, connectives) et des tokens Strong sans `lemma`.
+  - Conservation de la ponctuation, des connectives et de l'ordre natif grec/hébreu.
 - **Exclu** (pour cette itération) :
-  - Texte original en **ordre des mots source** (ordre hébreu/grec) : l'API ne fournit que le `lemma`
-    aligné par token traduit. Le texte original affiché suit donc l'**ordre de la traduction**
-    (alignement interlinéaire, pas un texte source fluide). Voir §8.
   - Interlinéaire dans le tiroir concordance (`m-strong-concordance`) et la page détail
     `/strong/[code]` — ces vues colorent déjà le mot correspondant dans le texte d'occurrence.
-  - Nouveau fetch / nouvel endpoint : on réutilise les `lemma`/`translit`/`lang` déjà renvoyés par
-    `?strongs=1` (spéc 29).
 
 ## 4. Spécification fonctionnelle
 
-### 4.1 Donnée source (inchangée)
+### 4.1 Donnée source
 
 Chaque `StrongToken` (`src/domain/entities/strong-token.entity.ts`) porte déjà :
 `{ text, strong, lemma?, translit?, lang?, phonetique?, definition?, origine?, type? }`.
@@ -50,29 +45,23 @@ Chaque `StrongToken` (`src/domain/entities/strong-token.entity.ts`) porte déjà
 - `translit` = romanisation ; `lang` = `'hebrew' | 'greek'`.
 - `strong` = code canonique `H2421` / `G25` ; `null` pour les tokens sans ancrage Strong.
 
-Aucune donnée supplémentaire à récupérer : le texte original se **reconstruit** depuis les `lemma`
-des tokens déjà chargés par `useStrongsForVerses`.
+La traduction utilise `/{version}/...?strongs=1`. La phrase source utilise séparément
+`/orig/...?mode=interlinear&translit=1`; ses `strongs` portent les formes fléchies dans `text`, dans
+l'ordre natif. Les deux jeux sont normalisés avant leur rendu.
 
 ### 4.2 Unité interlinéaire
 
-Quand l'affichage original est activé, chaque token du verset est rendu comme une unité inline qui
-contient **deux lignes** (colonne verticale) :
-
-1. **Ligne original** (au-dessus) : `lemma` en `font-serif`, plus petit, muted. Si `lemma` absent →
-   repli sur `translit` ; si absent → repli sur le code Strong sans préfixe (`2421`) ; si toujours
-   absent → ligne laissée vide (la bulle traduite reste, seule).
-2. **Ligne traduction** (en-dessous) : la bulle cliquable actuelle (`tok.text`), styling inchangé.
-
-Les unités s'enroulent en ligne (inline-flow) ; une unité ne se coupe jamais entre ses deux lignes.
-Les tokens **sans `strong`** (ponctuation/connectives) s'affichent en texte brut sur la ligne
-traduction, sans ligne original au-dessus (alignement vertical géré par la colonne de l'unité).
+Quand l'affichage original est activé, deux lignes autonomes sont rendues : la phrase source complète
+en premier, puis la traduction tokenisée existante. Les segments source appariés sont cliquables ;
+les autres restent visibles avec une teinte atténuée et une indication d'absence de correspondance.
 
 ### 4.3 Sélection synchronisée
 
-- Une unité Strong = **un seul** élément interactif (`<button>`) couvrant les deux lignes. Un clic
-  (sur la ligne original **ou** traduction) active le token → `activeIdx = i`.
-- L'état actif surligne **les deux lignes** : la bulle traduite se remplit comme aujourd'hui
-  (`bg-primary` hébreu / `bg-purple-500` grec, texte blanc) ; la ligne original prend la même
+- L'appariement utilise le code Strong et son rang d'occurrence dans chaque ligne, afin que les codes
+  répétés pointent vers la bonne paire.
+- Un clic sur le mot source ou traduit active les deux correspondants.
+- L'état actif surligne **les deux lignes** : la bulle traduite se remplit comme aujourd'hui ; le mot
+  source prend la même
   accentuation (gras + couleur d'accent de la langue, fond léger).
 - La définition Strong (bloc sous le verset) s'affiche à l'identique — inchangé.
 - La reprise spec 31 (`initialActiveStrong`) active le token au montage : les deux lignes se
@@ -184,16 +173,16 @@ Détail d'une paire active :
   - `src/presentation/stores/reader-preferences.store.ts` — ajouter le champ à `pickPrefs` (single
     point for persist + sync serialization via `getReaderPrefs`) + une action `setStrongOriginalText`
     (ou réutiliser `update({ strongOriginalText })`).
-  - `src/presentation/components/molecules/m-strong-verse.tsx` — nouveau prop `showOriginal?: boolean`
-    ; quand `true`, rendre chaque token Strong en `<button>` two-line (colonne) au lieu de la bulle
-    seule. État `activeIdx` inchangé (un clic = active la paire). Tokens sans `strong` : texte brut.
+  - `src/presentation/components/molecules/m-strong-verse.tsx` — rend la phrase source complète puis
+    la traduction et synchronise les mots appariés.
+  - `src/infrastructure/api/bible-api.ts` / `use-strong-data.ts` — chargent et normalisent séparément
+    les tokens `orig` lorsque le toggle est actif.
   - `src/presentation/components/molecules/m-strong-panel.tsx` — toggle dans l'en-tête (icône
     `hugeicons:language-skill` ou `hugeicons:translate-02`), branché sur
     `useReaderPreferences(s => s.strongOriginalText)` + `setStrongOriginalText` ; passer
     `showOriginal` à chaque `StrongVerse`.
 - **Nouveaux** : aucun.
-- **Inchangés** : domaine/entités, CQRS, repository, `bible-api.ts`, hooks (`use-strong-data`,
-  `use-strongs-for-verses`), `t-reader` (passe déjà `onSeeOccurrences`/`onNavigateStrong`), route
+- **Inchangés** : domaine/entités, CQRS, repository, `t-reader`, route
   `/strong/[code]`, tiroir concordance. Le toggle est lu directement dans `m-strong-panel` (pas de
   nouveau prop drilling depuis `t-reader`).
 
@@ -208,16 +197,15 @@ Détail d'une paire active :
 
 ### 6.3 API / contraintes
 
-- **Aucun** nouvel endpoint, **aucun** fetch supplémentaire. Les `lemma`/`translit`/`lang` sont déjà
-  renvoyés par `GET /{version}/{book}/{chap}/{selection}?strongs=1` (spéc 29, vérifié BYM).
-- Pas de dépendance backend.
+- Un fetch supplémentaire est lancé uniquement lorsque le texte original est affiché :
+  `GET /orig/{book}/{chap}/{selection}?mode=interlinear&translit=1`.
 - Régression : `showOriginal=false` (défaut) → rendu byte-identique à aujourd'hui.
 
 ## 7. Critères d'acceptation
 
 - [ ] Un toggle « texte original » apparaît dans l'en-tête du panneau Strong ; défaut éteint.
-- [ ] Toggle on : chaque token Strong s'affiche en paire [lemma / bulle], les paires s'enroulent
-      sans débordement horizontal (mobile + desktop 440px).
+- [ ] Toggle on : la phrase source complète apparaît dans son ordre natif au-dessus de la traduction.
+- [ ] Les mots sans paire traduite restent visibles, neutres et non cliquables.
 - [ ] Clic sur la ligne original **ou** la bulle active les deux lignes + ouvre la définition.
 - [ ] Token Strong sans `lemma` → repli `translit` puis code nu ; token sans `strong` → texte brut,
       pas de ligne original.
