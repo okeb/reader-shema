@@ -9,6 +9,8 @@ divulguée. La cohérence est vérifiée par `pnpm changelog:check`.
 
 ## [Unreleased]
 
+## [0.4.0] : 2026-08-15
+
 ### Ajouté
 
 - **E-mail de bienvenue** : un message de bienvenue vous est désormais envoyé à la création de votre compte, avec un raccourci pour reprendre la lecture.
