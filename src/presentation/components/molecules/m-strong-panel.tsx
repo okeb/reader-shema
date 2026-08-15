@@ -8,6 +8,7 @@ import { StrongPanelSkeleton } from '@/src/presentation/components/molecules/m-s
 import { StrongVerse, type StrongVerseView } from '@/src/presentation/components/molecules/m-strong-verse';
 import { BIBLE_VERSIONS, isSelectable, type BibleVersion } from '@/src/shared/constants/bible-versions';
 import type { StrongToken } from '@/src/domain/entities';
+import { useReaderPreferences } from '@/src/presentation/stores/reader-preferences.store';
 
 export type { StrongVerseView };
 
@@ -146,6 +147,9 @@ export function StrongPanel({
   covered = false,
   onClose,
 }: StrongPanelProps) {
+  const strongOriginalText = useReaderPreferences((s) => s.strongOriginalText);
+  const setStrongOriginalText = useReaderPreferences((s) => s.setStrongOriginalText);
+
   if (!open) return null;
 
   return (
@@ -184,14 +188,29 @@ export function StrongPanel({
               </span>
             )}
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            title="Fermer"
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
-          >
-            <Icon icon="hugeicons:cancel-01" className="h-4 w-4" />
-          </button>
+          <div className="flex shrink-0 items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setStrongOriginalText(!strongOriginalText)}
+              title={strongOriginalText ? 'Masquer le texte original' : 'Afficher le texte original'}
+              aria-label={strongOriginalText ? 'Masquer le texte original' : 'Afficher le texte original'}
+              aria-pressed={strongOriginalText}
+              className={cn(
+                'flex h-9 w-9 items-center justify-center rounded-full transition-colors hover:bg-primary/10 hover:text-primary',
+                strongOriginalText ? 'bg-primary/10 text-primary' : 'text-muted-foreground',
+              )}
+            >
+              <Icon icon="hugeicons:language-skill" className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              title="Fermer"
+              className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
+            >
+              <Icon icon="hugeicons:cancel-01" className="h-4 w-4" />
+            </button>
+          </div>
         </div>
 
         {/* Corps */}
@@ -208,6 +227,7 @@ export function StrongPanel({
                 <StrongVerse
                   key={verse.id}
                   verse={verse}
+                  showOriginal={strongOriginalText}
                   onSeeOccurrences={onSeeOccurrences}
                   onNavigateStrong={onNavigateStrong}
                   initialActiveStrong={

@@ -32,6 +32,7 @@ export function StrongVerse({
   onSeeOccurrences,
   onNavigateStrong,
   initialActiveStrong,
+  showOriginal = false,
 }: {
   verse: StrongVerseView;
   /** Ouvre la concordance du token (toutes les occurrences du même Strong). */
@@ -41,6 +42,8 @@ export function StrongVerse({
   onNavigateStrong?: (targetCode: string, source: { verseId: string; strongCode?: string }) => void;
   /** Code Strong du token à activer au montage (reprise après retour d'une fiche /strong/[code]). */
   initialActiveStrong?: string;
+  /** Affiche une paire interlinéaire [lemme/translittération, traduction] par token Strong. */
+  showOriginal?: boolean;
 }) {
   // Indice du token actif (dernier clic).
   const [activeIdx, setActiveIdx] = useState<number | null>(null);
@@ -63,14 +66,48 @@ export function StrongVerse({
       </div>
 
       {/* Verset tokenisé : les mots avec Strong sont des bulles cliquables. */}
-      <p className="font-reader text-[15px] leading-loose">
+      <div className={cn('font-reader text-[15px]', showOriginal ? 'flex flex-wrap items-end gap-y-1 leading-normal' : 'leading-loose')}>
         {verse.tokens.map((tok, i) => {
           const key = `${verse.id}-${i}`;
           if (!tok.strong) {
             return <span key={key}>{tok.text}</span>;
           }
           const isActive = activeIdx === i;
-          return (
+          const original = tok.lemma || tok.translit || tok.strong.replace(/^[HG]/, '');
+          return showOriginal ? (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setActiveIdx(i)}
+              aria-label={`${tok.text.trim()} — ${original}`}
+              title={`${tok.strong} — ${original}`}
+              className="mx-0.5 my-0.5 inline-flex min-h-11 flex-col items-center justify-end rounded-xl transition-colors"
+            >
+              <span
+                lang={tok.lang === 'hebrew' ? 'he' : tok.lang === 'greek' ? 'el' : undefined}
+                dir={tok.lang === 'hebrew' ? 'rtl' : undefined}
+                className={cn(
+                  'rounded-md px-2 py-0.5 font-serif text-[12px] text-muted-foreground transition-colors',
+                  isActive && tok.lang === 'hebrew' && 'bg-primary/10 font-semibold text-primary',
+                  isActive && tok.lang !== 'hebrew' && 'bg-purple-500/10 font-semibold text-purple-500',
+                )}
+              >
+                {original}
+              </span>
+              <span
+                className={cn(
+                  'rounded-2xl px-2 py-1 font-medium transition-all duration-400',
+                  isActive && tok.lang === 'greek'
+                    ? 'bg-purple-500 text-white'
+                    : isActive && tok.lang === 'hebrew'
+                      ? 'bg-primary text-white'
+                      : bubbleColor(tok.lang),
+                )}
+              >
+                {tok.text}
+              </span>
+            </button>
+          ) : (
             <button
               key={key}
               type="button"
@@ -89,7 +126,7 @@ export function StrongVerse({
             </button>
           );
         })}
-      </p>
+      </div>
 
       {/* Définition Strong du mot actif — en dessous du verset. */}
       {activeToken && activeToken.strong && (

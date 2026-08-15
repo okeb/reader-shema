@@ -12,7 +12,7 @@ export interface StrongOccurrence {
   text: string;
 }
 
-/** Lexique Strong d'un code, porté par l'endpoint de concordance (/bym/strong/:code).
+/** Lexique Strong d'un code, porté par l'endpoint de concordance (/orig/strong/:code).
  *  La page détail d'un code tire toutes ses métadonnées de ce seul fetch — pas d'appel séparé
  *  à /strong/:code. Tous les champs sont optionnels (l'entrée peut être absente du lexique). */
 export interface StrongLexicon {
@@ -29,7 +29,7 @@ export interface StrongLexicon {
   definition?: string;
 }
 
-/** Résultat paginé de la concordance d'un numéro Strong (endpoint /bym/strong/:code). */
+/** Résultat paginé de la concordance d'un numéro Strong (endpoint /orig/strong/:code). */
 export interface StrongConcordance {
   code: string;
   /** Nombre total d'occurrences (toutes pages confondues). */

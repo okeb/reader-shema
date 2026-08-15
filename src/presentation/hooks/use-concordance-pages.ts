@@ -32,9 +32,9 @@ export interface UseConcordancePagesResult {
 }
 
 /**
- * Charge les pages de concordance d'un code Strong (`/bym/strong/:code`) : lexique (page détail
+ * Charge les pages de concordance d'un code Strong (`/orig/strong/:code`) : lexique (page détail
  * auto-suffisante — un seul fetch porte lemme/lang/phonetique/origine/type/definition), occurrences
- * paginées, réaffichage du texte dans la version active (l'index reste `bym`), et tokens Strong en
+ * paginées, réaffichage du texte dans la version active, et tokens Strong en
  * arrière-plan pour colorer le mot. Réinitialise quand `code` change.
  *
  * Partagé entre le tiroir concordance (`m-strong-concordance`) et la page détail
@@ -63,22 +63,18 @@ export function useConcordancePages(
         setTotal(res.total);
         if (next === 1) setLexicon(res.lexicon ?? null);
 
-        // L'index de concordance n'existe que sous `bym` → `res.items` porte le texte BYM. En LSG (ou
-        // toute version ≠ bym), on réaffiche le texte des mêmes versets dans la version active (la
-        // numérotation est commune). Les emplacements (livre/chap/verset) restent ceux de l'index.
+        // L'index `orig` porte le texte source. La liste reste cohérente avec le lecteur en
+        // réaffichant les mêmes emplacements dans la version active.
         const fetchItems = res.items.map((o) => ({
           id: occId(o),
           bookId: o.bookId,
           chapter: o.chapter,
           verse: o.verse,
         }));
-        let pageItems = res.items;
-        if (version !== 'bym') {
-          const textMap = await runQuery<GetVersesTextResult>(
-            createGetVersesTextQuery(version, fetchItems),
-          );
-          pageItems = res.items.map((o) => ({ ...o, text: textMap[occId(o)] ?? o.text }));
-        }
+        const textMap = await runQuery<GetVersesTextResult>(
+          createGetVersesTextQuery(version, fetchItems),
+        );
+        const pageItems = res.items.map((o) => ({ ...o, text: textMap[occId(o)] ?? o.text }));
         setItems((prev) => (next === 1 ? pageItems : [...prev, ...pageItems]));
         setPage(next);
         setStatus('loaded');
