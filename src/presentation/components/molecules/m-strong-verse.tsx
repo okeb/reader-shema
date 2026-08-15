@@ -113,6 +113,18 @@ export function StrongVerse({
         {verse.reference}
       </div>
 
+      {showOriginal && verse.originalTokens === undefined && (
+        <p className="mb-3 text-[12px] text-muted-foreground animate-pulse">
+          Chargement du texte original…
+        </p>
+      )}
+
+      {showOriginal && verse.originalTokens?.length === 0 && (
+        <p className="mb-3 text-[12px] text-muted-foreground">
+          Texte original indisponible pour ce verset.
+        </p>
+      )}
+
       {showOriginal && verse.originalTokens && verse.originalTokens.length > 0 && (
         <div
           className="mb-3 flex flex-wrap items-baseline gap-x-1 gap-y-1 font-serif text-[16px] leading-relaxed"
