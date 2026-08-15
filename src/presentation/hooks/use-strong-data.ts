@@ -124,7 +124,7 @@ export function useStrongData({
 
   // Ouvre la concordance d'un token Strong (depuis le panneau Strong).
   const openConcordance = useCallback((token: StrongToken) => {
-    if (!token.strong) return;
+    if (!token.strong || !/^[HG]\d{1,5}$/.test(token.strong)) return;
     setConcordance({ code: token.strong, title: token.lemma || token.translit || token.strong, lang: token.lang });
   }, []);
 

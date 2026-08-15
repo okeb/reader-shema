@@ -33,6 +33,58 @@ export interface ApiVerse {
   strongs?: StrongToken[];
 }
 
+/** Garde la frontière HTTP tolérante aux champs Strong incomplets ou mal typés. */
+function optionalText(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const text = value.trim();
+  return text || undefined;
+}
+
+function normalizeStrongCode(value: unknown, lang?: string): string | null {
+  if (typeof value !== 'string' && typeof value !== 'number') return null;
+  const raw = String(value).trim().toUpperCase();
+  const prefixed = raw.match(/^([HG])0*(\d{1,5})$/);
+  if (prefixed) return `${prefixed[1]}${Number(prefixed[2])}`;
+  const digits = raw.match(/^0*(\d{1,5})$/);
+  if (!digits) return null;
+  const prefix = lang === 'hebrew' ? 'H' : lang === 'greek' ? 'G' : null;
+  return prefix ? `${prefix}${Number(digits[1])}` : null;
+}
+
+function normalizeStrongToken(value: unknown): StrongToken | null {
+  if (!value || typeof value !== 'object') return null;
+  const raw = value as Record<string, unknown>;
+  const lang = optionalText(raw.lang);
+  const text = typeof raw.text === 'string' ? raw.text : '';
+  const strong = normalizeStrongCode(raw.strong, lang);
+  if (!text && !strong) return null;
+  return {
+    text,
+    strong,
+    lemma: optionalText(raw.lemma),
+    translit: optionalText(raw.translit),
+    definition: optionalText(raw.definition),
+    lang,
+    phonetique: optionalText(raw.phonetique),
+    origine: optionalText(raw.origine),
+    type: optionalText(raw.type),
+  };
+}
+
+function normalizeStrongLexicon(value: unknown): StrongLexicon {
+  if (!value || typeof value !== 'object') return {};
+  const raw = value as Record<string, unknown>;
+  return {
+    lemma: optionalText(raw.lemma),
+    lang: optionalText(raw.lang),
+    translit: optionalText(raw.translit),
+    phonetique: optionalText(raw.phonetique),
+    origine: optionalText(raw.origine),
+    type: optionalText(raw.type),
+    definition: optionalText(raw.definition),
+  };
+}
+
 /** Transforme l'objet { "Jn. 3:1": ApiVerse, ... } en tableau trié par numéro de verset. */
 function parseVerseMap(data: Record<string, ApiVerse>): ApiVerse[] {
   return Object.values(data).sort((a, b) => a.verset - b.verset);
@@ -184,10 +236,14 @@ export async function getStrongsForVerses(
       if (!selection) return;
       const path = `/${version}/${g.bookId}/${g.chapter}/${selection}?strongs=1`;
       try {
-        const res = await apiClient.get<Record<string, ApiVerse & { strongs?: StrongToken[] }>>(path);
+        const res = await apiClient.get<Record<string, ApiVerse & { strongs?: unknown[] }>>(path);
         for (const v of Object.values(res.data)) {
           const id = g.idByVerse.get(v.verset);
-          if (id && Array.isArray(v.strongs)) result[id] = v.strongs;
+          if (id && Array.isArray(v.strongs)) {
+            result[id] = v.strongs
+              .map(normalizeStrongToken)
+              .filter((token): token is StrongToken => token !== null);
+          }
         }
       } catch {
         // Une requête échouée ne doit pas casser les autres groupes.
@@ -200,12 +256,12 @@ export async function getStrongsForVerses(
 
 /** Forme brute d'une page de concordance renvoyée par l'API. */
 interface ApiConcordance {
-  code: string;
-  total: number;
-  page: number;
-  size: number;
-  lexicon?: StrongLexicon;
-  items?: { livre: string; chapitre: number; verset: number; ecrit: string }[];
+  code?: unknown;
+  total?: unknown;
+  page?: unknown;
+  size?: unknown;
+  lexicon?: unknown;
+  items?: unknown;
 }
 
 /** Cache mémoire des pages de concordance déjà récupérées (clé `code:page:size`). */
@@ -233,25 +289,34 @@ export async function getStrongOccurrences(
       `/bym/strong/${encodeURIComponent(code)}?page=${page}&size=${size}`,
     );
     const data = res.data;
-    const items: StrongOccurrence[] = (data.items ?? []).map((it) => {
+    const rawItems = Array.isArray(data.items) ? data.items : [];
+    const items: StrongOccurrence[] = rawItems.flatMap((value) => {
+      if (!value || typeof value !== 'object') return [];
+      const it = value as Record<string, unknown>;
+      if (
+        typeof it.livre !== 'string' ||
+        typeof it.chapitre !== 'number' ||
+        typeof it.verset !== 'number' ||
+        typeof it.ecrit !== 'string'
+      ) return [];
       const bookId = resolveBookId(it.livre) ?? it.livre.toLowerCase();
       const bookName = getBookById(bookId)?.name ?? it.livre;
-      return {
+      return [{
         bookId,
         livre: it.livre,
         chapter: it.chapitre,
         verse: it.verset,
         reference: `${bookName} ${it.chapitre}:${it.verset}`,
         text: it.ecrit,
-      };
+      }];
     });
 
     const result: StrongConcordance = {
-      code: data.code,
-      total: data.total,
-      page: data.page,
-      size: data.size,
-      lexicon: data.lexicon ?? {},
+      code: normalizeStrongCode(data.code) ?? code,
+      total: typeof data.total === 'number' && data.total >= 0 ? data.total : items.length,
+      page: typeof data.page === 'number' && data.page > 0 ? data.page : page,
+      size: typeof data.size === 'number' && data.size > 0 ? data.size : size,
+      lexicon: normalizeStrongLexicon(data.lexicon),
       items,
     };
     concordanceCache.set(cacheKey, result);
