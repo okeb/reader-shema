@@ -9,6 +9,12 @@ divulguée. La cohérence est vérifiée par `pnpm changelog:check`.
 
 ## [Unreleased]
 
+## [0.4.3] : 2026-08-15
+
+### Corrigé
+
+- **Panneau Strong** : un mot original ou une concordance aux données incomplètes ne bloque plus l'affichage des autres mots Strong.
+
 ## [0.4.2] : 2026-08-15
 
 ### Modifié

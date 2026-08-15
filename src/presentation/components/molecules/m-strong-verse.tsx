@@ -69,25 +69,31 @@ export function StrongVerse({
       <div className={cn('font-reader text-[15px]', showOriginal ? 'flex flex-wrap items-start gap-y-2 leading-normal' : 'leading-loose')}>
         {verse.tokens.map((tok, i) => {
           const key = `${verse.id}-${i}`;
-          if (!tok.strong) {
+          const tokenText = typeof tok.text === 'string' ? tok.text : '';
+          const strong = typeof tok.strong === 'string' && /^[HG]\d{1,5}$/.test(tok.strong)
+            ? tok.strong
+            : null;
+          if (!strong) {
             return showOriginal ? (
               <span key={key} className="inline-grid grid-rows-[1.75rem_2rem]">
                 <span aria-hidden />
-                <span className="flex items-center">{tok.text}</span>
+                <span className="flex items-center">{tokenText}</span>
               </span>
             ) : (
-              <span key={key}>{tok.text}</span>
+              <span key={key}>{tokenText}</span>
             );
           }
           const isActive = activeIdx === i;
-          const original = tok.lemma || tok.translit || tok.strong.replace(/^[HG]/, '');
+          const lemma = typeof tok.lemma === 'string' ? tok.lemma : '';
+          const translit = typeof tok.translit === 'string' ? tok.translit : '';
+          const original = lemma || translit || strong.replace(/^[HG]/, '');
           return showOriginal ? (
             <button
               key={key}
               type="button"
               onClick={() => setActiveIdx(i)}
-              aria-label={`${tok.text.trim()} — ${original}`}
-              title={`${tok.strong} — ${original}`}
+              aria-label={`${tokenText.trim()} — ${original}`}
+              title={`${strong} — ${original}`}
               className="mx-0.5 inline-grid grid-rows-[1.75rem_2rem] items-stretch rounded-xl transition-colors"
             >
               <span
@@ -111,7 +117,7 @@ export function StrongVerse({
                       : bubbleColor(tok.lang),
                 )}
               >
-                {tok.text}
+                {tokenText}
               </span>
             </button>
           ) : (
@@ -127,9 +133,9 @@ export function StrongVerse({
                     ? 'bg-primary text-white'
                     : bubbleColor(tok.lang),
               )}
-              title={`${tok.strong} — ${tok.lemma ?? ''}`.trim()}
+              title={`${strong} — ${lemma}`.trim()}
             >
-              {tok.text}
+              {tokenText}
             </button>
           );
         })}
