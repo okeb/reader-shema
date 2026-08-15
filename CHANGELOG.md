@@ -9,6 +9,12 @@ divulguée. La cohérence est vérifiée par `pnpm changelog:check`.
 
 ## [Unreleased]
 
+## [0.4.2] : 2026-08-15
+
+### Modifié
+
+- **Texte original interlinéaire** : les mots originaux et leurs traductions sont désormais alignés sur deux axes horizontaux réguliers.
+
 ## [0.4.1] : 2026-08-15
 
 ### Corrigé
