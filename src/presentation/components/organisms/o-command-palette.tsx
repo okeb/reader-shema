@@ -1,33 +1,20 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Icon } from '@iconify/react';
 import { useRouter } from '@/i18n/routing';
-import { parseReference } from '@/src/presentation/lib/parse-reference';
+import { parsePartialReference } from '@/src/presentation/lib/parse-reference';
 import { useNavigationHistory } from '@/src/presentation/stores/navigation-history.store';
 import { useActiveVersion } from '@/src/presentation/stores/active-version.store';
 import { cn } from '@/lib/utils';
 
 type ReadHref = { pathname: '/read'; query: Record<string, string> };
 
-/** Convertit une URL de lecture stockée (`/read?livre=…&chap=…[&v=…]`) en href objet pour le routing. */
 function toReadHref(url: string): ReadHref {
   const u = new URL(url, 'http://l');
   return { pathname: '/read', query: Object.fromEntries(u.searchParams) };
 }
 
-/**
- * Palette de recherche (⌘/Ctrl + K) : saute à une référence biblique, fond flouté. Montée en
- * permanence (jamais `return null`) — l'input doit exister dans le DOM pour qu'un focus synchrone
- * dans le geste tactile ouvre le clavier iOS. Fermée = invisible + inerte.
- *
- * Ouverture : ⌘/Ctrl+K, ou event `bym:open-search` (bouton loupe du dock mobile). Affiche
- * l'historique récent quand la saisie est vide, et la référence résolue (ou un message) sinon.
- *
- * Porté de l'ancien `components/organisms/o-command-palette.tsx`. `useRouter` vient de
- * `@/i18n/routing` (href objet `{pathname:'/read', query}` — la string `/read?…` n'est pas
- * acceptée par le routeur typé next-intl).
- */
 export function CommandPalette() {
   const router = useRouter();
   const history = useNavigationHistory((s) => s.history);
@@ -36,7 +23,79 @@ export function CommandPalette() {
   const primaryId = useActiveVersion((s) => s.primaryId);
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState('');
+  const [focusedIndex, setFocusedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+
+  const partial = useMemo(() => parsePartialReference(value), [value]);
+
+  const { resolvedBook, chapter, selection, bookResults } = partial;
+
+  const hasInput = value.trim().length > 0;
+
+  const suggestionBooks = useMemo(() => {
+    if (!hasInput) return [];
+    if (resolvedBook && chapter != null) return bookResults.filter((r) => r.book.id !== resolvedBook.id);
+    if (resolvedBook) return bookResults.filter((r) => r.book.id !== resolvedBook.id);
+    return bookResults;
+  }, [hasInput, resolvedBook, chapter, bookResults]);
+
+  const primaryLabel = useMemo(() => {
+    if (!resolvedBook) return null;
+    const chap = chapter ?? 1;
+    const sel = selection ? `:${selection}` : '';
+    return `${resolvedBook.name} ${chap}${sel}`;
+  }, [resolvedBook, chapter, selection]);
+
+  const totalItems = (primaryLabel ? 1 : 0) + suggestionBooks.length;
+  const itemCount = Math.min(totalItems, 5);
+
+  const navigate = useCallback(
+    (href: ReadHref) => {
+      router.push(href);
+      setOpen(false);
+    },
+    [router],
+  );
+
+  const goToBook = useCallback(
+    (bookId: string, chap: number, sel?: string) => {
+      const book = partial.bookResults.find((r) => r.book.id === bookId)?.book;
+      if (!book) return;
+      const query: Record<string, string> = { livre: bookId, chap: String(chap) };
+      if (sel) query.v = sel;
+      const reference = `${book.name} ${chap}${sel ? `:${sel}` : ''}`;
+      const url = `/read?livre=${bookId}&chap=${chap}${sel ? `&v=${encodeURIComponent(sel)}` : ''}`;
+      pushHistory({ version: primaryId, bookId, chapter: chap, selection: sel, reference, url });
+      navigate({ pathname: '/read', query });
+    },
+    [partial.bookResults, primaryId, pushHistory, navigate],
+  );
+
+  const handleActivate = useCallback(
+    (index: number) => {
+      if (!hasInput) {
+        if (index < history.length) {
+          navigate(toReadHref(history[index].url));
+        }
+        return;
+      }
+
+      const primaryOffset = primaryLabel ? 1 : 0;
+      if (index === 0 && primaryLabel && resolvedBook) {
+        const chap = chapter ?? 1;
+        goToBook(resolvedBook.id, chap, selection ?? undefined);
+      } else {
+        const bookIdx = index - primaryOffset;
+        if (bookIdx >= 0 && bookIdx < suggestionBooks.length) {
+          const book = suggestionBooks[bookIdx].book;
+          setValue(`${book.id} `);
+          inputRef.current?.focus();
+        }
+      }
+    },
+    [hasInput, primaryLabel, resolvedBook, chapter, selection, suggestionBooks, goToBook, history, navigate],
+  );
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -47,9 +106,6 @@ export function CommandPalette() {
         setOpen(false);
       }
     };
-    // Ouverture déclenchée par le dock (loupe mobile) — cf. m-reader-dock. Focus SYNCHRONE dans
-    // le geste : sinon iOS n'ouvre pas le clavier (focus hors gesture ignoré). L'input est monté en
-    // permanence (cf. rendu), donc focusable immédiatement.
     const onOpen = () => {
       inputRef.current?.focus();
       setOpen(true);
@@ -65,35 +121,15 @@ export function CommandPalette() {
   useEffect(() => {
     if (open) {
       setValue('');
+      setFocusedIndex(0);
       const t = setTimeout(() => inputRef.current?.focus(), 30);
       return () => clearTimeout(t);
     }
   }, [open]);
 
-  const parsed = value.trim() ? parseReference(value) : null;
-
-  /** Navigue vers un href de lecture et ferme la palette. */
-  const navigate = (href: ReadHref) => {
-    router.push(href);
-    setOpen(false);
-  };
-
-  const go = () => {
-    if (!parsed) return;
-    const query: Record<string, string> = { livre: parsed.bookId, chap: String(parsed.chapter) };
-    if (parsed.selection) query.v = parsed.selection;
-    const reference = `${parsed.bookName} ${parsed.chapter}${parsed.selection ? `:${parsed.selection}` : ''}`;
-    const url = `/read?livre=${parsed.bookId}&chap=${parsed.chapter}${parsed.selection ? `&v=${encodeURIComponent(parsed.selection)}` : ''}`;
-    pushHistory({
-      version: primaryId,
-      bookId: parsed.bookId,
-      chapter: parsed.chapter,
-      selection: parsed.selection,
-      reference,
-      url,
-    });
-    navigate({ pathname: '/read', query });
-  };
+  useEffect(() => {
+    setFocusedIndex(0);
+  }, [value]);
 
   return (
     <div
@@ -116,8 +152,27 @@ export function CommandPalette() {
             tabIndex={open ? 0 : -1}
             onChange={(e) => setValue(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') go();
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                handleActivate(focusedIndex);
+              } else if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                setFocusedIndex((i) => {
+                  const max = hasInput ? Math.min(totalItems, 5) - 1 : Math.min(history.length, 8) - 1;
+                  return i < max ? i + 1 : 0;
+                });
+              } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                setFocusedIndex((i) => {
+                  const max = hasInput ? Math.min(totalItems, 5) - 1 : Math.min(history.length, 8) - 1;
+                  return i > 0 ? i - 1 : max;
+                });
+              }
             }}
+            role="combobox"
+            aria-expanded={open}
+            aria-controls="cmd-listbox"
+            aria-activedescendant={focusedIndex >= 0 ? `cmd-item-${focusedIndex}` : undefined}
             placeholder="Aller à…  ex. « 1co 3 23 » ou « genese 3 12-20 »"
             className="w-full bg-transparent py-4 text-base outline-none placeholder:text-muted-foreground/40"
           />
@@ -126,7 +181,7 @@ export function CommandPalette() {
           </kbd>
         </div>
 
-        {open && !value.trim() && history.length > 0 && (
+        {open && !hasInput && history.length > 0 && (
           <div className="border-t border-input/60 p-2">
             <div className="flex items-center justify-between px-3 pb-1 pt-1">
               <span className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/50">
@@ -139,45 +194,91 @@ export function CommandPalette() {
                 Effacer
               </button>
             </div>
-            {history.slice(0, 8).map((h) => (
-              <button
-                key={h.id}
-                onClick={() => navigate(toReadHref(h.url))}
-                className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-accent"
-              >
-                <Icon icon="hugeicons:clock-01" className="h-4 w-4 shrink-0 text-muted-foreground/50" />
-                <span className="flex-1 truncate font-medium">{h.reference}</span>
-              </button>
-            ))}
+            <div
+              id="cmd-listbox"
+              role="listbox"
+              className="max-h-[40vh] overflow-y-auto"
+            >
+              {history.slice(0, 8).map((h, i) => (
+                <button
+                  key={h.id}
+                  id={`cmd-item-${i}`}
+                  role="option"
+                  aria-selected={focusedIndex === i}
+                  onClick={() => navigate(toReadHref(h.url))}
+                  className={cn(
+                    'flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition-colors',
+                    focusedIndex === i ? 'bg-accent' : 'hover:bg-accent',
+                  )}
+                >
+                  <Icon icon="hugeicons:clock-01" className="h-4 w-4 shrink-0 text-muted-foreground/50" />
+                  <span className="flex-1 truncate font-medium">{h.reference}</span>
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
-        {open && value.trim() && (
+        {open && hasInput && (
           <div className="border-t border-input/60 p-2">
-            {parsed ? (
-              <button
-                onClick={go}
-                className="flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-accent"
-              >
-                <span className="flex items-center gap-2.5 text-sm">
-                  <Icon icon="hugeicons:book-open-01" className="h-4 w-4 text-primary" />
-                  <span className="font-medium">
-                    {parsed.bookName} {parsed.chapter}
-                    {parsed.selection ? `:${parsed.selection}` : ''}
+            <div
+              id="cmd-listbox"
+              role="listbox"
+              ref={listRef}
+              className="max-h-[40vh] overflow-y-auto"
+              aria-live="polite"
+            >
+              {primaryLabel && resolvedBook && (
+                <button
+                  id="cmd-item-0"
+                  role="option"
+                  aria-selected={focusedIndex === 0}
+                  onClick={() => handleActivate(0)}
+                  className={cn(
+                    'flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left transition-colors',
+                    focusedIndex === 0 ? 'bg-accent' : 'hover:bg-accent',
+                  )}
+                >
+                  <span className="flex items-center gap-2.5 text-sm">
+                    <Icon icon="hugeicons:book-open-01" className="h-4 w-4 text-primary" />
+                    <span className="font-medium">Aller à {primaryLabel}</span>
                   </span>
-                </span>
-                <span className="text-[11px] text-muted-foreground/50">↵</span>
-              </button>
-            ) : (
-              <p className="px-3 py-2.5 text-sm text-muted-foreground/60">
-                Référence introuvable. Essayez « jean 3 16 ».
-              </p>
-            )}
+                  <span className="text-[11px] text-muted-foreground/50">↵</span>
+                </button>
+              )}
+              {suggestionBooks.slice(0, primaryLabel ? 4 : 5).map((result, i) => {
+                const idx = primaryLabel ? i + 1 : i;
+                return (
+                  <button
+                    key={result.book.id}
+                    id={`cmd-item-${idx}`}
+                    role="option"
+                    aria-selected={focusedIndex === idx}
+                    onClick={() => handleActivate(idx)}
+                    className={cn(
+                      'flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition-colors',
+                      focusedIndex === idx ? 'bg-accent' : 'hover:bg-accent',
+                    )}
+                  >
+                    <Icon icon="hugeicons:book-open-01" className="h-4 w-4 shrink-0 text-muted-foreground/60" />
+                    <span className="truncate font-medium">{result.book.name}</span>
+                  </button>
+                );
+              })}
+              {totalItems === 0 && (
+                <p className="px-3 py-2.5 text-sm text-muted-foreground/60">
+                  Référence introuvable. Essayez « jean 3 16 ».
+                </p>
+              )}
+            </div>
           </div>
         )}
 
         <div className="flex items-center gap-3 border-t border-input/60 bg-foreground/[0.02] px-4 py-2 text-[11px] text-muted-foreground/50">
           <span>livre&nbsp;chapitre&nbsp;[verset(s)]</span>
+          {hasInput && bookResults.length > 0 && (
+            <span className="ml-auto">{bookResults.length} résultat{bookResults.length > 1 ? 's' : ''}</span>
+          )}
         </div>
       </div>
     </div>

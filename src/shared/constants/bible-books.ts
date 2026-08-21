@@ -129,3 +129,63 @@ export function getBookByAbbr(abbr: string): BibleBook | undefined {
   const norm = abbr.trim().toLowerCase();
   return BIBLE_BOOKS.find((b) => b.abbr.trim().toLowerCase() === norm);
 }
+
+export interface BookSearchResult {
+  book: BibleBook;
+  score: number;
+}
+
+/**
+ * Recherche incrémentale de livres.
+ * Retourne les livres correspondants triés par score croissant puis par ordre canonique.
+ *
+ * Scores :
+ *  0 — correspondance exacte (id ou nom normalisé)
+ *  1 — préfixe du nom normalisé
+ *  2 — préfixe de l'abbr normalisé
+ *  3 — sous-chaîne dans le nom normalisé
+ *
+ * Si query vide, retourne tous les livres avec score 3.
+ */
+export function searchBooks(query: string): BookSearchResult[] {
+  const q = normalizeQuery(query);
+
+  if (!q) {
+    return BIBLE_BOOKS.map((book) => ({ book, score: 3 }));
+  }
+
+  const results: BookSearchResult[] = [];
+
+  for (let i = 0; i < BIBLE_BOOKS.length; i++) {
+    const book = BIBLE_BOOKS[i];
+    const normId = normalizeQuery(book.id);
+    const normName = normalizeQuery(book.name);
+    const normAbbr = normalizeQuery(book.abbr);
+
+    let bestScore: number | null = null;
+
+    if (normId === q || normName === q) {
+      bestScore = 0;
+    }
+
+    if (bestScore === null && normName.startsWith(q)) {
+      bestScore = 1;
+    }
+
+    if (bestScore === null && normAbbr.startsWith(q)) {
+      bestScore = 2;
+    }
+
+    if (bestScore === null && normName.includes(q)) {
+      bestScore = 3;
+    }
+
+    if (bestScore !== null) {
+      results.push({ book, score: bestScore });
+    }
+  }
+
+  results.sort((a, b) => a.score - b.score || BIBLE_BOOKS.indexOf(a.book) - BIBLE_BOOKS.indexOf(b.book));
+
+  return results;
+}
