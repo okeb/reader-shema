@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Icon } from '@iconify/react';
 import { cn } from '@/lib/utils';
 import { GLASS_PILL } from '@/src/presentation/components/atoms/a-floating-button';
-import { BIBLE_BOOKS, getBookById } from '@/src/shared/constants/bible-books';
+import { BIBLE_BOOKS, getBookById, searchBooks } from '@/src/shared/constants/bible-books';
 
 interface PassageLauncherProps {
   /** Livre présélectionné à l'ouverture du panneau (défaut : « jean », point d'entrée du lecteur). */
@@ -69,9 +69,10 @@ export function PassageLauncher({ defaultBookId = 'jean', onSelect }: PassageLau
     }
   }, [open, popBookId]);
 
-  const q = search.toLowerCase().trim();
-  const ot = BIBLE_BOOKS.filter((b) => b.testament === 'ancien' && (!q || b.name.toLowerCase().includes(q)));
-  const nt = BIBLE_BOOKS.filter((b) => b.testament === 'nouveau' && (!q || b.name.toLowerCase().includes(q)));
+  const q = search.trim();
+  const results = q ? searchBooks(q) : BIBLE_BOOKS.map((b) => ({ book: b, score: 3 }));
+  const ot = results.filter((r) => r.book.testament === 'ancien').map((r) => r.book);
+  const nt = results.filter((r) => r.book.testament === 'nouveau').map((r) => r.book);
 
   const renderGroup = (label: string, books: typeof BIBLE_BOOKS) =>
     books.length > 0 && (
