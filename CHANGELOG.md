@@ -9,6 +9,10 @@ divulguée. La cohérence est vérifiée par `pnpm changelog:check`.
 
 ## [Unreleased]
 
+### Ajouté
+
+- **Panneau Strong — mots originaux sans correspondance** : cliquer sur un mot du texte original qui n'a pas de correspondance dans la traduction affiche désormais sa définition Strong (translittération, lemme, type grammatical, définition, origine, bouton concordance).
+
 ## [0.5.1] : 2026-08-15
 
 ### Corrigé
