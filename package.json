@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "next dev",
     "prebuild": "node scripts/set-version.mjs",
-    "build": "node scripts/set-version.mjs && next build",
+    "build": "node scripts/set-version.mjs && next build --webpack",
     "start": "next start",
     "lint": "next lint",
     "prettier": "prettier --write .",
