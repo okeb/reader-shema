@@ -29,6 +29,8 @@ export interface ApiVerse {
   version: string;
   titre?: string;
   paragraphe?: 'start' | 'end';
+  /** URL relative d'un fichier audio narré (présent uniquement si le fichier existe). Spec 37. */
+  audio?: string;
   /** Tokens Strong (présents uniquement avec ?strongs=1). */
   strongs?: StrongToken[];
 }
@@ -115,6 +117,7 @@ export async function getChapter(
     text: v.ecrit,
     titre: v.titre,
     paragraphe: v.paragraphe,
+    audio: v.audio,
   }));
 }
 
@@ -148,7 +151,7 @@ export async function getReferences(version: string, refs: string[]): Promise<Bi
       return {
         id: `${verses[0].livre}${chap}:${verses[0].verset}`,
         reference,
-        verses: verses.map((v) => ({ number: v.verset, text: v.ecrit })),
+        verses: verses.map((v) => ({ number: v.verset, text: v.ecrit, audio: v.audio })),
         bookId: book?.id ?? bookId,
         chapter: Number(chap),
       };
@@ -334,6 +337,57 @@ export async function getBookInfo(version: string, bookId: string): Promise<Book
   try {
     const res = await apiClient.get<BookInfo>(`/${version}/${bookId}/info`);
     return res.data;
+  } catch (err: unknown) {
+    const status = (err as { response?: { status?: number } })?.response?.status;
+    if (status === 404) return null;
+    return null;
+  }
+}
+
+// === Manifest audio (spec 37) =================================================
+//
+// L'audio est agnostique de la version : un fichier par verset, convention
+// `{osis}.{chap}.{verset}.mp3`, plus un éventuel `{osis}.{chap}.title.mp3`.
+// Le manifest décrit la couverture. Ces endpoints n'existent que sur l'API
+// « modifiée » ; en production standard ils 404 → on renvoie null (best-effort),
+// la feature audio reste invisible.
+
+/** Manifest d'un chapitre : numéros de versets audio + présence d'un titre narré. */
+export interface AudioManifestChapter {
+  verses: number[];
+  title: boolean;
+}
+
+/** Manifest global : map `osis → { chapitre (string) → numéros de versets }`. */
+export type AudioManifestGlobal = Record<string, Record<string, number[]>>;
+
+/**
+ * Manifest d'un chapitre (`/audio/manifest/{osis}/{chap}`).
+ * Best-effort : null si 404 ou erreur (le titre est simplement zappé).
+ */
+export async function getAudioManifestChapter(osis: string, chapter: number): Promise<AudioManifestChapter | null> {
+  try {
+    const res = await apiClient.get<AudioManifestChapter>(`/audio/manifest/${osis}/${chapter}`);
+    const d = res.data;
+    return {
+      verses: Array.isArray(d?.verses) ? d.verses : [],
+      title: Boolean(d?.title),
+    };
+  } catch (err: unknown) {
+    const status = (err as { response?: { status?: number } })?.response?.status;
+    if (status === 404) return null;
+    return null;
+  }
+}
+
+/**
+ * Manifest global (`/audio/manifest`) : couverture audio par livre/chapitre.
+ * Best-effort : null si 404 ou erreur (le badge du sélecteur ne s'affiche pas).
+ */
+export async function getAudioManifest(): Promise<AudioManifestGlobal | null> {
+  try {
+    const res = await apiClient.get<AudioManifestGlobal>(`/audio/manifest`);
+    return res.data ?? null;
   } catch (err: unknown) {
     const status = (err as { response?: { status?: number } })?.response?.status;
     if (status === 404) return null;

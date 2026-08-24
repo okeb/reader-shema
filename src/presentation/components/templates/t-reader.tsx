@@ -24,6 +24,7 @@ import { useAnnotations } from '@/src/presentation/stores/annotations.store';
 import { useQuizSeen } from '@/src/presentation/stores/quiz-seen.store';
 
 import { useReaderData } from '@/src/presentation/hooks/use-reader-data';
+import { useAudioReader } from '@/src/presentation/hooks/use-audio-reader';
 import { useReaderShortcuts } from '@/src/presentation/hooks/use-reader-shortcuts';
 import { useVerseSelection } from '@/src/presentation/hooks/use-verse-selection';
 import { useCoarsePointer } from '@/src/presentation/hooks/use-coarse-pointer';
@@ -196,6 +197,26 @@ export function TReader({
     chapter,
     refs,
   });
+
+  // --- Audio (spec 37) — lecteur unifié read / références -------------------- @nolint
+  // Un unique élément <audio> pilote les deux modes. En mode « read » la playlist
+  // couvre le chapitre (+ titre) ; en mode « références » elle se limite aux versets
+  // audio de la carte active (pas de titre, pas de saut vers une autre carte).
+  const activeCard = mode === 'refs' ? (cards?.find((c) => c.id === activeCardId) ?? null) : null;
+  const audio = useAudioReader(
+    mode === 'read' ? verses ?? [] : activeCard?.verses ?? [],
+    mode === 'read' ? bookId : (activeCard?.bookId ?? bookId),
+    mode === 'read' ? chapter : (activeCard?.chapter ?? 0),
+    {
+      includeTitle: mode === 'read',
+      resetKey:
+        mode === 'read'
+          ? `read:${bookId}:${chapter}`
+          : activeCard
+            ? `card:${activeCard.id}`
+            : 'refs:none',
+    },
+  );
 
   // Renvois bibliques du livre courant (mode read seulement — chargement à la demande, cache 1h).
   const crossRefs = useBookCrossRefs(bookId, chapter, mode === 'read');
@@ -806,6 +827,12 @@ export function TReader({
               onOpenRefs={openRefsForVerse}
               hover={hover}
               verseActions={verseActionsBundle}
+              currentAudioVerse={audio.currentVerse}
+              isAudioPlaying={audio.isPlaying}
+              onPlayAudioVerse={audio.playVerse}
+              onToggleAudio={audio.toggle}
+              onToggleListen={audio.toggle}
+              audioVerseMode={prefs.audioVerseButton}
             />
           ) : (
             <div className="mx-auto mt-32 max-w-md px-4 text-center text-sm text-muted-foreground">
@@ -826,6 +853,11 @@ export function TReader({
                     isSelected={selection.isSelected(verse.id)}
                     onToggleSelect={() => selection.toggle(verse.id)}
                     fontSize={prefs.fontSize}
+                    currentAudioVerse={audio.currentVerse}
+                    isAudioPlaying={audio.isPlaying}
+                    onPlayAudioVerse={audio.playVerse}
+                    onToggleAudio={audio.toggle}
+                    audioVerseMode={prefs.audioVerseButton}
                   />
                 ))
               ) : (
@@ -987,6 +1019,13 @@ export function TReader({
         onNavigate={goToCrossRef}
         onClose={() => setRefsTarget(null)}
       />
+
+      {/* Lecteur audio unique (spec 37) — piloté par useAudioReader via ref. */}
+      <audio ref={audio.audioRef} preload="metadata" className="hidden" />
+      {/* Annonce lecteur d'écran : verset en cours de lecture. */}
+      <span aria-live="polite" className="sr-only">
+        {audio.currentVerse != null && audio.isPlaying ? `Verset ${audio.currentVerse} en lecture` : ''}
+      </span>
     </>
   );
 }

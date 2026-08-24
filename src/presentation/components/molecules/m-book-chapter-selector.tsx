@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Icon } from '@iconify/react';
 import { cn } from '@/lib/utils';
 import { BIBLE_BOOKS, getBookById, searchBooks } from '@/src/shared/constants/bible-books';
+import { useAudioManifest } from '@/src/presentation/hooks/use-audio-manifest';
 
 interface BookChapterSelectorProps {
   bookId: string;
@@ -41,6 +42,11 @@ export function BookChapterSelector({
 
   const book = getBookById(bookId) ?? BIBLE_BOOKS[0];
   const popBook = getBookById(popBookId) ?? book;
+
+  // Couverture audio du livre survolé/sélectionné (manifest global, spec 37 §4.5).
+  // Best-effort : tant que le manifest n'est pas chargé (ou 404), aucune badge.
+  const { chaptersByOsis } = useAudioManifest();
+  const audioChapters = popBook.osis ? chaptersByOsis.get(popBook.osis) : undefined;
 
   useEffect(() => {
     if (open) {
@@ -171,21 +177,29 @@ export function BookChapterSelector({
                 <div className="grid grid-cols-5 gap-1">
                   {Array.from({ length: popBook.chapters }, (_, i) => i + 1).map((n) => {
                     const current = popBook.id === bookId && n === chapter;
+                    const hasAudio = audioChapters?.has(n) ?? false;
                     return (
                       <button
                         key={n}
+                        aria-label={hasAudio ? `Chapitre ${n} avec audio` : undefined}
                         onClick={() => {
                           onSelect(popBook.id, n);
                           setOpen(false);
                         }}
                         className={cn(
-                          'h-8 rounded-md text-xs font-medium transition-all',
+                          'group relative h-8 rounded-md text-xs font-medium transition-all',
                           current
                             ? 'bg-primary text-primary-foreground'
                             : 'text-foreground/80 hover:bg-primary/10 hover:text-primary',
                         )}
                       >
                         {n}
+                        {hasAudio && (
+                          <>
+                            <div className={cn("absolute top-1 right-1 h-1.5 w-1.5 rounded-full bg-primary pointer-events-none z-10", current ? "hidden" : "block group-hover:hidden")} />
+                            <Icon icon="hugeicons:volume-high" className={cn("absolute top-1 right-1 h-2.5 w-2.5 opacity-50 pointer-events-none z-10", current ? "block" : "hidden group-hover:block")} />
+                          </>
+                        )}
                       </button>
                     );
                   })}

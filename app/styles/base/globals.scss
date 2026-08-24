@@ -145,6 +145,39 @@
   .animate-slide-in-right {
     animation: slide-in-right 0.35s ease-out;
   }
+
+  /* Égaliseur du verset audio en cours de lecture (spec 37, phase 1). Chaque barre
+     porte son propre `animation-delay` ; `.reduce-motion` fige l'animation (durée
+     ~0 + 1 itération) → barres statiques à leur hauteur de base. */
+  .animate-eq {
+    transform-origin: bottom;
+    animation: eq 0.9s ease-in-out infinite;
+  }
+
+  /* Surlignage « scintillant » du verset audio en cours (spec 37, phase 2). Dégradé
+     primaire à faible opacité qui se déplace de gauche à droite. `.reduce-motion`
+     désactive le déplacement (fond statique léger). Priorité visuelle : la
+     sélection (`?v=`) et le feutre l'emportent sur ce fond. */
+  .verse-playing {
+    background-image: linear-gradient(
+      90deg,
+      hsl(var(--primary) / 0) 0%,
+      hsl(var(--primary) / 0.12) 50%,
+      hsl(var(--primary) / 0) 100%
+    );
+    background-size: 200% 100%;
+    background-position: 100% 0;
+    animation: shimmer 2.4s linear infinite;
+    border-radius: 0.25rem;
+  }
+  .dark .verse-playing {
+    background-image: linear-gradient(
+      90deg,
+      hsl(var(--primary) / 0) 0%,
+      hsl(var(--primary) / 0.18) 50%,
+      hsl(var(--primary) / 0) 100%
+    );
+  }
 }
 
 @keyframes fade-in-up {
@@ -212,6 +245,27 @@
   }
 }
 
+/* Égaliseur audio : les barres oscillent en hauteur (scaleY). */
+@keyframes eq {
+  0%,
+  100% {
+    transform: scaleY(0.35);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+/* Scintillement du verset en lecture : le dégradé glisse de droite à gauche. */
+@keyframes shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+
 /* === Glass / backdrop-filter ==============================================
    Safari < 18 (macOS ≤ 14, 2015 → sept 2024) ne reconnaît que -webkit-backdrop-filter, or
    Tailwind n'émet que la forme non préfixée `backdrop-filter` → les éléments glass y apparaissent
@@ -257,4 +311,14 @@
   animation-iteration-count: 1 !important;
   transition-duration: 0.001ms !important;
   scroll-behavior: auto !important;
+}
+
+/* Préférence OS « réduire les animations » : fige l'égaliseur audio et désactive
+   le scintillement du verset en lecture (spec 37 §5.5). Les barres restent visibles
+   à leur hauteur de base (repère conservé sans animation). */
+@media (prefers-reduced-motion: reduce) {
+  .animate-eq,
+  .verse-playing {
+    animation: none !important;
+  }
 }

@@ -14,6 +14,7 @@ import {
   LINE_HEIGHT_OPTIONS,
   MEASURE_OPTIONS,
   CROSS_REFS_OPTIONS,
+  AUDIO_VERSE_BUTTON_OPTIONS,
   MIN_FONT_SIZE,
   MAX_FONT_SIZE,
   clampFontSize,
@@ -228,6 +229,14 @@ export function ReadingSettings({ showLayout = true }: { showLayout?: boolean })
 
           <Row label="Renvois">
             <Seg value={prefs.crossRefsMode} options={CROSS_REFS_OPTIONS} onChange={prefs.setCrossRefsMode} />
+          </Row>
+
+          <Row label="Audio des versets">
+            <Seg
+              value={prefs.audioVerseButton}
+              options={AUDIO_VERSE_BUTTON_OPTIONS}
+              onChange={prefs.setAudioVerseButton}
+            />
           </Row>
 
           <div className="mx-2 my-1 h-px bg-border" />
