@@ -15,6 +15,10 @@ const nextConfig: NextConfig = {
       'next-intl/config': './i18n/request.ts',
     },
   },
+  webpack(config) {
+    config.resolve.alias['next-intl/config'] = path.join(process.cwd(), 'i18n/request.ts');
+    return config;
+  },
   sassOptions: {
     includePaths: [path.join(process.cwd(), 'styles')],
   },
