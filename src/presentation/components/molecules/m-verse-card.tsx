@@ -6,7 +6,9 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Link } from '@/i18n/routing';
 import { VerseNumber } from '@/src/presentation/components/atoms/a-verse-number';
+import { AAudioVerseButton } from '@/src/presentation/components/atoms/a-audio-verse-button';
 import { DEFAULT_FONT_SIZE } from '@/src/shared/constants/reader-preferences';
+import type { AudioVerseButtonMode } from '@/src/shared/constants/reader-preferences';
 import type { BiblicalVerse } from '@/src/domain/entities';
 
 interface VerseCardProps {
@@ -19,6 +21,13 @@ interface VerseCardProps {
   selectable?: boolean;
   isSelected?: boolean;
   onToggleSelect?: () => void;
+  /** Verset audio en cours de lecture (partagé avec le mode read, spec 37). */
+  currentAudioVerse?: number | null;
+  isAudioPlaying?: boolean;
+  onPlayAudioVerse?: (n: number) => void;
+  onToggleAudio?: () => void;
+  /** Affichage du bouton audio par verset : toujours / au survol / jamais (spec 37). */
+  audioVerseMode?: AudioVerseButtonMode;
 }
 
 /**
@@ -29,7 +38,7 @@ interface VerseCardProps {
  * Porté de l'ancien `components/molecules/m-verse-card.tsx`.
  */
 export const VerseCard = forwardRef<HTMLDivElement, VerseCardProps>(
-  ({ verse, isActive, index = 0, fontSize = DEFAULT_FONT_SIZE, selectable = false, isSelected = false, onToggleSelect }, ref) => {
+  ({ verse, isActive, index = 0, fontSize = DEFAULT_FONT_SIZE, selectable = false, isSelected = false, onToggleSelect, currentAudioVerse = null, isAudioPlaying = false, onPlayAudioVerse, onToggleAudio, audioVerseMode = 'always' }, ref) => {
     const [cardCopied, setCardCopied] = useState(false);
 
     const copyCard = (e: MouseEvent) => {
@@ -102,11 +111,25 @@ export const VerseCard = forwardRef<HTMLDivElement, VerseCardProps>(
             style={{ fontSize: `${fontSize}px` }}
             className="select-text font-reader leading-loose text-black antialiased dark:text-white"
           >
-            {verse.verses.map((v) => (
-              <span key={v.number}>
-                <VerseNumber value={v.number} /> {v.text}{' '}
-              </span>
-            ))}
+            {verse.verses.map((v) => {
+              const isAudioCurrent = currentAudioVerse === v.number;
+              return (
+                <span key={v.number}>
+                  <VerseNumber value={v.number} />
+                  {v.audio && onPlayAudioVerse && audioVerseMode !== 'never' && (
+                    <AAudioVerseButton
+                      verseNumber={v.number}
+                      isCurrent={isAudioCurrent}
+                      isPlaying={isAudioCurrent && isAudioPlaying}
+                      onToggle={isAudioCurrent ? () => onToggleAudio?.() : () => onPlayAudioVerse(v.number)}
+                      visibility={audioVerseMode === 'selection' ? 'selection' : 'always'}
+                      isSelected={isSelected}
+                    />
+                  )}{' '}
+                  {v.text}{' '}
+                </span>
+              );
+            })}
           </p>
         </div>
       </div>

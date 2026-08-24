@@ -2,6 +2,8 @@
 export interface VerseText {
   number: number;
   text: string;
+  /** URL relative d'un fichier audio narré, présent uniquement si le fichier existe (spec 37). */
+  audio?: string;
 }
 
 /**

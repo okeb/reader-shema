@@ -5,10 +5,11 @@ import { Icon } from '@iconify/react';
 import { cn } from '@/lib/utils';
 import type { ChapterVerse, BookInfo, BookmarkVerse } from '@/src/domain/entities';
 import type { BibleVersion } from '@/src/shared/constants/bible-versions';
-import type { ReadingLayout, CrossRefsMode } from '@/src/shared/constants/reader-preferences';
+import type { ReadingLayout, CrossRefsMode, AudioVerseButtonMode } from '@/src/shared/constants/reader-preferences';
 import type { VerseSelection } from '@/src/presentation/hooks/use-verse-selection';
 import type { HoverCluster } from '@/src/presentation/hooks/use-hover-cluster';
 import { VerseNumber } from '@/src/presentation/components/atoms/a-verse-number';
+import { AAudioVerseButton } from '@/src/presentation/components/atoms/a-audio-verse-button';
 import { BookInfoPanel } from '@/src/presentation/components/molecules/m-book-info-panel';
 import { VersionCredits } from '@/src/presentation/components/molecules/m-version-credits';
 import { VerseActions, type VerseActionsBundle } from '@/src/presentation/components/molecules/m-verse-actions';
@@ -102,6 +103,18 @@ interface ReaderContentProps {
   hover: HoverCluster;
   /** Faisceau de props du cluster d'actions (desktop hover + tactile dock). */
   verseActions: VerseActionsBundle;
+  /** Numéro du verset audio en cours de lecture (null si idle) — spec 37. */
+  currentAudioVerse?: number | null;
+  /** Vrai si la lecture audio est active (anime l'égaliseur du verset courant). */
+  isAudioPlaying?: boolean;
+  /** Lit un verset audio précis (interrompt la lecture continue en cours). */
+  onPlayAudioVerse?: (n: number) => void;
+  /** Play/pause de la piste audio courante. */
+  onToggleAudio?: () => void;
+  /** Bascule la lecture audio du chapitre depuis l'en-tête. */
+  onToggleListen?: () => void;
+  /** Affichage du bouton audio par verset : toujours / au survol / jamais (spec 37). */
+  audioVerseMode?: AudioVerseButtonMode;
 }
 
 /**
@@ -149,8 +162,17 @@ export function ReaderContent({
   onOpenRefs,
   hover,
   verseActions,
+  currentAudioVerse = null,
+  isAudioPlaying = false,
+  onPlayAudioVerse,
+  onToggleAudio,
+  onToggleListen,
+  audioVerseMode = 'always',
 }: ReaderContentProps) {
   const blocks = useMemo(() => buildBlocks(verses), [verses]);
+
+  // Au moins un verset du chapitre a de l'audio (pilule d'en-tête, spec 37).
+  const hasAudio = useMemo(() => verses.some((v) => v.audio), [verses]);
 
   // Verset du milieu de la sélection (médiane spatiale par numéro de verset) : héberge le cluster
   // d'actions desktop, afin que la bulle s'affiche au milieu de la plage sélectionnée plutôt qu'à
@@ -180,6 +202,9 @@ export function ReaderContent({
           quizzes={quizzes}
           onNavigateQuiz={onNavigateQuiz}
           onQuizSeen={onQuizSeen}
+          hasAudio={hasAudio}
+          isAudioPlaying={isAudioPlaying}
+          onToggleListen={onToggleListen}
         />
 
         {/* Texte du chapitre */}
@@ -199,7 +224,7 @@ export function ReaderContent({
             ) : layout === 'verses' ? (
               // Affichage verset par verset : numéro en colonne + texte.
               <div key={block.key} className="mb-3 break-inside-avoid">
-                {block.verses.map((v) => {
+                {block.verses.map((v, vi) => {
                   const isHl = highlightSet.has(v.number);
                   const id = verseId(bookId, chapter, v.number);
                   const isSel = selection.isSelected(id);
@@ -209,6 +234,7 @@ export function ReaderContent({
                   const hlColor = highlightOf(annId);
                   const noted = hasNote(annId);
                   const refsCount = refsCountFor(v.number);
+                  const isAudioCurrent = currentAudioVerse === v.number;
                   // Le feutre s'efface visuellement quand le verset est sélectionné/surbrillance
                   // (fond primaire) pour éviter la superposition de deux fonds.
                   const showHl = hlColor && !((isSel || isHl) && !focusMode);
@@ -220,10 +246,11 @@ export function ReaderContent({
                       }}
                       onClick={() => handleVerseClick(id)}
                       className={cn(
-                        'relative flex cursor-pointer scroll-mt-24 gap-3 rounded-r px-2 py-0.5 transition-[color,opacity] duration-300',
+                        'animate-fade-in-up group relative flex cursor-pointer scroll-mt-24 gap-3 rounded-r px-2 py-0.5 transition-[color,opacity] duration-300',
                         (isSel || isHl) && !focusMode && 'border-l-2 border-primary bg-primary/5',
-                        dimmed(isSel, isHl) && 'opacity-10',
+                        dimmed(isSel, isHl) && !isAudioCurrent && 'opacity-10',
                       )}
+                      style={{ animationDelay: `${vi * 70}ms`, animationFillMode: 'backwards' }}
                     >
                       {/* Cluster d'actions horizontal, flottant au-dessus du verset du milieu de
                           la sélection. Tactile : remplacé par un cluster fixe global (cf. dock).
@@ -288,6 +315,17 @@ export function ReaderContent({
                             <span className="text-[10px] font-semibold tabular-nums">{refsCount}</span>
                           </button>
                         )}
+                        {v.audio && onPlayAudioVerse && audioVerseMode !== 'never' && (
+                          <AAudioVerseButton
+                            verseNumber={v.number}
+                            isCurrent={isAudioCurrent}
+                            isPlaying={isAudioCurrent && isAudioPlaying}
+                            onToggle={isAudioCurrent ? () => onToggleAudio?.() : () => onPlayAudioVerse(v.number)}
+                            visibility={audioVerseMode === 'selection' ? 'selection' : 'always'}
+                            isSelected={isSel}
+                            className="ml-1.5"
+                          />
+                        )}
                       </p>
                     </div>
                   );
@@ -300,10 +338,11 @@ export function ReaderContent({
                 style={textSizeStyle}
                 className="mb-4 select-text font-reader text-black antialiased dark:text-white"
               >
-                {block.verses.map((v) => {
+                {block.verses.map((v, vi) => {
                   const isHl = highlightSet.has(v.number);
                   const id = verseId(bookId, chapter, v.number);
                   const isSel = selection.isSelected(id);
+                  const isAudioCurrent = currentAudioVerse === v.number;
                   // Desktop : survol prolongé. Tactile : masqué — le dock mute en cluster à la place.
                   const canHover = !coarse && isSel;
                   const annId = bmIdFor(bookId, chapter, v.number);
@@ -325,14 +364,16 @@ export function ReaderContent({
                       style={{
                         ...(bmColor ? { textDecorationColor: bmColor } : {}),
                         ...(showHl ? ({ '--hl-color': hlColor } as CSSProperties) : {}),
+                        animationDelay: `${vi * 70}ms`,
+                        animationFillMode: 'backwards',
                       }}
                       className={cn(
-                        'cursor-pointer scroll-mt-24 transition-[color,opacity] duration-300',
+                        'animate-fade-in-up group cursor-pointer scroll-mt-24 transition-[color,opacity] duration-300',
                         canHover && 'relative',
                         (isSel || isHl) && !focusMode && 'box-decoration-clone rounded bg-primary/10 px-0.5 text-primary',
                         showHl && 'verse-highlight box-decoration-clone px-0.5',
                         bm && 'underline decoration-wavy underline-offset-4',
-                        dimmed(isSel, isHl) && 'opacity-10',
+                        dimmed(isSel, isHl) && !isAudioCurrent && 'opacity-10',
                       )}
                     >
                       {/* Cluster d'actions : apparaît au survol prolongé (1 s) — ou dès la sélection
@@ -389,6 +430,16 @@ export function ReaderContent({
                           <Icon icon="hugeicons:link-02" className="h-3.5 w-3.5" />
                           <span className="text-[10px] font-semibold tabular-nums">{refsCount}</span>
                         </button>
+                      )}
+                      {v.audio && onPlayAudioVerse && audioVerseMode !== 'never' && (
+                        <AAudioVerseButton
+                          verseNumber={v.number}
+                          isCurrent={isAudioCurrent}
+                          isPlaying={isAudioCurrent && isAudioPlaying}
+                          onToggle={isAudioCurrent ? () => onToggleAudio?.() : () => onPlayAudioVerse(v.number)}
+                          visibility={audioVerseMode === 'selection' ? 'selection' : 'always'}
+                          isSelected={isSel}
+                        />
                       )}{' '}
                     </span>
                   );

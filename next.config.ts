@@ -9,6 +9,9 @@ import path from 'node:path';
  * (Si next-intl ≥ 4 est adopté plus tard, on pourra revenir au plugin `createNextIntlPlugin`.)
  */
 const nextConfig: NextConfig = {
+  // Accès au dev server depuis d'autres hôtes du réseau (ex. Tailscale 100.x) : Next bloque par
+  // défaut les requêtes cross-origin vers /_next/hmr. On autorise l'IP Tailscale de la machine.
+  allowedDevOrigins: ['100.118.206.115'],
   turbopack: {
     resolveAlias: {
       // Chemin relatif (Turbopack n'accepte pas d'import absolu type serveur ici).

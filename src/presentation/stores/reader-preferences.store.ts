@@ -19,6 +19,7 @@ import {
   type LineHeightKey,
   type MeasureKey,
   type CrossRefsMode,
+  type AudioVerseButtonMode,
   type LogoStyle,
   type AppIconKey,
   type AccentKey,
@@ -92,6 +93,7 @@ interface ReaderPrefsState extends ReaderPreferences {
   setLineHeight: (lineHeight: LineHeightKey) => void;
   setMeasure: (measure: MeasureKey) => void;
   setCrossRefsMode: (mode: CrossRefsMode) => void;
+  setAudioVerseButton: (mode: AudioVerseButtonMode) => void;
   setLogoStyle: (style: LogoStyle) => void;
   setAppIcon: (icon: AppIconKey) => void;
   setAccent: (accent: AccentKey) => void;
@@ -103,6 +105,7 @@ interface ReaderPrefsState extends ReaderPreferences {
   setStrongOriginalText: (on: boolean) => void;
   setAvatarStyle: (style: AvatarStyle) => void;
   setAvatarVariant: (variant: PlayfulVariant) => void;
+  setFollowAudio: (on: boolean) => void;
 }
 
 /** Extrait l'objet `ReaderPreferences` plat depuis l'état du store (format verbatim persisté). */
@@ -117,6 +120,7 @@ function pickPrefs(s: ReaderPreferences): ReaderPreferences {
     measure: s.measure,
     focusMode: s.focusMode,
     crossRefsMode: s.crossRefsMode,
+    audioVerseButton: s.audioVerseButton,
     logoStyle: s.logoStyle,
     appIcon: s.appIcon,
     accent: s.accent,
@@ -126,6 +130,7 @@ function pickPrefs(s: ReaderPreferences): ReaderPreferences {
     strongOriginalText: s.strongOriginalText,
     avatarStyle: s.avatarStyle,
     avatarVariant: s.avatarVariant,
+    followAudio: s.followAudio,
   };
 }
 
@@ -145,6 +150,7 @@ export const useReaderPreferences = create<ReaderPrefsState>()(
       setLineHeight: (lineHeight) => set((s) => { s.lineHeight = lineHeight; }),
       setMeasure: (measure) => set((s) => { s.measure = measure; }),
       setCrossRefsMode: (crossRefsMode) => set((s) => { s.crossRefsMode = crossRefsMode; }),
+      setAudioVerseButton: (audioVerseButton) => set((s) => { s.audioVerseButton = audioVerseButton; }),
       setLogoStyle: (logoStyle) => set((s) => { s.logoStyle = logoStyle; }),
       setAppIcon: (appIcon) => set((s) => { s.appIcon = appIcon; }),
       setAccent: (accent) => { applyAccentVar(accent); set((s) => { s.accent = accent; }); },
@@ -156,6 +162,7 @@ export const useReaderPreferences = create<ReaderPrefsState>()(
       setStrongOriginalText: (strongOriginalText) => set((s) => { s.strongOriginalText = strongOriginalText; }),
       setAvatarStyle: (avatarStyle) => set((s) => { s.avatarStyle = avatarStyle; }),
       setAvatarVariant: (avatarVariant) => set((s) => { s.avatarVariant = avatarVariant; }),
+      setFollowAudio: (followAudio) => set((s) => { s.followAudio = followAudio; }),
     })),
     {
       name: READER_PREFS_STORAGE_KEY,

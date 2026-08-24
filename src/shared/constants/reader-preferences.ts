@@ -89,6 +89,19 @@ export const CROSS_REFS_OPTIONS: { key: CrossRefsMode; label: string }[] = [
   { key: 'never', label: 'Jamais' },
 ];
 
+/**
+ * Affichage du bouton audio par verset (spec 37 §5.1) : `always` = toujours visible,
+ * `selection` = visible au survol du verset uniquement, `never` = masqué (la pilule
+ * d'en-tête reste disponible). Le verset en cours de lecture garde son égaliseur quel
+ * que soit le mode (repère de position).
+ */
+export type AudioVerseButtonMode = 'always' | 'selection' | 'never';
+export const AUDIO_VERSE_BUTTON_OPTIONS: { key: AudioVerseButtonMode; label: string }[] = [
+  { key: 'always', label: 'Toujours' },
+  { key: 'selection', label: 'Sélection' },
+  { key: 'never', label: 'Jamais' },
+];
+
 export type LineHeightKey = 'tight' | 'normal' | 'relaxed' | 'loose';
 export const LINE_HEIGHT_OPTIONS: { key: LineHeightKey; label: string; value: number }[] = [
   { key: 'tight', label: 'Serré', value: 1.5 },
@@ -197,6 +210,10 @@ export interface ReaderPreferences {
   strongOriginalText: boolean;
   avatarStyle: AvatarStyle;
   avatarVariant: PlayfulVariant;
+  /** Auto-scroll doux vers le verset en cours de lecture audio (spec 37, phase 2). */
+  followAudio: boolean;
+  /** Affichage du bouton audio par verset : toujours / au survol / jamais (spec 37). */
+  audioVerseButton: AudioVerseButtonMode;
 }
 
 export const READER_PREFS_DEFAULTS: ReaderPreferences = {
@@ -218,4 +235,6 @@ export const READER_PREFS_DEFAULTS: ReaderPreferences = {
   strongOriginalText: false,
   avatarStyle: 'playful',
   avatarVariant: 'beam',
+  followAudio: true,
+  audioVerseButton: 'always',
 };

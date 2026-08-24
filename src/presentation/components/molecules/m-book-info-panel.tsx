@@ -22,6 +22,12 @@ interface BookInfoPanelProps {
   onNavigateQuiz?: (bookId: string, chapter: number, verse: string) => void;
   /** Marque une question comme répondue (persistance `quiz-seen.store`). */
   onQuizSeen?: (quizId: string) => void;
+  /** Vrai si au moins un verset du chapitre a de l'audio (spec 37). */
+  hasAudio?: boolean;
+  /** Vrai si la lecture audio du chapitre est en cours. */
+  isAudioPlaying?: boolean;
+  /** Bascule la lecture audio du chapitre (playChapter / toggle). */
+  onToggleListen?: () => void;
 }
 
 /**
@@ -40,6 +46,9 @@ export function BookInfoPanel({
   quizzes,
   onNavigateQuiz,
   onQuizSeen,
+  hasAudio,
+  isAudioPlaying,
+  onToggleListen,
 }: BookInfoPanelProps) {
   return (
     <header className="pb-16">
@@ -50,23 +59,49 @@ export function BookInfoPanel({
         <h2 className="animate-fade-in-up font-book text-3xl font-bold tracking-tight text-bold dark:text-white">
           {bookInfo?.titre || bookName}
         </h2>
-        {/* Bouton info — un libellé se déploie horizontalement au survol (cf. m-book-chapter-selector). */}
-        <button
-          type="button"
-          onClick={onToggle}
-          title={open ? 'Masquer les informations' : 'Informations du livre'}
-          className={cn(
-            'group mt-1.5 flex h-8 shrink-0 items-center overflow-hidden rounded-full pl-2 pr-2 transition-all duration-300 group-hover:pr-3',
-            open
-              ? 'bg-primary/10 text-primary'
-              : 'text-muted-foreground/40 hover:bg-primary/10 hover:text-primary',
+        <div className="mt-1.5 flex shrink-0 items-center gap-1.5">
+          {/* Bouton « Écouter le chapitre » (spec 37) — masqué si le chapitre n'a pas d'audio.
+              Même motif que le bouton info : icône seule au repos, libellé déployé au survol. */}
+          {hasAudio && onToggleListen && (
+            <button
+              type="button"
+              onClick={onToggleListen}
+              aria-label={isAudioPlaying ? 'Mettre en pause le chapitre' : 'Écouter le chapitre'}
+              title={isAudioPlaying ? 'Mettre en pause le chapitre' : 'Écouter le chapitre'}
+              className={cn(
+                'group flex h-8 shrink-0 items-center overflow-hidden rounded-full pl-2 pr-2 transition-all duration-300 group-hover:pr-3',
+                isAudioPlaying
+                  ? 'bg-primary/10 text-primary'
+                  : 'text-muted-foreground/40 hover:bg-primary/10 hover:text-primary',
+              )}
+            >
+              <Icon
+                icon={isAudioPlaying ? 'hugeicons:pause' : 'hugeicons:play'}
+                className="h-4 w-4 shrink-0"
+              />
+              <span className="max-w-0 overflow-hidden whitespace-nowrap text-[11px] font-medium opacity-0 transition-all duration-300 group-hover:ml-1 group-hover:max-w-[72px] group-hover:opacity-100">
+                {isAudioPlaying ? 'Pause' : 'Écouter'}
+              </span>
+            </button>
           )}
-        >
-          <Icon icon="hugeicons:information-circle" className="h-4 w-4 shrink-0" />
-          <span className="max-w-0 overflow-hidden whitespace-nowrap text-[11px] font-medium opacity-0 transition-all duration-300 group-hover:ml-1 group-hover:max-w-[64px] group-hover:opacity-100">
-            {open ? 'Fermer' : 'Infos'}
-          </span>
-        </button>
+          {/* Bouton info — un libellé se déploie horizontalement au survol (cf. m-book-chapter-selector). */}
+          <button
+            type="button"
+            onClick={onToggle}
+            title={open ? 'Masquer les informations' : 'Informations du livre'}
+            className={cn(
+              'group flex h-8 shrink-0 items-center overflow-hidden rounded-full pl-2 pr-2 transition-all duration-300 group-hover:pr-3',
+              open
+                ? 'bg-primary/10 text-primary'
+                : 'text-muted-foreground/40 hover:bg-primary/10 hover:text-primary',
+            )}
+          >
+            <Icon icon="hugeicons:information-circle" className="h-4 w-4 shrink-0" />
+            <span className="max-w-0 overflow-hidden whitespace-nowrap text-[11px] font-medium opacity-0 transition-all duration-300 group-hover:ml-1 group-hover:max-w-[64px] group-hover:opacity-100">
+              {open ? 'Fermer' : 'Infos'}
+            </span>
+          </button>
+        </div>
       </div>
       <p className="mt-0.5 text-lg text-muted-foreground">Chapitre {chapter}</p>
 
