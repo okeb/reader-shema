@@ -76,7 +76,8 @@ export function AppearanceMenu({ onOpenHelp, className }: AppearanceMenuProps) {
 
   // Spec 27 : connecté → le déclencheur devient l'avatar (fond thématique) au lieu de la roue crantée.
   const showAvatar = session.active === true && session.userId !== null;
-  const avatarSeed = session.userId ?? '';
+  // Seed = e-mail du compte (individu connecté) ; repli sur user.id si l'e-mail est absent.
+  const avatarSeed = session.email ?? session.userId ?? '';
 
   return (
     <div ref={ref} className={cn('relative inline-flex items-center', className)}>

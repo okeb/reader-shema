@@ -123,11 +123,12 @@ export default async function ConfidentialitePage({ params }: Props) {
         </p>
         <p>
           <strong>Avatar.</strong> Une fois connecté, l&apos;avatar affiché en haut à droite est
-          généré à la demande par notre service d&apos;avatars à partir de votre identifiant de
-          compte opaque (jamais l&apos;adresse e-mail). L&apos;image est déterministe — elle ne
-          dépend que de cet identifiant et de la variante choisie — et n&apos;est jamais stockée :
-          elle est régénérée à chaque affichage et mise en cache côté CDN. Le choix de la variante
-          est une préférence cosmétique, synchronisée avec vos réglages si l&apos;opt-in est actif.
+          généré à la demande par notre service d&apos;avatars à partir de votre adresse e-mail
+          (à défaut, de votre identifiant de compte). Cette donnée transite vers ce service pour
+          produire l&apos;image ; elle n&apos;est pas stockée — l&apos;avatar est déterministe (ne
+          dépend que de cette donnée et de la variante choisie), régénéré à chaque affichage et
+          mis en cache côté CDN. Le choix de la variante est une préférence cosmétique,
+          synchronisée avec vos réglages si l&apos;opt-in est actif.
         </p>
         <p>
           <strong>Vos droits : export et suppression.</strong> Vous pouvez exporter vos

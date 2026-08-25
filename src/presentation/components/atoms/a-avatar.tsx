@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import { type AvatarVariant, buildAvatarUrl } from '@/src/shared/constants/reader-preferences';
 
 export interface AvatarProps {
-  /** Seed déterministe (user.id Better Auth — opaque, stable, identique sur tous les appareils). */
+  /** Seed déterministe : e-mail du compte connecté (repli sur user.id si absent). */
   seed: string;
   variant: AvatarVariant;
   /** Sizing du conteneur (ex. `h-full w-full`). Le fond thématique + ring sont portés ici. */

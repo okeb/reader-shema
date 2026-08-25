@@ -113,7 +113,7 @@ export function AccountProvider({ authEnabled, children }: AccountProviderProps)
  * Indicateur de session discret pour le menu apparence — spec 22 §7, spec 27 (seed avatar).
  * `active === null` → compte non configuré ou session en cours de chargement (on n'affiche rien) ;
  * `false` → compte configuré mais déconnecté ; `true` → connecté (`email` + `userId` renseignés).
- * `userId` sert de seed à l'avatar (opaque, stable, identique sur tous les appareils — pas l'e-mail).
+ * `email` sert de seed à l'avatar (individu connecté) ; `userId` est le repli si l'e-mail est absent.
  */
 export function useSessionIndicator(): {
   active: boolean | null;
