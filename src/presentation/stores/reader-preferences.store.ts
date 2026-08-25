@@ -24,8 +24,8 @@ import {
   type AppIconKey,
   type AccentKey,
   type ReadingTint,
-  type AvatarStyle,
-  type PlayfulVariant,
+  type AvatarVariant,
+  AVATAR_VARIANT_OPTIONS,
 } from '@/src/shared/constants/reader-preferences';
 import { jsonStorage } from './multi-key-storage';
 
@@ -103,8 +103,7 @@ interface ReaderPrefsState extends ReaderPreferences {
   toggleFocus: () => void;
   toggleQuiz: () => void;
   setStrongOriginalText: (on: boolean) => void;
-  setAvatarStyle: (style: AvatarStyle) => void;
-  setAvatarVariant: (variant: PlayfulVariant) => void;
+  setAvatarVariant: (variant: AvatarVariant) => void;
   setFollowAudio: (on: boolean) => void;
 }
 
@@ -128,7 +127,6 @@ function pickPrefs(s: ReaderPreferences): ReaderPreferences {
     reduceMotion: s.reduceMotion,
     quizEnabled: s.quizEnabled,
     strongOriginalText: s.strongOriginalText,
-    avatarStyle: s.avatarStyle,
     avatarVariant: s.avatarVariant,
     followAudio: s.followAudio,
   };
@@ -160,7 +158,6 @@ export const useReaderPreferences = create<ReaderPrefsState>()(
       toggleFocus: () => set((s) => { s.focusMode = !s.focusMode; }),
       toggleQuiz: () => set((s) => { s.quizEnabled = !s.quizEnabled; }),
       setStrongOriginalText: (strongOriginalText) => set((s) => { s.strongOriginalText = strongOriginalText; }),
-      setAvatarStyle: (avatarStyle) => set((s) => { s.avatarStyle = avatarStyle; }),
       setAvatarVariant: (avatarVariant) => set((s) => { s.avatarVariant = avatarVariant; }),
       setFollowAudio: (followAudio) => set((s) => { s.followAudio = followAudio; }),
     })),
@@ -169,6 +166,19 @@ export const useReaderPreferences = create<ReaderPrefsState>()(
       storage: createJSONStorage(() => jsonStorage),
       // On persiste uniquement les champs de préférences (pas hydrated ni les actions).
       partialize: pickPrefs,
+      version: 1,
+      // v0 → v1 : remplacement des générateurs d'avatar (minidenticons/playful → app externe
+      // profil-generator-one). On retire l'ancien champ `avatarStyle` et on rabat toute variante
+      // héritée non valide (beam/marble/pixel/sunset/ring/bauhaus) sur la variante par défaut.
+      migrate: (persisted, version) => {
+        const p = { ...(persisted ?? {}) } as Record<string, unknown> & Partial<ReaderPreferences>;
+        if (version < 1) {
+          delete p.avatarStyle;
+          const valid = AVATAR_VARIANT_OPTIONS.map((o) => o.key);
+          if (!valid.includes(p.avatarVariant as AvatarVariant)) p.avatarVariant = 'gradient_pixel';
+        }
+        return p as unknown as ReaderPrefsState;
+      },
       onRehydrateStorage: () => (state) => {
         if (state) {
           state.hydrated = true;

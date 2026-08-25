@@ -11,8 +11,7 @@ import {
   ACCENT_OPTIONS,
   LOGO_STYLE_OPTIONS,
   APP_ICON_OPTIONS,
-  AVATAR_STYLE_OPTIONS,
-  PLAYFUL_VARIANT_OPTIONS,
+  AVATAR_VARIANT_OPTIONS,
 } from '@/src/shared/constants/reader-preferences';
 import { appIconPath } from '@/src/shared/constants/brand-logos';
 import { useSessionIndicator } from '@/src/presentation/components/organisms/o-account-provider';
@@ -40,12 +39,12 @@ interface AppearanceMenuProps {
  * fond de lecture/sépia, mode focus…) vit dans le panneau Réglages de lecture ([Aa]) du dock.
  *
  * Spec 27 : connecté, le déclencheur devient l'avatar de l'utilisateur (fond thématique, seed =
- * `user.id`) au lieu de la roue crantée ; le menu ajoute une section « Avatar » (choix du
- * générateur `minidenticons`/`playful` + variante `playful`). Déconnecté, la roue crantée reste
- * et l'entrée « Compte & synchronisation / Se connecter » ouvre la modale de compte.
+ * `user.id`) au lieu de la roue crantée ; le menu ajoute une section « Avatar » (choix de la
+ * variante parmi les 6 de l'app externe `profil-generator-one`). Déconnecté, la roue crantée
+ * reste et l'entrée « Compte & synchronisation / Se connecter » ouvre la modale de compte.
  *
  * Self-contained : lit `useReaderPreferences` (accent, logoStyle, reduceMotion, quizEnabled,
- * avatarStyle, avatarVariant) et `useThemeCycle` (thème). Popover ancré à droite (sous le bouton,
+ * avatarVariant) et `useThemeCycle` (thème). Popover ancré à droite (sous le bouton,
  * bord droit) car le bouton vit à droite de la topbar. Ferme au clic dehors et à Échap.
  *
  * Porté de l'ancien `components/molecules/m-appearance-menu.tsx`.
@@ -96,7 +95,7 @@ export function AppearanceMenu({ onOpenHelp, className }: AppearanceMenuProps) {
         )}
       >
         {showAvatar ? (
-          <Avatar seed={avatarSeed} style={prefs.avatarStyle} variant={prefs.avatarVariant} className="h-9 w-9" />
+          <Avatar seed={avatarSeed} variant={prefs.avatarVariant} className="h-9 w-9" />
         ) : (
           <Icon icon="hugeicons:settings-02" className={cn('h-[18px] w-[18px]', open ? 'text-primary' : 'text-current')} />
         )}
@@ -150,55 +149,34 @@ export function AppearanceMenu({ onOpenHelp, className }: AppearanceMenuProps) {
           ) : null}
           {session.active !== null && <div className="mx-3 h-px bg-border" />}
 
-          {/* Avatar — spec 27. Uniquement connecté (seed = user.id). Choix du générateur +,
-              pour `playful`, de la variante. Préférence cosmétique locale, synchronisée. */}
+          {/* Avatar — spec 27. Uniquement connecté (seed = user.id). Choix de la variante parmi
+              les 6 de l'app externe profil-generator-one. Préférence cosmétique locale, sync. */}
           {showAvatar && (
             <>
               <p className="px-3 pb-1 pt-2.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/60">
                 Avatar
               </p>
-              <div className="mx-3 mb-2 flex gap-0.5 rounded-lg bg-input p-0.5">
-                {AVATAR_STYLE_OPTIONS.map((o) => (
+              <div className="grid grid-cols-6 gap-1.5 px-3 pb-3">
+                {AVATAR_VARIANT_OPTIONS.map((o) => (
                   <button
                     key={o.key}
                     type="button"
                     role="menuitemradio"
-                    aria-checked={o.key === prefs.avatarStyle}
-                    onClick={() => prefs.setAvatarStyle(o.key)}
+                    aria-checked={o.key === prefs.avatarVariant}
+                    title={o.label}
+                    aria-label={o.label}
+                    onClick={() => prefs.setAvatarVariant(o.key)}
                     className={cn(
-                      'flex-1 rounded-md px-1.5 py-1 text-[10.5px] font-medium leading-tight transition-colors',
-                      o.key === prefs.avatarStyle
-                        ? 'bg-background text-foreground shadow-sm'
-                        : 'text-foreground/70 hover:text-foreground',
+                      'aspect-square overflow-hidden rounded-full transition-transform hover:scale-110',
+                      o.key === prefs.avatarVariant
+                        ? 'ring-2 ring-foreground ring-offset-1 ring-offset-background'
+                        : 'ring-1 ring-border',
                     )}
                   >
-                    {o.label}
+                    <Avatar seed={avatarSeed} variant={o.key} className="h-full w-full" />
                   </button>
                 ))}
               </div>
-              {prefs.avatarStyle === 'playful' && (
-                <div className="grid grid-cols-6 gap-1.5 px-3 pb-3">
-                  {PLAYFUL_VARIANT_OPTIONS.map((o) => (
-                    <button
-                      key={o.key}
-                      type="button"
-                      role="menuitemradio"
-                      aria-checked={o.key === prefs.avatarVariant}
-                      title={o.label}
-                      aria-label={o.label}
-                      onClick={() => prefs.setAvatarVariant(o.key)}
-                      className={cn(
-                        'aspect-square overflow-hidden rounded-full transition-transform hover:scale-110',
-                        o.key === prefs.avatarVariant
-                          ? 'ring-2 ring-foreground ring-offset-1 ring-offset-background'
-                          : 'ring-1 ring-border',
-                      )}
-                    >
-                      <Avatar seed={avatarSeed} style="playful" variant={o.key} className="h-full w-full" />
-                    </button>
-                  ))}
-                </div>
-              )}
               <div className="mx-3 h-px bg-border" />
             </>
           )}

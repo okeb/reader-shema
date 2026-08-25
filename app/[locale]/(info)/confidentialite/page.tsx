@@ -123,11 +123,11 @@ export default async function ConfidentialitePage({ params }: Props) {
         </p>
         <p>
           <strong>Avatar.</strong> Une fois connecté, l&apos;avatar affiché en haut à droite est
-          généré <em>côté appareil</em> à partir de votre identifiant de compte opaque (jamais
-          l&apos;adresse e-mail). Aucune image n&apos;est envoyée ni stockée sur nos serveurs, et
-          aucun appel n&apos;est émis vers un service tiers (contrairement à Gravatar). Le choix du
-          générateur est une préférence cosmétique, synchronisée avec vos réglages si l&apos;opt-in
-          est actif.
+          généré à la demande par notre service d&apos;avatars à partir de votre identifiant de
+          compte opaque (jamais l&apos;adresse e-mail). L&apos;image est déterministe — elle ne
+          dépend que de cet identifiant et de la variante choisie — et n&apos;est jamais stockée :
+          elle est régénérée à chaque affichage et mise en cache côté CDN. Le choix de la variante
+          est une préférence cosmétique, synchronisée avec vos réglages si l&apos;opt-in est actif.
         </p>
         <p>
           <strong>Vos droits : export et suppression.</strong> Vous pouvez exporter vos

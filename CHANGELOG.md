@@ -9,6 +9,10 @@ divulguée. La cohérence est vérifiée par `pnpm changelog:check`.
 
 ## [Unreleased]
 
+### Modifié
+
+- **Avatars du compte** : les avatars sont désormais générés par un service dédié proposant six nouvelles variantes (Dégradé, Géométrique, Aléatoire, Icône, Vague, Dev), en remplacement des anciens identicons et avatars géométriques.
+
 ## [0.5.3] : 2026-08-25
 
 ### Ajouté
