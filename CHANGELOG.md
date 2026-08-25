@@ -9,6 +9,17 @@ divulguée. La cohérence est vérifiée par `pnpm changelog:check`.
 
 ## [Unreleased]
 
+## [0.5.3] : 2026-08-25
+
+### Ajouté
+
+- **Lecture audio des versets** : bouton de lecture par verset avec mode de visibilité configurable (toujours, au survol de la sélection, jamais).
+- **Indicateur de chapitres audio** : petit point coloré ou icône volume sur les chapitres disponibles en audio dans le sélecteur.
+
+### Modifié
+
+- **Animations d'apparition** : les versets apparaissent désormais avec un léger délai entre chacun pour une lecture fluide.
+
 ## [0.5.2] : 2026-08-24
 
 ### Ajouté
