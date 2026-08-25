@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import { type AvatarVariant, buildAvatarUrl } from '@/src/shared/constants/reader-preferences';
 
 export interface AvatarProps {
-  /** Seed déterministe : e-mail du compte connecté (repli sur user.id si absent). */
+  /** Seed déterministe : identifiant de compte (user.id), opaque et non-PII — jamais l'e-mail. */
   seed: string;
   variant: AvatarVariant;
   /** Sizing du conteneur (ex. `h-full w-full`). Le fond thématique + ring sont portés ici. */

@@ -76,8 +76,8 @@ export function AppearanceMenu({ onOpenHelp, className }: AppearanceMenuProps) {
 
   // Spec 27 : connecté → le déclencheur devient l'avatar (fond thématique) au lieu de la roue crantée.
   const showAvatar = session.active === true && session.userId !== null;
-  // Seed = e-mail du compte (individu connecté) ; repli sur user.id si l'e-mail est absent.
-  const avatarSeed = session.email ?? session.userId ?? '';
+  // Seed = identifiant de compte (user.id), opaque et non-PII — jamais l'e-mail (cf. page Confidentialité).
+  const avatarSeed = session.userId ?? '';
 
   return (
     <div ref={ref} className={cn('relative inline-flex items-center', className)}>
@@ -150,8 +150,8 @@ export function AppearanceMenu({ onOpenHelp, className }: AppearanceMenuProps) {
           ) : null}
           {session.active !== null && <div className="mx-3 h-px bg-border" />}
 
-          {/* Avatar — spec 27. Uniquement connecté (seed = user.id). Choix de la variante parmi
-              les 6 de l'app externe profil-generator-one. Préférence cosmétique locale, sync. */}
+          {/* Avatar — spec 27. Uniquement connecté (seed = user.id, jamais l'e-mail). Choix de la
+              variante parmi les 6 de l'app externe profil-generator-one. Préférence cosmétique locale, sync. */}
           {showAvatar && (
             <>
               <p className="px-3 pb-1 pt-2.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/60">
