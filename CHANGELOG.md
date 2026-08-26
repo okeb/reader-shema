@@ -9,6 +9,12 @@ divulguée. La cohérence est vérifiée par `pnpm changelog:check`.
 
 ## [Unreleased]
 
+## [0.5.4] : 2026-08-26
+
+### Ajouté
+
+- **Recherche de verset par URL** : un lien de la forme `…/search?p=Mc+1:7` retrouve un passage à partir d'une référence libre (notation `livre chapitre:verset`) et redirige vers le lecteur ; si la référence ne résout pas, une page de recherche avec suggestions est affichée.
+
 ### Modifié
 
 - **Avatars du compte** : les avatars sont désormais générés par un service dédié proposant six nouvelles variantes (Dégradé, Géométrique, Aléatoire, Icône, Vague, Dev), en remplacement des anciens identicons et avatars géométriques.
