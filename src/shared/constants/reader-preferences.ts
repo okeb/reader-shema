@@ -145,29 +145,50 @@ export const APP_ICON_OPTIONS: { key: AppIconKey; label: string }[] = [
 ];
 
 /**
- * Avatar utilisateur (spec 27) : générateur déterministe depuis `user.id`, rendu côté client.
- * `minidenticons` = identicons pixelisés (string SVG, pas de variante) ; `playful` = avatars
- * géométriques (`playful-avatars`, 6 variantes). Le choix est une préférence cosmétique locale
- * (persistée dans `bibleReaderPrefs`, synchronisée via le kind `readerPrefs` si opt-in).
+ * Avatar utilisateur (spec 27, révisé) : générateur déterministe servi par l'app externe
+ * `profil-generator-one` (Vercel). La seed (`user.id` Better Auth — opaque, stable, identique sur
+ * tous les appareils) détermine l'image ; 5 variantes au choix. L'image est fetchée à la demande
+ * (SVG, cache immutable 1 an côté CDN) — aucune génération côté appareil, aucun stockage. Le choix
+ * de la variante est une préférence cosmétique locale (persistée dans `bibleReaderPrefs`,
+ * synchronisée via le kind `readerPrefs` si opt-in).
  */
-export type AvatarStyle = 'minidenticons' | 'playful';
-export const AVATAR_STYLE_OPTIONS: { key: AvatarStyle; label: string }[] = [
-  { key: 'playful', label: 'Avatars' },
-  { key: 'minidenticons', label: 'Identicons' },
+export type AvatarVariant = 'gradient_pixel' | 'geometric' | 'random' | 'wave' | 'identicon';
+export const AVATAR_VARIANT_OPTIONS: { key: AvatarVariant; label: string }[] = [
+  { key: 'gradient_pixel', label: 'Dégradé' },
+  { key: 'geometric', label: 'Géométrique' },
+  { key: 'random', label: 'Aléatoire' },
+  { key: 'wave', label: 'Vague' },
+  { key: 'identicon', label: 'Identicon' },
 ];
-export type PlayfulVariant = 'beam' | 'marble' | 'pixel' | 'sunset' | 'ring' | 'bauhaus';
-export const PLAYFUL_VARIANT_OPTIONS: { key: PlayfulVariant; label: string }[] = [
-  { key: 'beam', label: 'Beam' },
-  { key: 'marble', label: 'Marble' },
-  { key: 'pixel', label: 'Pixel' },
-  { key: 'sunset', label: 'Sunset' },
-  { key: 'ring', label: 'Ring' },
-  { key: 'bauhaus', label: 'Bauhaus' },
-];
-/** Palette `playful-avatars` pour le mode clair (teintes saturées, fond clair). */
-export const AVATAR_PALETTE_LIGHT: string[] = ['#92A1C6', '#146A7C', '#F0AB3D', '#C271B4', '#C20D90'];
-/** Palette `playful-avatars` pour le mode sombre (teintes plus claires, fond sombre). */
-export const AVATAR_PALETTE_DARK: string[] = ['#A6B8D8', '#3A9CB0', '#F5C463', '#D58FCC', '#E54FB0'];
+
+/** Base de l'app d'avatars (profil-generator-one, déployée sur Vercel). */
+export const AVATAR_API_BASE = 'https://profil-generator-one.vercel.app';
+
+/**
+ * Construit l'URL d'avatar déterministe pour un couple (seed, variante).
+ * Format SVG (scalaire, crisp à toute taille) ; la réponse est `cache-control: immutable, max-age=1an`.
+ *
+ * Quatre variantes envoient des paramètres supplémentaires figés à l'API :
+ * - `identicon` : `grid=8` + `harmony=complementary` (spec 27, révision identicon).
+ * - `random` : `grid=8` + `harmony=analogous` (spec 27, révision aléatoire) — remplace l'ancienne
+ *   variante `icon_center` qui a été retirée.
+ * - `geometric` : `grid=8` + `harmony=analogous` (spec 27, révision géométrique).
+ * - `wave` : `harmony=analogous` (spec 27, révision vague) — grid laissée à la valeur par défaut.
+ * Seule `gradient_pixel` laisse l'API appliquer ses valeurs par défaut (grid=16, harmony=auto).
+ */
+export function buildAvatarUrl(seed: string, variant: AvatarVariant): string {
+  const params = new URLSearchParams({ variant, seed, format: 'svg' });
+  if (variant === 'identicon') {
+    params.set('grid', '8');
+    params.set('harmony', 'complementary');
+  } else if (variant === 'random' || variant === 'geometric') {
+    params.set('grid', '8');
+    params.set('harmony', 'analogous');
+  } else if (variant === 'wave') {
+    params.set('harmony', 'analogous');
+  }
+  return `${AVATAR_API_BASE}/avatar?${params.toString()}`;
+}
 
 export const MIN_FONT_SIZE = 12;
 export const MAX_FONT_SIZE = 32;
@@ -208,8 +229,7 @@ export interface ReaderPreferences {
   quizEnabled: boolean;
   /** Affiche le lemme/translittération au-dessus des tokens dans le panneau Strong. */
   strongOriginalText: boolean;
-  avatarStyle: AvatarStyle;
-  avatarVariant: PlayfulVariant;
+  avatarVariant: AvatarVariant;
   /** Auto-scroll doux vers le verset en cours de lecture audio (spec 37, phase 2). */
   followAudio: boolean;
   /** Affichage du bouton audio par verset : toujours / au survol / jamais (spec 37). */
@@ -233,8 +253,7 @@ export const READER_PREFS_DEFAULTS: ReaderPreferences = {
   reduceMotion: false,
   quizEnabled: true,
   strongOriginalText: false,
-  avatarStyle: 'playful',
-  avatarVariant: 'beam',
+  avatarVariant: 'gradient_pixel',
   followAudio: true,
   audioVerseButton: 'always',
 };

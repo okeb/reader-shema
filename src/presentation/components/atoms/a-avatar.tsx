@@ -1,67 +1,32 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { useTheme } from 'next-themes';
-import { minidenticon } from 'minidenticons';
+import { useState } from 'react';
 import { cn } from '@/lib/utils';
-import {
-  type AvatarStyle,
-  type PlayfulVariant,
-  AVATAR_PALETTE_LIGHT,
-  AVATAR_PALETTE_DARK,
-} from '@/src/shared/constants/reader-preferences';
+import { type AvatarVariant, buildAvatarUrl } from '@/src/shared/constants/reader-preferences';
 
 export interface AvatarProps {
-  /** Seed déterministe (user.id Better Auth — opaque, stable, identique sur tous les appareils). */
+  /** Seed déterministe : identifiant de compte (user.id), opaque et non-PII — jamais l'e-mail. */
   seed: string;
-  style: AvatarStyle;
-  variant?: PlayfulVariant;
+  variant: AvatarVariant;
   /** Sizing du conteneur (ex. `h-full w-full`). Le fond thématique + ring sont portés ici. */
   className?: string;
 }
 
 /**
- * Avatar utilisateur (spec 27) — déterministe depuis la seed, rendu côté client.
+ * Avatar utilisateur (spec 27, révisé) — déterministe depuis la seed, servi par l'app externe
+ * `profil-generator-one` (SVG fetché à la demande, cache immutable 1 an côté CDN).
  *
- * Deux générateurs au choix :
- *  - `minidenticons` : identicon pixelisé (string SVG → data URI dans un `<img>`). SSR-safe : la
- *    lib ne touche à `customElements` qu'avec `globalThis.customElements?.` (optional chaining).
- *  - `playful` : web component `<playful-avatar>` (playful-avatars). La lib appelle
- *    `customElements.define` au top-level **sans garde** → on l'importe dynamiquement côté client
- *    (dans un effet) pour éviter un `ReferenceError` au SSR.
+ * L'image est rendue dans un `<img>` classique (pas `next/image`) : l'URL est déterministe et
+ * déjà optimisée côté CDN, et cela évite de déclarer un `remotePattern`. En cas d'échec réseau
+ * (service indisponible), l'`<img>` est masqué et le conteneur reste un disque thématique neutre
+ * (ring + fond) — pas d'icône « image cassée ».
  *
- * Le fond suit le thème : conteneur `ring-1 ring-border` + teinte `--foreground` (theme-aware via
- * les variants `dark:`). `minidenticons` ajuste sa `lightness` au thème ; `playful` reçoit une
- * palette claire/sombre. Le générateur ne s'affiche qu'après montage (repli sur disque thématique
- * vide) pour éviter un flash clair/sombre et un mismatch d'hydration.
+ * Le conteneur `rounded-full ring-1 ring-border` clippe l'image ; le fond `--foreground` ne se
+ * voit qu'avant le chargement ou en repli d'erreur.
  */
-export function Avatar({ seed, style, variant = 'beam', className }: AvatarProps) {
-  const { resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-  const [playfulReady, setPlayfulReady] = useState(false);
-
-  useEffect(() => setMounted(true), []);
-
-  // Enregistre <playful-avatar> côté client uniquement (cf. commentaire de module).
-  useEffect(() => {
-    if (style !== 'playful' || playfulReady) return;
-    let cancelled = false;
-    void import('playful-avatars').then(() => {
-      if (!cancelled) setPlayfulReady(true);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [style, playfulReady]);
-
-  const isDark = mounted && resolvedTheme === 'dark';
-
-  // minidenticon : string SVG → data URI. Mémoïsé par (seed, thème).
-  const miniDataUri = useMemo(() => {
-    if (style !== 'minidenticons' || !mounted) return null;
-    const lightness = isDark ? 60 : 45;
-    return `data:image/svg+xml;utf8,${encodeURIComponent(minidenticon(seed, 80, lightness))}`;
-  }, [style, seed, isDark, mounted]);
+export function Avatar({ seed, variant, className }: AvatarProps) {
+  const [errored, setErrored] = useState(false);
+  const url = buildAvatarUrl(seed, variant);
 
   return (
     <span
@@ -72,15 +37,13 @@ export function Avatar({ seed, style, variant = 'beam', className }: AvatarProps
         className,
       )}
     >
-      {style === 'minidenticons' && miniDataUri && (
-        <img src={miniDataUri} alt="" className="h-full w-full" />
-      )}
-      {style === 'playful' && playfulReady && (
-        <playful-avatar
-          name={seed}
-          variant={variant}
-          colors={isDark ? AVATAR_PALETTE_DARK : AVATAR_PALETTE_LIGHT}
-          className="h-full w-full rounded-full"
+      {!errored && (
+        <img
+          src={url}
+          alt=""
+          draggable={false}
+          onError={() => setErrored(true)}
+          className="h-full w-full"
         />
       )}
     </span>

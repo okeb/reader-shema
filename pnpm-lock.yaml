@@ -95,9 +95,6 @@ importers:
       lucide-react:
         specifier: ^0.363.0
         version: 0.363.0(react@19.2.0)
-      minidenticons:
-        specifier: ^4.2.1
-        version: 4.2.1
       next:
         specifier: 16.3.0
         version: 16.3.0(@types/node@20.19.43)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(sass@1.102.0)
@@ -110,9 +107,6 @@ importers:
       pg:
         specifier: ^8.22.0
         version: 8.22.0
-      playful-avatars:
-        specifier: ^1.0.0
-        version: 1.0.0
       react:
         specifier: 19.2.0
         version: 19.2.0
@@ -2537,10 +2531,6 @@ packages:
     resolution: {integrity: sha512-ZDY+bPm5zTTF+YpCrAU9nK0UgICYPT0QtT1NZWFv4s++TNkcgVaT0g6+4R2uI4MjQjzysHB1zxuWL50hzaeXiw==}
     engines: {node: '>= 0.6'}
 
-  minidenticons@4.2.1:
-    resolution: {integrity: sha512-oWfFivA0lOx/V/bO/YIJbthB26lV8JXYvhnv9zM2hNd3fzsHTXQ6c6bWZPcvhD3nnOB+lQk/D9lF43BXixrN8g==}
-    engines: {node: '>=15.14.0'}
-
   minimatch@10.2.6:
     resolution: {integrity: sha512-vpLQEs+VLCr1nU0BXS07maYoFwlDAH0gngQuuttxIwutDFEMHq2blX+8vpgxDdK3J1PwjCJiep77OitTZ4Ll1A==}
     engines: {node: 18 || 20 || >=22}
@@ -2770,9 +2760,6 @@ packages:
   pirates@4.0.7:
     resolution: {integrity: sha512-TfySrs/5nm8fQJDcBDuUng3VOUKsd7S+zqvbOTiGXHfxX4wK31ard+hoNuvkicM/2YFzlpDgABOevKSsB4G/FA==}
     engines: {node: '>= 6'}
-
-  playful-avatars@1.0.0:
-    resolution: {integrity: sha512-kQK76frsyuX5y7agZKteMwsIFKSxtNg1AnIy8WspO5tAl32hPPSysDHS0WB5xWrvyx58jkhsQ2Jo9GE03W6YtA==}
 
   possible-typed-array-names@1.1.0:
     resolution: {integrity: sha512-/+5VFTchJDoVj3bhoqi6UeymcD00DAwb1nJwamzPvHEszJ4FpF6SNNbUbOS8yI56qHzdV8eK0qEfOSiodkTdxg==}
@@ -5748,8 +5735,6 @@ snapshots:
     dependencies:
       mime-db: 1.52.0
 
-  minidenticons@4.2.1: {}
-
   minimatch@10.2.6:
     dependencies:
       brace-expansion: 5.0.9
@@ -5979,8 +5964,6 @@ snapshots:
   pify@2.3.0: {}
 
   pirates@4.0.7: {}
-
-  playful-avatars@1.0.0: {}
 
   possible-typed-array-names@1.1.0: {}
 
