@@ -24,8 +24,8 @@ import {
   type AppIconKey,
   type AccentKey,
   type ReadingTint,
-  type AvatarVariant,
-  AVATAR_VARIANT_OPTIONS,
+  type AvatarHarmony,
+  AVATAR_HARMONY_OPTIONS,
 } from '@/src/shared/constants/reader-preferences';
 import { jsonStorage } from './multi-key-storage';
 
@@ -103,7 +103,7 @@ interface ReaderPrefsState extends ReaderPreferences {
   toggleFocus: () => void;
   toggleQuiz: () => void;
   setStrongOriginalText: (on: boolean) => void;
-  setAvatarVariant: (variant: AvatarVariant) => void;
+  setAvatarHarmony: (harmony: AvatarHarmony) => void;
   setFollowAudio: (on: boolean) => void;
 }
 
@@ -127,7 +127,7 @@ function pickPrefs(s: ReaderPreferences): ReaderPreferences {
     reduceMotion: s.reduceMotion,
     quizEnabled: s.quizEnabled,
     strongOriginalText: s.strongOriginalText,
-    avatarVariant: s.avatarVariant,
+    avatarHarmony: s.avatarHarmony,
     followAudio: s.followAudio,
   };
 }
@@ -158,7 +158,7 @@ export const useReaderPreferences = create<ReaderPrefsState>()(
       toggleFocus: () => set((s) => { s.focusMode = !s.focusMode; }),
       toggleQuiz: () => set((s) => { s.quizEnabled = !s.quizEnabled; }),
       setStrongOriginalText: (strongOriginalText) => set((s) => { s.strongOriginalText = strongOriginalText; }),
-      setAvatarVariant: (avatarVariant) => set((s) => { s.avatarVariant = avatarVariant; }),
+      setAvatarHarmony: (avatarHarmony) => set((s) => { s.avatarHarmony = avatarHarmony; }),
       setFollowAudio: (followAudio) => set((s) => { s.followAudio = followAudio; }),
     })),
     {
@@ -166,28 +166,41 @@ export const useReaderPreferences = create<ReaderPrefsState>()(
       storage: createJSONStorage(() => jsonStorage),
       // On persiste uniquement les champs de préférences (pas hydrated ni les actions).
       partialize: pickPrefs,
-      version: 3,
+      version: 4,
       // v0 → v1 : remplacement des générateurs d'avatar (minidenticons/playful → app externe
       // profil-generator-one). On retire l'ancien champ `avatarStyle` et on rabat toute variante
       // héritée non valide (beam/marble/pixel/sunset/ring/bauhaus) sur la variante par défaut.
       // v1 → v2 : remplacement de la variante `dev` par `identicon` (grid=8, harmony=complementary).
       // v2 → v3 : retrait de la variante `icon_center` (remplacée par `random` figé grid=8,
-      // harmony=analogous) et de l'ancienne variante `dev` déjà migrée en v2 (sécurité).
+      // harmony=analogous).
+      // v3 → v4 : refonte du modèle — la préférence passe de `avatarVariant` (variante d'image) à
+      // `avatarHarmony` (règle d'harmonie de couleurs). Tous les avatars utilisent désormais
+      // identicon+grid=8 ; seule l'harmonie change. On mappe chaque ancienne variante vers une
+      // harmonie équivalente puis on supprime `avatarVariant`.
       migrate: (persisted, version) => {
         const p = { ...(persisted ?? {}) } as Record<string, unknown> & Partial<ReaderPreferences>;
         if (version < 1) {
           delete p.avatarStyle;
-          const valid = AVATAR_VARIANT_OPTIONS.map((o) => o.key);
-          if (!valid.includes(p.avatarVariant as AvatarVariant)) p.avatarVariant = 'gradient_pixel';
         }
-        if (version < 2) {
-          // L'ancienne variante `dev` n'existe plus → on la rabat sur `identicon` (son remplaçant).
-          // Comparaison sur valeur brute car `dev` n'est plus dans le type `AvatarVariant`.
-          if ((p.avatarVariant as string) === 'dev') p.avatarVariant = 'identicon';
-        }
-        if (version < 3) {
-          // `icon_center` retiré → rabattu sur `random` (nouveau comportement grid=8 + analogous).
-          if ((p.avatarVariant as string) === 'icon_center') p.avatarVariant = 'random';
+        if (version < 4) {
+          // Mappe l'ancienne variante d'avatar vers la nouvelle harmonie de couleurs.
+          const legacyVariant = p.avatarVariant as string | undefined;
+          const harmonyMap: Record<string, AvatarHarmony> = {
+            dev: 'complementary',
+            identicon: 'complementary',
+            random: 'analogous',
+            geometric: 'analogous',
+            icon_center: 'analogous',
+            wave: 'analogous',
+            gradient_pixel: 'monochromatic',
+          };
+          p.avatarHarmony = (legacyVariant && harmonyMap[legacyVariant]) || 'complementary';
+          // Vérifie que l'harmonie héritée (déjà en v4) est valide ; sinon valeur par défaut.
+          const valid = AVATAR_HARMONY_OPTIONS.map((o) => o.key);
+          if (!valid.includes(p.avatarHarmony as AvatarHarmony)) {
+            p.avatarHarmony = 'complementary';
+          }
+          delete p.avatarVariant;
         }
         return p as unknown as ReaderPrefsState;
       },

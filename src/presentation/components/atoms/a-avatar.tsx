@@ -2,12 +2,12 @@
 
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
-import { type AvatarVariant, buildAvatarUrl } from '@/src/shared/constants/reader-preferences';
+import { type AvatarHarmony, buildAvatarUrl } from '@/src/shared/constants/reader-preferences';
 
 export interface AvatarProps {
   /** Seed déterministe : identifiant de compte (user.id), opaque et non-PII — jamais l'e-mail. */
   seed: string;
-  variant: AvatarVariant;
+  harmony: AvatarHarmony;
   /** Sizing du conteneur (ex. `h-full w-full`). Le fond thématique + ring sont portés ici. */
   className?: string;
 }
@@ -24,9 +24,9 @@ export interface AvatarProps {
  * Le conteneur `rounded-full ring-1 ring-border` clippe l'image ; le fond `--foreground` ne se
  * voit qu'avant le chargement ou en repli d'erreur.
  */
-export function Avatar({ seed, variant, className }: AvatarProps) {
+export function Avatar({ seed, harmony, className }: AvatarProps) {
   const [errored, setErrored] = useState(false);
-  const url = buildAvatarUrl(seed, variant);
+  const url = buildAvatarUrl(seed, harmony);
 
   return (
     <span

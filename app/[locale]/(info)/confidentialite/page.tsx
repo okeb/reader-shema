@@ -127,9 +127,9 @@ export default async function ConfidentialitePage({ params }: Props) {
           compte interne (<strong>jamais depuis votre adresse e-mail</strong>). Cet
           identifiant, opaque et non personnel, transite vers ce service pour produire
           l&apos;image ; il n&apos;est pas stocké — l&apos;avatar est déterministe (ne dépend que de
-          cet identifiant et de la variante choisie), régénéré à chaque affichage et mis en cache
-          côté CDN. Le choix de la variante est une préférence cosmétique, synchronisée avec vos
-          réglages si l&apos;opt-in est actif.
+          cet identifiant et de l&apos;harmonie de couleurs choisie), régénéré à chaque affichage et
+          mis en cache côté CDN. Le choix de l&apos;harmonie est une préférence cosmétique,
+          synchronisée avec vos réglages si l&apos;opt-in est actif.
         </p>
         <p>
           <strong>Vos droits : export et suppression.</strong> Vous pouvez exporter vos
