@@ -11,9 +11,7 @@ divulguée. La cohérence est vérifiée par `pnpm changelog:check`.
 
 ### Modifié
 
-- **Variante d'avatar « Icône » retirée** : la variante « Icône » disparaît du sélecteur d'avatar et son style est fusionné dans « Aléatoire » (grille fine, harmonie de couleurs analogue fixe).
-- **Avatar « Dev » → « Identicon »** : la variante d'avatar « Dev » est remplacée par « Identicon » (motifs symétriques en miroir), servie par le service d'avatars avec une grille fine et une harmonie de couleurs complémentaire fixe.
-- **Avatars « Géométrique », « Vague » et « Aléatoire »** : ces trois variantes sont désormais servies avec une harmonie de couleurs analogue fixe pour un rendu plus doux ; « Géométrique » et « Aléatoire » adoptent en plus une grille fine.
+- **Avatars du compte unifiés** : les avatars sont désormais tous des identicons (motifs symétriques en miroir) avec une grille fine fixe. Le sélecteur d'avatar ne propose plus plusieurs styles d'image mais cinq harmonies de couleurs : monochromatique, complémentaire, analogue, complémentaire scindée et analogue accentuée.
 
 ## [0.5.4] : 2026-08-26
 
