@@ -151,13 +151,13 @@ export function AppearanceMenu({ onOpenHelp, className }: AppearanceMenuProps) {
           {session.active !== null && <div className="mx-3 h-px bg-border" />}
 
           {/* Avatar — spec 27. Uniquement connecté (seed = user.id, jamais l'e-mail). Choix de la
-              variante parmi les 6 de l'app externe profil-generator-one. Préférence cosmétique locale, sync. */}
+              variante parmi les 5 de l'app externe profil-generator-one. Préférence cosmétique locale, sync. */}
           {showAvatar && (
             <>
               <p className="px-3 pb-1 pt-2.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/60">
                 Avatar
               </p>
-              <div className="grid grid-cols-6 gap-1.5 px-3 pb-3">
+              <div className="grid grid-cols-5 gap-1.5 px-3 pb-3">
                 {AVATAR_VARIANT_OPTIONS.map((o) => (
                   <button
                     key={o.key}

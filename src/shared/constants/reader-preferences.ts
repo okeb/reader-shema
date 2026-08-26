@@ -147,19 +147,18 @@ export const APP_ICON_OPTIONS: { key: AppIconKey; label: string }[] = [
 /**
  * Avatar utilisateur (spec 27, révisé) : générateur déterministe servi par l'app externe
  * `profil-generator-one` (Vercel). La seed (`user.id` Better Auth — opaque, stable, identique sur
- * tous les appareils) détermine l'image ; 6 variantes au choix. L'image est fetchée à la demande
+ * tous les appareils) détermine l'image ; 5 variantes au choix. L'image est fetchée à la demande
  * (SVG, cache immutable 1 an côté CDN) — aucune génération côté appareil, aucun stockage. Le choix
  * de la variante est une préférence cosmétique locale (persistée dans `bibleReaderPrefs`,
  * synchronisée via le kind `readerPrefs` si opt-in).
  */
-export type AvatarVariant = 'gradient_pixel' | 'geometric' | 'random' | 'icon_center' | 'wave' | 'dev';
+export type AvatarVariant = 'gradient_pixel' | 'geometric' | 'random' | 'wave' | 'identicon';
 export const AVATAR_VARIANT_OPTIONS: { key: AvatarVariant; label: string }[] = [
   { key: 'gradient_pixel', label: 'Dégradé' },
   { key: 'geometric', label: 'Géométrique' },
   { key: 'random', label: 'Aléatoire' },
-  { key: 'icon_center', label: 'Icône' },
   { key: 'wave', label: 'Vague' },
-  { key: 'dev', label: 'Dev' },
+  { key: 'identicon', label: 'Identicon' },
 ];
 
 /** Base de l'app d'avatars (profil-generator-one, déployée sur Vercel). */
@@ -168,9 +167,26 @@ export const AVATAR_API_BASE = 'https://profil-generator-one.vercel.app';
 /**
  * Construit l'URL d'avatar déterministe pour un couple (seed, variante).
  * Format SVG (scalaire, crisp à toute taille) ; la réponse est `cache-control: immutable, max-age=1an`.
+ *
+ * Quatre variantes envoient des paramètres supplémentaires figés à l'API :
+ * - `identicon` : `grid=8` + `harmony=complementary` (spec 27, révision identicon).
+ * - `random` : `grid=8` + `harmony=analogous` (spec 27, révision aléatoire) — remplace l'ancienne
+ *   variante `icon_center` qui a été retirée.
+ * - `geometric` : `grid=8` + `harmony=analogous` (spec 27, révision géométrique).
+ * - `wave` : `harmony=analogous` (spec 27, révision vague) — grid laissée à la valeur par défaut.
+ * Seule `gradient_pixel` laisse l'API appliquer ses valeurs par défaut (grid=16, harmony=auto).
  */
 export function buildAvatarUrl(seed: string, variant: AvatarVariant): string {
   const params = new URLSearchParams({ variant, seed, format: 'svg' });
+  if (variant === 'identicon') {
+    params.set('grid', '8');
+    params.set('harmony', 'complementary');
+  } else if (variant === 'random' || variant === 'geometric') {
+    params.set('grid', '8');
+    params.set('harmony', 'analogous');
+  } else if (variant === 'wave') {
+    params.set('harmony', 'analogous');
+  }
   return `${AVATAR_API_BASE}/avatar?${params.toString()}`;
 }
 
