@@ -15,14 +15,16 @@ export interface PartialReference {
 }
 
 /**
- * Analyse une saisie type "1co 3 23" ou "genese 3 12-20".
- * Format : <livre> <chapitre> [<verset(s)>] (verset(s) = "12", "12-20", "1,3,5-8").
+ * Analyse une saisie type "Mc 1:7", "1co 3 23" ou "genese 3:12-20".
+ * Format : <livre> <chapitre>[:<verset(s)>] (verset(s) = "12", "12-20", "1,3,5-8").
+ * Le séparateur chapitre/verset accepte indifféremment `:` ou un espace, pour couvrir la
+ * notation biblique standard ("Mc 1:7") comme la forme tapée ("Mc 1 7").
  * Renvoie null si la référence ne résout pas à un livre/chapitre valides.
  */
 export function parseReference(input: string): ParsedReference | null {
   const m = input
     .trim()
-    .match(/^(.+?)\s+(\d+)(?:\s+(\d+(?:\s*-\s*\d+)?(?:\s*,\s*\d+(?:\s*-\s*\d+)?)*))?\s*$/);
+    .match(/^(.+?)\s+(\d+)(?:[:\s]+(\d+(?:\s*-\s*\d+)?(?:\s*,\s*\d+(?:\s*-\s*\d+)?)*))?\s*$/);
   if (!m) return null;
 
   const bookId = resolveBookId(m[1]);

@@ -8,6 +8,9 @@ export const routing = defineRouting({
   localePrefix: 'always',
   pathnames: {
     '/read': { en: '/read', fr: '/read' },
+    // Recherche par référence libre (spec 38) — ex. /fr/search?p=Mc+1:7 redirige vers /fr/read.
+    // Identique dans les deux locales.
+    '/search': { en: '/search', fr: '/search' },
     // Fiche détail d'un numéro Strong (spec 29) — identique dans les deux locales ; `[code]` n'est
     // pas énumérable, donc pas de `generateStaticParams` (dynamicParams = true par défaut).
     '/strong/[code]': { en: '/strong/[code]', fr: '/strong/[code]' },
