@@ -9,6 +9,8 @@ divulguée. La cohérence est vérifiée par `pnpm changelog:check`.
 
 ## [Unreleased]
 
+## [0.6.1] : 2026-09-01
+
 ### Corrigé
 
 - **Recherche rapide (⌘K)** : taper « 2 pi » ou « 1 co » propose désormais directement le bon livre numéroté (2 Pierre, 1 Corinthiens) au lieu d'afficher la liste de tous les livres commençant par ce chiffre.
