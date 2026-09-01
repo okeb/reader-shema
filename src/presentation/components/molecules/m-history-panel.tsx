@@ -1,8 +1,10 @@
 'use client';
 
+import { useState } from 'react';
 import { Icon } from '@iconify/react';
 import type { NavHistoryEntry } from '@/src/domain/entities';
 import { groupByDay } from '@/src/presentation/lib/date-grouping';
+import { ConfirmDialog } from './m-confirm-dialog';
 
 interface HistoryPanelProps {
   open: boolean;
@@ -17,10 +19,12 @@ interface HistoryPanelProps {
  * Historique de navigation : la liste des derniers chapitres consultés. Même coque que les signets
  * (tiroir gauche opaque sur mobile, flottant à gauche sur desktop). Les entrées sont regroupées par
  * jour ; cliquer une entrée fait basculer la lecture centrale sur la référence (cf. onSelect).
+ * L'effacement global est irréversible → confirmation via `ConfirmDialog`.
  *
  * Porté de l'ancien `components/molecules/m-history-panel.tsx`.
  */
 export function HistoryPanel({ open, history, onSelect, onRemove, onClear, onClose }: HistoryPanelProps) {
+  const [confirmClear, setConfirmClear] = useState(false);
   if (!open) return null;
 
   const groups = groupByDay(history);
@@ -32,32 +36,21 @@ export function HistoryPanel({ open, history, onSelect, onRemove, onClear, onClo
       {/* Mobile : prend tout l'écran (pleine largeur) au-dessus du texte. Desktop : flotte dans
           l'espace libre à gauche de la lecture (sans cadre). Même positionnement que les signets. */}
       <div className="fixed bottom-0 left-0 top-0 z-50 w-full overflow-y-auto bg-background px-5 py-5 shadow-2xl md:bottom-24 md:top-24 md:z-30 md:w-[210px] md:max-w-[46vw] md:bg-transparent md:px-6 md:py-0 md:shadow-none">
-        {/* En-tête : titre + effacement global (toujours visible) + fermeture. */}
+        {/* En-tête : titre + fermeture. L'effacement global vit au pied du panneau (cf. spec 13
+            §5.2) — pas ici, trop proche de la croix (risque de tap accidentel). */}
         <div className="mb-12 flex items-center justify-between gap-2 pr-1">
           <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
             <Icon icon="hugeicons:clock-01" className="h-3.5 w-3.5 text-primary" />
             Historique
           </span>
-          <div className="flex items-center gap-2.5">
-            {history.length > 0 && (
-              <button
-                type="button"
-                onClick={onClear}
-                title="Effacer l'historique"
-                className="text-[11px] text-muted-foreground/50 transition-colors hover:text-destructive"
-              >
-                Effacer
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={onClose}
-              title="Fermer (H)"
-              className="flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground/60 transition-colors hover:bg-primary/10 hover:text-primary"
-            >
-              <Icon icon="hugeicons:cancel-01" className="h-3.5 w-3.5" />
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            title="Fermer (H)"
+            className="flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground/60 transition-colors hover:bg-primary/10 hover:text-primary"
+          >
+            <Icon icon="hugeicons:cancel-01" className="h-3.5 w-3.5" />
+          </button>
         </div>
 
         {history.length === 0 ? (
@@ -99,7 +92,31 @@ export function HistoryPanel({ open, history, onSelect, onRemove, onClear, onClo
             ))}
           </div>
         )}
+
+        {/* Pied de panneau : effacement global, séparé de la croix de fermeture (spec 13 §5.2). */}
+        {history.length > 0 && (
+          <div className="mt-10 border-t border-border/60 pt-3">
+            <button
+              type="button"
+              onClick={() => setConfirmClear(true)}
+              title="Effacer tout l'historique"
+              className="flex min-h-[44px] w-full items-center gap-1.5 rounded px-1 text-[12px] text-muted-foreground/60 transition-colors hover:text-destructive"
+            >
+              <Icon icon="hugeicons:delete-02" className="h-3.5 w-3.5" />
+              Effacer l'historique
+            </button>
+          </div>
+        )}
       </div>
+
+      <ConfirmDialog
+        open={confirmClear}
+        onOpenChange={setConfirmClear}
+        title="Effacer l'historique ?"
+        description="Toutes les entrées de navigation récente seront supprimées définitivement. Cette action est irréversible."
+        confirmLabel="Effacer"
+        onConfirm={onClear}
+      />
     </>
   );
 }

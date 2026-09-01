@@ -11,6 +11,12 @@ export interface NavHistoryEntry {
   chapter: number;
   /** Dernier verset (ou plage) surligné, ex. « 16 », « 12-20 ». Absent = chapitre entier. */
   selection?: string;
+  /**
+   * Tous les versets (ou plages) surlignés pour ce chapitre, sans doublon, le plus récent en
+   * dernier. Rétro-compat : les entrées legacy n'ont pas ce champ (migré à `[selection]` à
+   * l'hydratation). `selection` reste la valeur active (= dernier élément).
+   */
+  selections?: string[];
   /** Référence affichable, ex. « Jean 3 » / « Jean 3:16 ». */
   reference: string;
   /** URL de navigation, ex. `/read?livre=jean&chap=3&v=16`. */
@@ -28,4 +34,4 @@ export function navHistoryId(version: string, bookId: string, chapter: number): 
 }
 
 /** Nombre maximal d'entrées conservées (les plus anciennes sont évincées). */
-export const HISTORY_MAX = 25;
+export const HISTORY_MAX = 100;
