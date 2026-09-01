@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Icon } from '@iconify/react';
 import { cn } from '@/lib/utils';
-import { BIBLE_BOOKS, getBookById, searchBooks } from '@/src/shared/constants/bible-books';
+import { BIBLE_BOOKS, BOOK_SECTIONS, getBookById, searchBooks } from '@/src/shared/constants/bible-books';
 import { useAudioManifest } from '@/src/presentation/hooks/use-audio-manifest';
 
 interface BookChapterSelectorProps {
@@ -74,8 +74,10 @@ export function BookChapterSelector({
 
   const q = search.trim();
   const results = q ? searchBooks(q) : BIBLE_BOOKS.map((b) => ({ book: b, score: 3 }));
-  const ot = results.filter((r) => r.book.testament === 'ancien').map((r) => r.book);
-  const nt = results.filter((r) => r.book.testament === 'nouveau').map((r) => r.book);
+  const groups = BOOK_SECTIONS.map((section) => ({
+    ...section,
+    books: results.filter((r) => r.book.section === section.id).map((r) => r.book),
+  }));
 
   const renderGroup = (label: string, books: typeof BIBLE_BOOKS) =>
     books.length > 0 && (
@@ -159,9 +161,8 @@ export function BookChapterSelector({
                 </div>
               </div>
               <div ref={listRef} className="flex-1 overflow-y-auto pb-1">
-                {renderGroup('Ancien Testament', ot)}
-                {renderGroup('Nouveau Testament', nt)}
-                {ot.length === 0 && nt.length === 0 && (
+                {groups.map((g) => renderGroup(g.label, g.books))}
+                {groups.every((g) => g.books.length === 0) && (
                   <p className="px-2 py-4 text-center text-[10px] text-muted-foreground/50">Aucun résultat</p>
                 )}
               </div>
