@@ -9,6 +9,10 @@ divulguée. La cohérence est vérifiée par `pnpm changelog:check`.
 
 ## [Unreleased]
 
+### Corrigé
+
+- **Recherche rapide (⌘K)** : taper « 2 pi » ou « 1 co » propose désormais directement le bon livre numéroté (2 Pierre, 1 Corinthiens) au lieu d'afficher la liste de tous les livres commençant par ce chiffre.
+
 ### Modifié
 
 - **Avatars du compte unifiés** : les avatars sont désormais tous des identicons (motifs symétriques en miroir) avec une grille fine fixe. Le sélecteur d'avatar ne propose plus plusieurs styles d'image mais cinq harmonies de couleurs : monochromatique, complémentaire, analogue, complémentaire scindée et analogue accentuée.
