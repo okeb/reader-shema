@@ -3,5 +3,8 @@
   { "kind": "version", "match": "0.1.5", "reason": "historique livré avant la gouvernance SemVer — features sous bump patch" },
   { "kind": "version", "match": "0.1.6", "reason": "historique livré avant la gouvernance SemVer — features sous bump patch" },
   { "kind": "version", "match": "0.1.11", "reason": "historique livré avant la gouvernance SemVer — features sous bump patch" },
-  { "kind": "version", "match": "0.1.1", "reason": "historique livré avant la gouvernance SemVer — features sous bump patch" }
+  { "kind": "version", "match": "0.1.1", "reason": "historique livré avant la gouvernance SemVer — features sous bump patch" },
+  { "kind": "version", "match": "0.5.2", "reason": "déjà publiée (tag v0.5.2) — feature Strong sous bump patch, non rétro-corrigable" },
+  { "kind": "version", "match": "0.5.3", "reason": "déjà publiée (tag v0.5.3) — features audio sous bump patch, non rétro-corrigable" },
+  { "kind": "version", "match": "0.5.4", "reason": "déjà publiée (tag v0.5.4) — feature recherche par URL sous bump patch, non rétro-corrigable" }
 ]
