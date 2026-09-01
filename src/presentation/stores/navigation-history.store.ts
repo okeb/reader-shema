@@ -22,7 +22,9 @@ function isValid(x: unknown): x is NavHistoryEntry {
     typeof e.reference === 'string' &&
     typeof e.url === 'string' &&
     typeof e.at === 'number' &&
-    (e.selection === undefined || typeof e.selection === 'string')
+    (e.selection === undefined || typeof e.selection === 'string') &&
+    (e.selections === undefined ||
+      (Array.isArray(e.selections) && e.selections.every((s) => typeof s === 'string')))
   );
 }
 
@@ -95,9 +97,19 @@ export const useNavigationHistory = create<NavigationHistoryState>()(
       push: (entry) =>
         set((s) => {
           const id = navHistoryId(entry.version, entry.bookId, entry.chapter);
+          const existing = s.history.find((e) => e.id === id);
+          // Cumule les sélections par chapitre (sans doublon, la plus récente en dernier) ;
+          // `selection` reste la valeur active pour la rétro-compat UI.
+          const selections =
+            entry.selection != null
+              ? [...(existing?.selections ?? []), entry.selection].filter(
+                  (v, i, arr) => arr.indexOf(v) === i,
+                )
+              : existing?.selections;
           const full: NavHistoryEntry = {
             ...entry,
             id,
+            selections,
             at: typeof Date !== 'undefined' ? Date.now() : 0,
           };
           s.history = [full, ...s.history.filter((e) => e.id !== id)].slice(0, HISTORY_MAX);
@@ -117,7 +129,10 @@ export const useNavigationHistory = create<NavigationHistoryState>()(
       partialize: (s) => s.history,
       onRehydrateStorage: () => (state) => {
         if (!state) return;
-        let next = (state.history ?? []).filter(isValid);
+        let next = (state.history ?? []).filter(isValid).map((e) =>
+          // Migration : une entrée sans `selections` mais avec `selection` → `[selection]`.
+          !e.selections && e.selection != null ? { ...e, selections: [e.selection] } : e,
+        );
         // Migration one-shot de l'ancien historique de recherches si la nouvelle clé est vide.
         if (next.length === 0) {
           const migrated = migrateLegacy();

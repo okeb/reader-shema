@@ -21,29 +21,36 @@ passage de tout à l'heure » et complète naturellement « Reprendre » (une po
 - **Inclus** :
   - Enregistrement **automatique** de chaque chapitre affiché en lecture continue (mode `read`),
     plus les recherches de la palette (déjà captées). Le plus récent en tête, **dédoublonné**,
-    capé (~25 entrées).
-  - Une entrée = `version + livre + chapitre (+ sélection/verset surligné si présent)`.
+    capé (100 entrées).
+  - Une entrée = `version + livre + chapitre (+ sélections/versets surlignés, cumulés sans doublon)`.
   - **Panneau « Historique »** listant les entrées **groupées par jour** (Aujourd'hui / Hier / date) ;
-    tap → revient à la référence (surbrillance si verset). Retrait d'une entrée ; « Effacer » global.
+    tap → revient à la référence (surbrillance si verset). Retrait d'une entrée ; « Effacer » global
+    **derrière une confirmation** (`ConfirmDialog` — irréversible).
   - **Bouton dock « Historique »** + raccourci `H`.
   - **Unification** : les « Recherches récentes » de la palette lisent désormais la même source.
+  - **Sauvegarde** : l'historique est inclus dans l'export/import JSON (format v2) — c'est une
+    donnée de reprise de lecture, pas une préférence jetable. Fusion LWW par entrée (`at`).
 - **Exclu** (cette itération) :
   - Le mode `refs` (références ponctuelles) et les ouvertures « one-shot » — ne polluent pas
     l'historique (cohérent avec « Reprendre »).
-  - Synchro multi-appareils (pas de compte), recherche plein-texte, historique des **actions**
-    (signets/favoris posés), annulation (« undo ») de l'effacement.
+  - Recherche plein-texte, historique des **actions** (signets/favoris posés).
 
 ## 4. Spécification fonctionnelle
 - À chaque chapitre rendu en mode `read` (hors chargement, `verses.length > 0`), pousser une entrée
   dans l'historique — **au même endroit** que la sauvegarde de position actuelle
   (`o-bible-reader.tsx`, l. 648-653).
 - **Dédoublonnage** par `id = ${version}:${bookId}:${chapter}` : si l'entrée existe, on la **remonte
-  en tête** et on met à jour `at` (et la `selection`/`url` les plus récentes). Une seule entrée par
-  chapitre, même visité plusieurs fois.
-- **Cap** : 25 entrées (les plus anciennes tombent).
+  en tête** et on met à jour `at`/`url`. Une seule entrée par chapitre, même visité plusieurs fois.
+- **Cap** : 100 entrées (les plus anciennes tombent).
 - La palette (`go()`) pousse également via la même API → une recherche explicite remonte l'entrée.
-- **Granularité du verset** : la dédup ignore la sélection (`v`) mais l'entrée **conserve le dernier
-  `v`** consulté pour ce chapitre, afin de réafficher la bonne surbrillance au retour.
+- **Granularité du verset** : la dédup ignore la sélection (`v`) mais l'entrée **cumule toutes les
+  `selections`** consultées pour ce chapitre (sans doublon, la plus récente en dernier) ; `selection`
+  reste la valeur active pour la réafficher au retour. Les entrées legacy sans `selections` sont
+  migrées à l'hydratation (`selections = [selection]`).
+- **Sync cloud** : au pull, fusion par `id` (LWW par `at`) avec **union des `selections`** — aucune
+  sélection d'un appareil n'écrase celle d'un autre.
+- **Quota localStorage** : en cas d'échec d'écriture (`QuotaExceededError`), l'historique est taillé
+  aux 50 entrées les plus récentes puis l'écriture est retentée (récupération best-effort).
 - **Migration** : à l'hydratation, si l'ancienne clé `bym:search-history` existe et que la nouvelle
   est vide, convertir les entrées `{label, url}` (en lisant `livre`/`chap`/`v` de l'URL), puis
   supprimer l'ancienne clé.
@@ -83,7 +90,10 @@ Mobile : tiroir gauche (même slot que Signets)   Dock :
   pour révéler le texte (comme les signets).
 - **Retrait d'une entrée** : croix `hugeicons:cancel-01` révélée au survol (desktop) / visible
   (mobile), comme dans `BookmarkPanel`.
-- **« Effacer »** (pied de panneau) → vide tout l'historique.
+- **« Effacer »** (pied de panneau ou palette) → **modale de confirmation** (`m-confirm-dialog`) :
+  « Effacer l'historique ? — … irréversible. » avec Annuler / Effacer. Idem palette ⌘K. Le bouton
+  vit au **pied du panneau**, volontairement éloigné de la croix de fermeture (évite les taps
+  accidentels).
 - Groupement par jour calculé à partir de `at` (Aujourd'hui / Hier / `JJ mois`).
 
 ### 5.4 Responsive
@@ -129,22 +139,26 @@ Mobile : tiroir gauche (même slot que Signets)   Dock :
   `navHistory.history`, `go()` appelle `navHistory.push`). Supprime la divergence des deux stockages.
 
 ### 6.2 Données & persistance
-- `localStorage`, clé **`bym:nav-history`** : tableau capé à 25, dédup par `id`, ordre MRU.
+- `localStorage`, clé **`bym:nav-history`** : tableau capé à 100, dédup par `id`, ordre MRU.
 - Forme d'une entrée :
   ```ts
   interface NavHistoryEntry {
-    id: string;          // `${version}:${bookId}:${chapter}`
+    id: string;            // `${version}:${bookId}:${chapter}`
     version: string;
     bookId: string;
     chapter: number;
-    selection?: string;  // ex. "16", "12-20"
-    reference: string;   // ex. « Jean 3 » / « Jean 3:16 »
-    url: string;         // /bym/read?livre=&chap=&v=
-    at: number;          // dernière visite (ms)
+    selection?: string;    // ex. "16", "12-20" — valeur active (dernière consultée)
+    selections?: string[]; // cumul sans doublon des versets/plages consultés (legacy : migrés)
+    reference: string;     // ex. « Jean 3 » / « Jean 3:16 »
+    url: string;           // /bym/read?livre=&chap=&v=
+    at: number;            // dernière visite (ms)
   }
   ```
 - Migration one-shot depuis `bym:search-history` (format `{label, url}`), puis suppression de
   l'ancienne clé.
+- **Sauvegarde JSON** (`data-transfer.ts`, format v2) : clé `history` incluse à l'export ; import en
+  mode « fusion » = LWW par entrée (`at`), mode « remplacer » = écrasement. Les sauvegardes v1
+  (sans historique) restent importables.
 
 ### 6.3 API / contraintes
 - Aucune dépendance API. Respecte l'atomic design (`a-`/`m-`/`o-`), Tailwind `darkMode:"class"`,
@@ -171,7 +185,7 @@ Mobile : tiroir gauche (même slot que Signets)   Dock :
   panneau = navigation), au prix d'un doublon de logique.
 - **Granularité du verset** : dédup par `livre+chap` (recommandé) plutôt que par `livre+chap+v`, pour
   éviter d'empiler 10 entrées d'un même chapitre lors d'une étude verset par verset.
-- **Cap = 25** : à ajuster selon ressenti (15–40).
+- **Cap = 100** : à ajuster selon ressenti (50–200).
 - **Chevauchement avec « Reprendre »** (spec 04) : « Reprendre » reste la dernière position en pastille
   dock ; l'historique est la liste complète — complémentaires, pas redondants.
 - **Place dans le dock** : un bouton de plus sur tactile ; vérifier la largeur (le dock a déjà

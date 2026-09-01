@@ -148,6 +148,16 @@ const highlightsAdapter: SyncAdapter = {
 // HISTORY_MAX) au lieu de remplacer. Sinon, en écriture concurrente multi-appareil, le
 // LWW par kind écarterait les entrées de l'autre appareil. La fusion converge : chaque
 // appareil republie ensuite l'ensemble complet.
+// Les `selections` (versets visités par chapitre) sont fusionnées en union : aucune
+// sélection d'un appareil n'écrase celle d'un autre.
+
+/** Union de deux listes de sélections (sans doublons, l'ordre local d'abord). */
+function mergeSelections(a: string[] | undefined, b: string[] | undefined): string[] | undefined {
+  if (!a && !b) return undefined;
+  const out = [...(a ?? [])];
+  for (const s of b ?? []) if (!out.includes(s)) out.push(s);
+  return out;
+}
 
 const historyAdapter: SyncAdapter = {
   kind: 'history',
@@ -162,7 +172,15 @@ const historyAdapter: SyncAdapter = {
     for (const e of remote) {
       if (!e || typeof e.id !== 'string') continue; // entrée malformée → ignorée
       const ex = byId.get(e.id);
-      if (!ex || (typeof e.at === 'number' && e.at > (ex.at ?? -1))) byId.set(e.id, e);
+      if (!ex) {
+        byId.set(e.id, e);
+        continue;
+      }
+      // Doublon : on garde l'entrée au `at` le plus récent, mais on préserve les
+      // sélections des deux appareils (union sans doublons).
+      const winner = typeof e.at === 'number' && e.at > (ex.at ?? -1) ? e : ex;
+      const loser = winner === e ? ex : e;
+      byId.set(e.id, { ...winner, selections: mergeSelections(winner.selections, loser.selections) });
     }
     const merged = [...byId.values()]
       .sort((a, b) => (b.at ?? 0) - (a.at ?? 0))

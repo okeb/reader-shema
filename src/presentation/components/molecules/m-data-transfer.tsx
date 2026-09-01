@@ -50,8 +50,8 @@ export function DataTransfer() {
         Sauvegarde de mes données
       </h2>
       <p className="mb-4 max-w-prose text-sm text-muted-foreground">
-        Vos favoris, signets, surlignages et notes sont stockés sur cet appareil. Exportez-les pour
-        ne rien perdre, ou restaurez une sauvegarde.
+        Vos favoris, signets, surlignages, notes et historique de navigation sont stockés sur cet
+        appareil. Exportez-les pour ne rien perdre, ou restaurez une sauvegarde.
       </p>
 
       <div className="flex flex-wrap items-center gap-2.5">

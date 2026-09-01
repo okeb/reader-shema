@@ -6,6 +6,7 @@ import { useRouter } from '@/i18n/routing';
 import { parsePartialReference } from '@/src/presentation/lib/parse-reference';
 import { useNavigationHistory } from '@/src/presentation/stores/navigation-history.store';
 import { useActiveVersion } from '@/src/presentation/stores/active-version.store';
+import { ConfirmDialog } from '@/src/presentation/components/molecules/m-confirm-dialog';
 import { cn } from '@/lib/utils';
 
 type ReadHref = { pathname: '/read'; query: Record<string, string> };
@@ -24,6 +25,7 @@ export function CommandPalette() {
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState('');
   const [focusedIndex, setFocusedIndex] = useState(0);
+  const [confirmClear, setConfirmClear] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -188,7 +190,7 @@ export function CommandPalette() {
                 Récemment consulté
               </span>
               <button
-                onClick={clearHistory}
+                onClick={() => setConfirmClear(true)}
                 className="text-[11px] text-muted-foreground/50 transition-colors hover:text-primary"
               >
                 Effacer
@@ -281,6 +283,15 @@ export function CommandPalette() {
           )}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={confirmClear}
+        onOpenChange={setConfirmClear}
+        title="Effacer l'historique ?"
+        description="Toutes les entrées de navigation récente seront supprimées définitivement. Cette action est irréversible."
+        confirmLabel="Effacer"
+        onConfirm={clearHistory}
+      />
     </div>
   );
 }

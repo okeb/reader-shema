@@ -13,6 +13,19 @@ divulguée. La cohérence est vérifiée par `pnpm changelog:check`.
 
 - **Avatars du compte unifiés** : les avatars sont désormais tous des identicons (motifs symétriques en miroir) avec une grille fine fixe. Le sélecteur d'avatar ne propose plus plusieurs styles d'image mais cinq harmonies de couleurs : monochromatique, complémentaire, analogue, complémentaire scindée et analogue accentuée.
 
+## [0.6.0] : 2026-09-01
+
+### Ajouté
+
+- **Historique de navigation enrichi** : l'historique conserve désormais 100 passages (au lieu de 25) et se souvient de tous les versets consultés dans un même chapitre, sans perdre les précédents.
+- **Confirmation avant effacement de l'historique** : un dialogue demande validation avant de vider l'historique, depuis le panneau comme depuis la recherche rapide (⌘K).
+- **Historique inclus dans la sauvegarde** : l'export de vos données embarque désormais l'historique de navigation ; la restauration fusionne les passages sans écraser les plus récents.
+
+### Corrigé
+
+- **Panneau Historique** : le bouton « Effacer » est déplacé en bas du panneau, à distance de la croix de fermeture, pour éviter les clics accidentels.
+- **Historique préservé en cas de stockage saturé** : si la mémoire du navigateur est pleine, l'historique est réduit à ses passages les plus récents au lieu d'être silencieusement perdu au rechargement.
+
 ## [0.5.4] : 2026-08-26
 
 ### Ajouté

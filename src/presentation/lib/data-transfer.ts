@@ -13,9 +13,10 @@ import { z } from 'zod';
  * d'écrire dans le `localStorage`, avec un message explicite. Les stores filtrent eux-mêmes les
  * items invalides à la réhydratation (`isValid` dans `onRehydrateStorage`) — double défense.
  *
- * Scope : uniquement les **stores de contenu** (favoris, signets, surlignages, notes). Les réglages
- * de lecture, position, version, historique et flags « déjà vu » (quiz/doodle) sont volontairement
- * exclus — ce sont des préférences/état éphémère, pas du contenu à ne pas perdre.
+ * Scope : les **stores de contenu** (favoris, signets, surlignages, notes) + l'**historique de
+ * navigation** (inclus depuis la v2 du format : c'est une donnée de reprise de lecture, pas une
+ * préférence jetable). Les réglages de lecture, position, version et flags « déjà vu »
+ * (quiz/doodle) restent exclus — état éphémère, pas du contenu.
  */
 
 /** Clés `localStorage` incluses dans une sauvegarde, regroupées sous une étiquette stable. */
@@ -25,12 +26,13 @@ const KEYS = {
   bookmarks: 'bymBookmarks',
   highlights: 'bymHighlights',
   notes: 'bymNotes',
+  history: 'bym:nav-history',
 } as const;
 
 type DataKey = keyof typeof KEYS;
 
 const BACKUP_APP = 'shema-reader';
-const BACKUP_VERSION = 1;
+const BACKUP_VERSION = 2;
 
 // --- Schéma zod de la sauvegarde -----------------------------------------------------------
 
@@ -54,22 +56,33 @@ const dataSchema = z
     bookmarks: bookmarksSchema.optional(),
     highlights: highlightsSchema.optional(),
     notes: notesSchema.optional(),
+    history: favoritesSchema.optional(), // même forme : tableau d'objets (validés par le store)
   })
   .passthrough(); // tolère des clés futures / inconnues dans `data`
 
-const backupSchema = z.object({
-  app: z.literal(BACKUP_APP),
-  type: z.literal('backup'),
-  version: z.literal(BACKUP_VERSION),
-  exportedAt: z.number(),
-  data: dataSchema,
-});
+/** Accepte les sauvegardes v1 (sans historique) et v2. */
+const backupSchema = z.union([
+  z.object({
+    app: z.literal(BACKUP_APP),
+    type: z.literal('backup'),
+    version: z.literal(BACKUP_VERSION),
+    exportedAt: z.number(),
+    data: dataSchema,
+  }),
+  z.object({
+    app: z.literal(BACKUP_APP),
+    type: z.literal('backup'),
+    version: z.literal(1),
+    exportedAt: z.number(),
+    data: dataSchema,
+  }),
+]);
 
 /** Enveloppe de sauvegarde, versionnée pour les évolutions futures du format. */
 export interface Backup {
   app: 'shema-reader';
   type: 'backup';
-  version: 1;
+  version: 2;
   exportedAt: number;
   data: Partial<Record<DataKey, unknown>>;
 }
@@ -152,6 +165,26 @@ function mergeById(existing: unknown, incoming: unknown): unknown[] {
   return out;
 }
 
+/**
+ * Merge spécifique historique : union par `id`, doublon → l'entrée au timestamp `at` le plus
+ * récent l'emporte (LWW par entrée, pas « l'existant d'office »). Tri desc par `at`.
+ */
+function mergeHistory(existing: unknown, incoming: unknown): unknown[] {
+  const a = Array.isArray(existing) ? existing : [];
+  const b = Array.isArray(incoming) ? incoming : [];
+  const byId = new Map<string, unknown>();
+  for (const e of [...a, ...b]) {
+    const id = (e as { id?: string })?.id;
+    if (typeof id !== 'string') continue;
+    const ex = byId.get(id) as { at?: number } | undefined;
+    const at = (e as { at?: number })?.at;
+    if (!ex || (typeof at === 'number' && at > (ex.at ?? -1))) byId.set(id, e);
+  }
+  return [...byId.values()].sort(
+    (x, y) => ((y as { at?: number }).at ?? 0) - ((x as { at?: number }).at ?? 0),
+  );
+}
+
 /** Compte total d'éléments d'une sauvegarde (pour le retour utilisateur). */
 export function countBackup(b: Backup): number {
   let n = 0;
@@ -176,7 +209,8 @@ export function applyBackup(backup: Backup, mode: ImportMode): void {
     if (mode === 'merge') {
       const existing = readKey(key);
       if (Array.isArray(incoming)) {
-        next = mergeById(existing, incoming);
+        // Historique : LWW par entrée (timestamp `at`), pas « l'existant d'office ».
+        next = label === 'history' ? mergeHistory(existing, incoming) : mergeById(existing, incoming);
       } else if (incoming && typeof incoming === 'object') {
         // Maps (highlights/notes) : l'existant l'emporte sur les clés en conflit.
         next = { ...(incoming as object), ...((existing as object) ?? {}) };
