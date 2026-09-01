@@ -9,6 +9,8 @@ divulguée. La cohérence est vérifiée par `pnpm changelog:check`.
 
 ## [Unreleased]
 
+## [0.6.2] : 2026-09-01
+
 ### Modifié
 
 - **Sélecteur de passages** : les livres sont désormais regroupés selon la tradition hébraïque — Torah, Nevi'im (Prophètes), Ketouvim (Écrits) — suivis du Testament de Yéhoshoua, en remplacement des groupes Ancien/Nouveau Testament. Valable dans le sélecteur du lecteur comme dans le lanceur de l'accueil.
