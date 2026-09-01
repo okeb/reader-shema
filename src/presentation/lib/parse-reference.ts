@@ -71,9 +71,14 @@ export function parsePartialReference(input: string): PartialReference {
     };
   }
 
-  const spaceIdx = trimmed.indexOf(' ');
-  const bookPart = trimmed.slice(0, spaceIdx);
-  const rest = trimmed.slice(spaceIdx + 1).trim();
+  // Livres numérotés ("1 Corinthiens", "2 Pierre") : si la saisie commence par un
+  // chiffre suivi d'un mot non numérique, l'espace tapé fait partie du nom du livre
+  // ("2 pi" → "2 Pierre"), pas d'un séparateur livre/chapitre.
+  const tokens = trimmed.split(/\s+/);
+  const regroupNumberedBook = /^\d/.test(trimmed) && tokens.length >= 2 && !/^\d+$/.test(tokens[1]);
+
+  const bookPart = regroupNumberedBook ? `${tokens[0]} ${tokens[1]}` : tokens[0];
+  const rest = tokens.slice(regroupNumberedBook ? 2 : 1).join(' ');
 
   const results = searchBooks(bookPart);
   const resolvedBook = results.length === 1 && results[0].score <= 1 ? results[0].book : null;
