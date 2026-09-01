@@ -145,10 +145,10 @@ export function BookChapterSelector({
 
       {/* Popover */}
       {open && (
-        <div className="absolute left-1/2 top-full z-30 mt-2 w-[370px] max-w-[92vw] -translate-x-1/2 overflow-hidden rounded-xl border border-input bg-popover shadow-2xl">
+        <div className="absolute left-1/2 top-full z-30 mt-2 w-[388px] max-w-[92vw] -translate-x-1/2 overflow-hidden rounded-xl border border-input bg-popover shadow-2xl">
           <div className="flex h-72">
             {/* Liste des livres */}
-            <div className="flex w-[132px] shrink-0 flex-col border-r border-foreground/10">
+            <div className="flex w-[150px] shrink-0 flex-col border-r border-foreground/10">
               <div className="h-12 shrink-0 border-b border-foreground/10 px-2 py-1.5">
                 <div className="flex h-full items-center gap-1.5 rounded-md bg-foreground/5 px-2 py-1">
                   <Icon icon="hugeicons:search-01" className="h-3 w-3 shrink-0 text-muted-foreground/50" />

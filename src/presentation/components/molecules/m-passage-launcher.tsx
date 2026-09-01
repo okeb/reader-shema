@@ -130,7 +130,7 @@ export function PassageLauncher({ defaultBookId = 'jean', onSelect }: PassageLau
         <div className={cn('mt-2 w-full overflow-hidden rounded-xl shadow-2xl', GLASS_PILL)}>
           <div className="flex h-72">
             {/* Liste des livres */}
-            <div className="flex w-36 shrink-0 flex-col border-r border-foreground/10">
+            <div className="flex w-[150px] shrink-0 flex-col border-r border-foreground/10">
               <div className="h-12 shrink-0 border-b border-foreground/10 px-2 py-1.5">
                 <div className="flex h-full items-center gap-1.5 rounded-md bg-foreground/5 px-2 py-1">
                   <Icon icon="hugeicons:search-01" className="h-3 w-3 shrink-0 text-muted-foreground/50" />

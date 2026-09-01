@@ -9,6 +9,10 @@ divulguée. La cohérence est vérifiée par `pnpm changelog:check`.
 
 ## [Unreleased]
 
+### Corrigé
+
+- **Sélecteur de passages** : la colonne des livres est élargie pour que les noms longs comme « 1 Thessaloniciens » s'affichent entièrement, sans troncature.
+
 ## [0.6.2] : 2026-09-01
 
 ### Modifié
