@@ -18,6 +18,10 @@ export interface StrongToken {
   origine?: string;
   /** Catégorie grammaticale (ex. "Nom féminin", "Verbe"). */
   type?: string;
+  /** Code grammatical brut (ex. "G5656", "V-AAI-2P", "H8804"). */
+  morph?: string;
+  /** Analyse grammaticale en français (ex. "aoriste actif indicatif"). */
+  morph_fr?: string;
 }
 
 /** Item à résoudre en Strong : un verset identifié par livre/chapitre/numéro. */

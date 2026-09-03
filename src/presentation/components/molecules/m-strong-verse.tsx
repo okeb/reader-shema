@@ -24,6 +24,11 @@ function bubbleColor(lang?: string) {
   return 'bg-purple-500/15 text-purple-700 hover:bg-purple-500/30 dark:text-purple-300'; // grec par défaut
 }
 
+/** Un code grammatical brut (V-AAI-2P, G5656…) ne doit jamais s'afficher tel quel. */
+function isRawMorphCode(label: string) {
+  return /^[HG]?\d+$/.test(label) || /^V-/.test(label);
+}
+
 function StrongDefinitionCard({
   token,
   verseId,
@@ -81,6 +86,11 @@ function StrongDefinitionCard({
                   onNavigateStrong?.(target, { verseId, strongCode: strong ?? undefined })
                 }
               />
+            </span>
+          )}
+          {token.morph_fr && !isRawMorphCode(token.morph_fr) && (
+            <span className="rounded bg-purple-500/10 px-1.5 py-0 text-[10px] font-medium text-purple-600 dark:text-purple-300">
+              {token.morph_fr}
             </span>
           )}
           {token.phonetique && (

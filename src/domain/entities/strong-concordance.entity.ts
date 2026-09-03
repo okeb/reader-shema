@@ -12,6 +12,18 @@ export interface StrongOccurrence {
   text: string;
 }
 
+/** Entrée LSJ détaillée (STEPBible TFLSJ, CC BY 4.0) — grec uniquement. */
+export interface StrongLsj {
+  /** Gloss anglais de l'entrée. */
+  gloss?: string;
+  /** Forme grecque (ex. "ἀγαπάω"). */
+  greek?: string;
+  /** Translittération (ex. "agapaō"). */
+  translit?: string;
+  /** Intégralité du sens LSJ (texte anglais, multi-niveaux — rendu en texte brut). */
+  meaning?: string;
+}
+
 /** Lexique Strong d'un code, porté par l'endpoint de concordance (/bym/strong/:code).
  *  La page détail d'un code tire toutes ses métadonnées de ce seul fetch — pas d'appel séparé
  *  à /strong/:code. Tous les champs sont optionnels (l'entrée peut être absente du lexique). */
@@ -27,6 +39,8 @@ export interface StrongLexicon {
   /** Catégorie grammaticale (ex. "Nom masculin"). */
   type?: string;
   definition?: string;
+  /** Détail LSJ (dictionnaire grec complet) — présent pour les codes G*, absent pour H*. */
+  lsj?: StrongLsj;
 }
 
 /** Résultat paginé de la concordance d'un numéro Strong (endpoint /bym/strong/:code). */

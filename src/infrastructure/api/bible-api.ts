@@ -8,6 +8,7 @@ import type {
   StrongOccurrence,
   StrongConcordance,
   StrongLexicon,
+  StrongLsj,
   BookInfo,
 } from '@/src/domain/entities';
 import { compressVerses } from '@/src/domain/value-objects/verse-selection.vo';
@@ -70,7 +71,22 @@ function normalizeStrongToken(value: unknown): StrongToken | null {
     phonetique: optionalText(raw.phonetique),
     origine: optionalText(raw.origine),
     type: optionalText(raw.type),
+    morph: optionalText(raw.morph),
+    morph_fr: optionalText(raw.morph_fr),
   };
+}
+
+/** Entrée LSJ détaillée (STEPBible TFLSJ) — texte brut, rendu en <pre> jamais en HTML. */
+function normalizeLsj(value: unknown): StrongLsj | undefined {
+  if (!value || typeof value !== 'object') return undefined;
+  const raw = value as Record<string, unknown>;
+  const entry: StrongLsj = {
+    gloss: optionalText(raw.gloss),
+    greek: optionalText(raw.greek),
+    translit: optionalText(raw.translit),
+    meaning: optionalText(raw.meaning),
+  };
+  return entry.gloss || entry.greek || entry.meaning ? entry : undefined;
 }
 
 function normalizeStrongLexicon(value: unknown): StrongLexicon {
@@ -84,6 +100,7 @@ function normalizeStrongLexicon(value: unknown): StrongLexicon {
     origine: optionalText(raw.origine),
     type: optionalText(raw.type),
     definition: optionalText(raw.definition),
+    lsj: normalizeLsj(raw.lsj),
   };
 }
 

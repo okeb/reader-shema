@@ -1,5 +1,6 @@
 'use client';
 
+import { Icon } from '@iconify/react';
 import { cn } from '@/lib/utils';
 import type { StrongLexicon } from '@/src/domain/entities';
 import { OrigineText } from '@/src/presentation/components/atoms/a-origine-text';
@@ -65,6 +66,24 @@ export function StrongLexiconCard({
           <span className="font-semibold text-foreground/70">Origine : </span>
           <OrigineText origine={lexicon.origine} lang={lexicon.lang} onNavigate={onNavigate} />
         </div>
+      )}
+
+      {lexicon.lsj?.meaning && (
+        <details className="group mt-3 border-t border-input/50 pt-2">
+          <summary className="flex cursor-pointer list-none items-center gap-1.5 text-[12px] font-semibold text-foreground/70 transition-colors hover:text-foreground [&::-webkit-details-marker]:hidden">
+            <Icon
+              icon="hugeicons:arrow-right-01"
+              className="h-3 w-3 transition-transform group-open:rotate-90"
+            />
+            Détail (LSJ)
+          </summary>
+          <p className="mt-2 whitespace-pre-line text-[12px] leading-relaxed text-muted-foreground">
+            {lexicon.lsj.meaning}
+          </p>
+          <p className="mt-2 text-[10px] italic text-muted-foreground/70">
+            Liddell-Scott-Jones (STEPBible / Tyndale House Cambridge), CC BY 4.0 — texte anglais.
+          </p>
+        </details>
       )}
     </section>
   );

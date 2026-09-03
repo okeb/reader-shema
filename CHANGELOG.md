@@ -9,6 +9,13 @@ divulguée. La cohérence est vérifiée par `pnpm changelog:check`.
 
 ## [Unreleased]
 
+## [0.7.0] : 2026-09-04
+
+### Ajouté
+
+- **Analyse grammaticale des mots originaux** : chaque mot grec ou hébreu affiche désormais son analyse morphologique (temps, voix, mode, personne) dans la fiche Strong. Par exemple, « aimeras » est identifié comme futur actif indicatif, « dit » comme aoriste second actif indicatif. Quand un même mot porte deux analyses distinctes, les deux lectures sont présentées (ex. : « appela » — inaccompli ou accompli).
+- **Dictionnaire grec LSJ** : une section repliable « Détail (LSJ) » dans la fiche Strong propose la définition complète du Liddell-Scott-Jones pour chaque mot grec, avec attribution CC BY 4.0. Les crochets éditoriaux sont convertis en symboles ⟨⟩ lisibles.
+
 ## [0.6.3] : 2026-09-01
 
 ### Corrigé
