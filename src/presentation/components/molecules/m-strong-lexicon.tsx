@@ -68,7 +68,23 @@ export function StrongLexiconCard({
         </div>
       )}
 
-      {lexicon.lsj?.meaning && (
+      {lexicon.wikt?.meaning ? (
+        <details className="group mt-3 border-t border-input/50 pt-2">
+          <summary className="flex cursor-pointer list-none items-center gap-1.5 text-[12px] font-semibold text-foreground/70 transition-colors hover:text-foreground [&::-webkit-details-marker]:hidden">
+            <Icon
+              icon="hugeicons:arrow-right-01"
+              className="h-3 w-3 transition-transform group-open:rotate-90"
+            />
+            Détail
+          </summary>
+          <p className="mt-2 whitespace-pre-line text-[12px] leading-relaxed text-muted-foreground">
+            {lexicon.wikt.meaning}
+          </p>
+          <p className="mt-2 text-[10px] italic text-muted-foreground/70">
+            Wiktionnaire, CC BY-SA 3.0.
+          </p>
+        </details>
+      ) : lexicon.lsj?.meaning && (
         <details className="group mt-3 border-t border-input/50 pt-2">
           <summary className="flex cursor-pointer list-none items-center gap-1.5 text-[12px] font-semibold text-foreground/70 transition-colors hover:text-foreground [&::-webkit-details-marker]:hidden">
             <Icon

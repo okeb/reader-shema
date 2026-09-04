@@ -9,6 +9,7 @@ import type {
   StrongConcordance,
   StrongLexicon,
   StrongLsj,
+  StrongWikt,
   BookInfo,
 } from '@/src/domain/entities';
 import { compressVerses } from '@/src/domain/value-objects/verse-selection.vo';
@@ -89,6 +90,14 @@ function normalizeLsj(value: unknown): StrongLsj | undefined {
   return entry.gloss || entry.greek || entry.meaning ? entry : undefined;
 }
 
+/** Définition française du Wiktionnaire (CC BY-SA). */
+function normalizeWikt(value: unknown): StrongWikt | undefined {
+  if (!value || typeof value !== 'object') return undefined;
+  const raw = value as Record<string, unknown>;
+  const meaning = optionalText(raw.meaning);
+  return meaning ? { meaning } : undefined;
+}
+
 function normalizeStrongLexicon(value: unknown): StrongLexicon {
   if (!value || typeof value !== 'object') return {};
   const raw = value as Record<string, unknown>;
@@ -101,6 +110,7 @@ function normalizeStrongLexicon(value: unknown): StrongLexicon {
     type: optionalText(raw.type),
     definition: optionalText(raw.definition),
     lsj: normalizeLsj(raw.lsj),
+    wikt: normalizeWikt(raw.wikt),
   };
 }
 
