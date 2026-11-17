@@ -102,7 +102,7 @@ export const SYNC_HOSTING = {
 /**
  * E-mails transactionnels du compte (spec 26) — sous-traitement à mentionner (RGPD art. 28).
  *
- * Better Auth raw appelle `sendEmail` (vérification e-mail, reset mot de passe, magic-link) ;
+ * Better Auth raw appelle `sendEmail` (vérification e-mail, reset mot de passe) ;
  * l'envoi est délégué à Resend. Aucune donnée de lecture ni blob chiffré ne transite par ce canal —
  * uniquement l'adresse e-mail de l'utilisateur et le lien signé. No-op en dev si la clé absente.
  */
@@ -112,7 +112,7 @@ export const EMAIL_PROVIDER = {
   /** Ce qui transite par ce canal : l'adresse e-mail, des liens signés à courte expiration, et (spec 28)
    *  la clé de récupération d'urgence e-mailée à l'inscription / au re-keying (jamais persistée serveur). */
   scope:
-    "L'adresse e-mail, des liens signés à courte expiration (vérification, reset, magic-link) et la clé de récupération d'urgence (e-mailée à l'adresse du compte, jamais persistée).",
+    "L'adresse e-mail, des liens signés à courte expiration (vérification, reset) et la clé de récupération d'urgence (e-mailée à l'adresse du compte, jamais persistée).",
 } as const;
 
 /** Liens des pages informationnelles (footer + sitemap). */

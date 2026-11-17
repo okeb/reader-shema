@@ -7,7 +7,7 @@ import { useAccount } from '@/src/presentation/stores/account.store';
 import { useCryptoSession } from '@/src/presentation/stores/crypto-session.store';
 import { attachSyncListeners, pullAndMerge } from '@/src/presentation/lib/sync/sync-engine';
 import { attachSyncSubscribers } from '@/src/presentation/lib/sync/sync-subscribers';
-import { loadDeviceDek } from '@/src/presentation/lib/sync/device-key-store';
+import { loadDeviceDek, storeDeviceDek } from '@/src/presentation/lib/sync/device-key-store';
 
 /**
  * Fournit la disponibilité du compte (auth+DB configurées) au reste de l'arbre —
@@ -53,7 +53,7 @@ export function AccountProvider({ authEnabled, children }: AccountProviderProps)
     return () => window.removeEventListener('bym:open-account', onOpen);
   }, [authEnabled]);
 
-  // Hydratation « se souvenir de cet appareil » (spec 28) : au chargement, si une session est
+  // Hydratation de l'appareil mémorisé (spec 28) : au chargement, si une session est
   // présente, la master key absente et qu'un DEK persisté valide existe pour cet utilisateur, on le
   // restaure silencieusement (setMasterKey + pullAndMerge) — déverrouillage transparent sans
   // redemander le mot de passe. DEK absent/expiré → l'étape `unlock-password` à l'ouverture de la
@@ -69,6 +69,8 @@ export function AccountProvider({ authEnabled, children }: AccountProviderProps)
       if (cancelled || !dek) return;
       if (useCryptoSession.getState().unlocked) return; // déverrouillé entre-temps (dialog)
       useCryptoSession.getState().setMasterKey(dek);
+      // Expiration glissante : chaque visite repousse l'échéance (30 j sans visite → mot de passe).
+      void storeDeviceDek(userId, dek);
       try {
         await pullAndMerge();
       } catch {

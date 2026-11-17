@@ -21,6 +21,7 @@ import {
   purgeCloudData,
   upgradeLegacyToEnvelope,
   BootstrapLostError,
+  rewrapPassword,
 } from '@/src/presentation/lib/sync/sync-engine';
 import { storeDeviceDek, clearDeviceDek } from '@/src/presentation/lib/sync/device-key-store';
 
@@ -29,9 +30,8 @@ type Step =
   | 'password' // saisie mot de passe (sign in / sign up)
   | 'forgot-password' // saisie email → envoi du reset (spec 26)
   | 'forgot-password-sent' // confirmation envoi reset
-  | 'magic-link-sent' // confirmation envoi lien magique
-  | 'unlock-password' // reload / reset legacy : (re)saisie du mot de passe (routine) — spec 28
-  | 'unlock-recovery' // urgence / magic-link / legacy : saisie de la clé de récupération — spec 28
+  | 'unlock-password' // DEK de l'appareil absent / reset legacy : (re)saisie du mot de passe — spec 28
+  | 'unlock-recovery' // urgence (mot de passe réinitialisé) / legacy : clé de récupération — spec 28
   | 'recovery-display' // 1ʳᵉ fois / reset : on montre la recovery key (e-mailée en filet) — spec 28
   | 'migrating' // migration local → cloud en cours
   | 'done'; // compte ouvert + sync active
@@ -46,14 +46,17 @@ interface AccountDialogProps {
 /**
  * Modale de compte custom (pas de composants AuthView pré-construits) — spec 22 §7, spec 28.
  *
- * Machine à états spec 28 : le déverrouillage routine se fait au **mot de passe**, la **clé de
- * récupération** est l'urgence (compte perdu / mot de passe oublié) ET le déverrouillage routine des
- * comptes magic-link (sans mot de passe). Une enveloppe DEK/KEK (`kind='keyEnvelope'`) gate le
- * premier-login vs retour : présente → `unlockWithPassword` (transparent si mot de passe en state) ;
- * absente → `bootstrapEnvelope` (inscription) ou migration legacy.
+ * Machine à états spec 28 : la connexion e-mail + **mot de passe** déverrouille tout. La **clé de
+ * récupération** ne sert qu'en urgence : mot de passe réinitialisé (l'ancien wrap ne s'ouvre plus) ou
+ * compte legacy / ex-magic-link sans wrap mot de passe. Dans ces cas, une fois la clé saisie, le DEK
+ * est re-wrappé sous le mot de passe de connexion (`rewrapPassword`) → la clé n'est plus redemandée.
+ * Une enveloppe DEK/KEK (`kind='keyEnvelope'`) gate le premier-login vs retour : présente →
+ * `unlockWithPassword` (transparent à la connexion) ; absente → `bootstrapEnvelope` (inscription) ou
+ * migration legacy.
  *
- * « Se souvenir de cet appareil (30 jours) » : opt-in qui persiste le DEK (non-extractable) sur
- * l'appareil via IndexedDB → déverrouillage silencieux au reload (hydraté dans `o-account-provider`).
+ * L'appareil est toujours mémorisé après déverrouillage : le DEK (non-extractable) est persisté via
+ * IndexedDB → déverrouillage silencieux au reload (hydraté dans `o-account-provider`), purgé au
+ * signOut.
  *
  * UI maison sous `createPortal`, `useScrollLock`, `role="dialog"`, piège à focus maison
  * (`use-focus-trap`), Échap pour fermer, bottom-sheet mobile / centré desktop.
@@ -75,8 +78,9 @@ export function AccountDialog({ open, openHint, onClose }: AccountDialogProps) {
   const [generatedKey, setGeneratedKey] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  // spec 28 : case « se souvenir de cet appareil (30 jours) » sur les étapes de déverrouillage.
-  const [rememberDevice, setRememberDevice] = useState(false);
+  // Mot de passe validé par le serveur à la connexion (en mémoire, le temps de la modale) : sert à
+  // re-wrapper le DEK après un déverrouillage d'urgence par clé de récupération.
+  const loginPasswordRef = useRef('');
   // spec 28 : `unlock-recovery` en mode legacy (anciens blobs sans enveloppe) vs urgence.
   const [legacyMode, setLegacyMode] = useState(false);
   // spec 28 : `unlock-password` en mode 'unlock' (reload routine) ou 'reset' (legacy → repartir à zéro).
@@ -91,7 +95,6 @@ export function AccountDialog({ open, openHint, onClose }: AccountDialogProps) {
   useEffect(() => {
     if (!open) return;
     setError('');
-    setRememberDevice(false);
     const unlocked = useCryptoSession.getState().unlocked;
     if (session.data?.user && unlocked) {
       setStep('done');
@@ -154,13 +157,20 @@ export function AccountDialog({ open, openHint, onClose }: AccountDialogProps) {
             await maybeStoreDevice();
             setStep('done');
           } else if (r === 'wrong') {
-            setUnlockMode('unlock');
-            setStep('unlock-password');
-            setError('Mot de passe incorrect.');
-          } else if (r === 'no-pw-wrap') {
-            // Compte magic-link (pas de pwWrap) → déverrouillage routine par clé de récupération.
+            // Le serveur vient d'accepter ce mot de passe mais il n'ouvre pas l'enveloppe → il a été
+            // réinitialisé. La clé de récupération (une seule fois) re-liera le nouveau mot de passe.
             setLegacyMode(false);
             setStep('unlock-recovery');
+            setError(
+              'Votre mot de passe a changé. Saisissez une dernière fois votre clé de récupération : elle reliera vos données au nouveau mot de passe.',
+            );
+          } else if (r === 'no-pw-wrap') {
+            // Compte sans wrap mot de passe (ex-magic-link) → clé de récupération une fois, puis rewrap.
+            setLegacyMode(false);
+            setStep('unlock-recovery');
+            setError(
+              'Saisissez une dernière fois votre clé de récupération : vos données seront ensuite déverrouillées par votre mot de passe.',
+            );
           } else {
             // no-envelope (race deux-appareils entre temps) → on bootstrappe.
             await doBootstrap();
@@ -195,9 +205,9 @@ export function AccountDialog({ open, openHint, onClose }: AccountDialogProps) {
     }
   }
 
-  /** Persiste le DEK sur l'appareil si « se souvenir » est coché (opt-in, 30 j) — spec 28. */
+  /** Mémorise le DEK sur l'appareil (30 j glissants) : plus de mot de passe à chaque reload. */
   async function maybeStoreDevice() {
-    if (!rememberDevice || !session.data?.user) return;
+    if (!session.data?.user) return;
     const dek = useCryptoSession.getState().masterKey;
     if (dek) await storeDeviceDek(session.data.user.id, dek);
   }
@@ -209,7 +219,10 @@ export function AccountDialog({ open, openHint, onClose }: AccountDialogProps) {
    */
   async function doBootstrap() {
     try {
-      const key = await bootstrapEnvelope({ password: password || undefined, emailKey: true });
+      const key = await bootstrapEnvelope({
+        password: password || loginPasswordRef.current || undefined,
+        emailKey: true,
+      });
       setGeneratedKey(key);
       await maybeStoreDevice();
       setStep('recovery-display');
@@ -254,18 +267,16 @@ export function AccountDialog({ open, openHint, onClose }: AccountDialogProps) {
         return;
       }
     }
+    loginPasswordRef.current = password;
     // Le succès déclenche l'avancée via l'effet sur `session.data`.
   }
 
   /**
    * Soumet l'étape `unlock-password` — spec 28. En mode 'unlock' : déverrouillage routine au mot de
    * passe. En mode 'reset' (legacy sans ancienne clé) : purge les blobs legacy + bootstrap d'une
-   * nouvelle enveloppe (mot de passe courant pour le pwWrap, ou magic-link si vide).
+   * nouvelle enveloppe (mot de passe saisi, sinon celui de la connexion, pour le pwWrap).
    */
   async function submitUnlockPassword() {
-    if (unlockMode === 'reset' && !password && !rememberDevice) {
-      // Reset autorisé sans mot de passe (magic-link) ; on n'exige pas password ici.
-    }
     setBusy(true);
     setError('');
     try {
@@ -284,7 +295,9 @@ export function AccountDialog({ open, openHint, onClose }: AccountDialogProps) {
         await maybeStoreDevice();
         setStep('done');
       } else if (r === 'wrong') {
-        setError('Mot de passe incorrect.');
+        setError(
+          'Mot de passe incorrect. Si vous l’avez réinitialisé, utilisez votre clé de récupération.',
+        );
       } else if (r === 'no-pw-wrap') {
         setLegacyMode(false);
         setStep('unlock-recovery');
@@ -310,13 +323,22 @@ export function AccountDialog({ open, openHint, onClose }: AccountDialogProps) {
     setError('');
     try {
       if (legacyMode) {
-        await upgradeLegacyToEnvelope(recoveryKey.trim());
+        await upgradeLegacyToEnvelope(recoveryKey.trim(), loginPasswordRef.current || undefined);
         await maybeStoreDevice();
         setStep('done');
         return;
       }
       const r = await unlockWithRecoveryKey(recoveryKey.trim());
       if (r === 'ok') {
+        // Re-lie le mot de passe de connexion (validé par le serveur) : la clé de récupération ne
+        // sera plus demandée. Sans mot de passe connu (reload), l'appareil reste mémorisé.
+        if (loginPasswordRef.current) {
+          try {
+            await rewrapPassword(loginPasswordRef.current);
+          } catch {
+            console.warn('sync: rewrap du mot de passe échoué');
+          }
+        }
         await maybeStoreDevice();
         setStep('done');
       } else if (r === 'no-envelope') {
@@ -364,20 +386,6 @@ export function AccountDialog({ open, openHint, onClose }: AccountDialogProps) {
     }
   }
 
-  async function submitMagicLink() {
-    if (!email.trim()) return;
-    setBusy(true);
-    setError('');
-    try {
-      await authClient.signIn.magicLink({ email: email.trim(), callbackURL: accountCallbackURL });
-      setStep('magic-link-sent');
-    } catch {
-      setError("Impossible d'envoyer le lien de connexion.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
   async function signOut() {
     const userId = session.data?.user?.id;
     await authClient.signOut();
@@ -387,6 +395,7 @@ export function AccountDialog({ open, openHint, onClose }: AccountDialogProps) {
     setRecoveryKey('');
     setGeneratedKey('');
     setPassword('');
+    loginPasswordRef.current = '';
     setLegacyMode(false);
     setUnlockMode('unlock');
     onClose();
@@ -448,19 +457,6 @@ export function AccountDialog({ open, openHint, onClose }: AccountDialogProps) {
                 className="w-full rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition-opacity disabled:opacity-50"
               >
                 Continuer
-              </button>
-              <div className="flex items-center gap-2 py-0.5 text-[11px] text-muted-foreground">
-                <span className="h-px flex-1 bg-border" />
-                <span>ou</span>
-                <span className="h-px flex-1 bg-border" />
-              </div>
-              <button
-                type="button"
-                disabled={busy || !email.trim()}
-                onClick={submitMagicLink}
-                className="w-full rounded-lg border border-input px-3 py-2 text-sm transition-colors hover:bg-foreground/5 disabled:opacity-50"
-              >
-                {busy ? '…' : 'Recevoir un lien de connexion'}
               </button>
               {error && <p className="text-[12px] text-destructive">{error}</p>}
             </div>
@@ -582,27 +578,6 @@ export function AccountDialog({ open, openHint, onClose }: AccountDialogProps) {
             </div>
           )}
 
-          {/* Étape : confirmation envoi lien magique (spec 26). */}
-          {step === 'magic-link-sent' && (
-            <div className="space-y-3 py-2 text-center">
-              <Icon icon="hugeicons:mail-send-02" className="mx-auto h-8 w-8 text-primary" />
-              <p className="text-[13px] leading-snug text-muted-foreground">
-                Un lien de connexion a été envoyé à <strong className="text-foreground">{email}</strong>.
-                Cliquez dessus pour vous connecter — il expire dans 5 minutes et est à usage unique.
-              </p>
-              <button
-                type="button"
-                onClick={() => {
-                  setError('');
-                  setStep('email');
-                }}
-                className="w-full rounded-lg border border-input px-3 py-2 text-sm transition-colors hover:bg-foreground/5"
-              >
-                Retour
-              </button>
-            </div>
-          )}
-
           {/* Étape : (re)saisie du mot de passe — routine (reload) ou reset legacy — spec 28. */}
           {step === 'unlock-password' && (
             <div className="space-y-3">
@@ -618,15 +593,6 @@ export function AccountDialog({ open, openHint, onClose }: AccountDialogProps) {
                 placeholder="Mot de passe"
                 className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-primary"
               />
-              <label className="flex items-center gap-2 text-[12px] text-muted-foreground">
-                <input
-                  type="checkbox"
-                  checked={rememberDevice}
-                  onChange={(e) => setRememberDevice(e.target.checked)}
-                  className="h-3.5 w-3.5 accent-primary"
-                />
-                Se souvenir de cet appareil (30 jours)
-              </label>
               <button
                 type="button"
                 disabled={busy || (unlockMode === 'unlock' && !password)}
@@ -668,7 +634,7 @@ export function AccountDialog({ open, openHint, onClose }: AccountDialogProps) {
             </div>
           )}
 
-          {/* Étape : saisie de la clé de récupération — urgence / magic-link / legacy — spec 28. */}
+          {/* Étape : saisie de la clé de récupération — urgence (mot de passe réinitialisé) / legacy — spec 28. */}
           {step === 'unlock-recovery' && (
             <div className="space-y-3">
               {legacyMode ? (
@@ -680,8 +646,8 @@ export function AccountDialog({ open, openHint, onClose }: AccountDialogProps) {
                 </p>
               ) : (
                 <p className="text-[13px] leading-snug text-muted-foreground">
-                  Saisissez votre clé de récupération pour déverrouiller vos données. Elle est
-                  chiffrée localement et ne quitte pas ce navigateur.
+                  Saisissez votre clé de récupération (reçue par e-mail à la création du compte) pour
+                  déverrouiller vos données. Elle ne quitte pas ce navigateur.
                 </p>
               )}
               <input
@@ -691,15 +657,6 @@ export function AccountDialog({ open, openHint, onClose }: AccountDialogProps) {
                 placeholder="Clé de récupération"
                 className="w-full rounded-lg border border-input bg-background px-3 py-2 font-mono text-[13px] outline-none focus:border-primary"
               />
-              <label className="flex items-center gap-2 text-[12px] text-muted-foreground">
-                <input
-                  type="checkbox"
-                  checked={rememberDevice}
-                  onChange={(e) => setRememberDevice(e.target.checked)}
-                  className="h-3.5 w-3.5 accent-primary"
-                />
-                Se souvenir de cet appareil (30 jours)
-              </label>
               <button
                 type="button"
                 disabled={busy || !recoveryKey.trim()}
@@ -783,8 +740,8 @@ export function AccountDialog({ open, openHint, onClose }: AccountDialogProps) {
                 </span>
               </div>
               <p className="text-[12px] leading-snug text-muted-foreground">
-                Vos favoris et votre position de lecture se synchronisent sur vos appareils.
-                Pas de score, pas de statistique.
+                Votre historique, votre position de lecture, vos favoris, signets et notes se
+                synchronisent sur vos appareils. Pas de score, pas de statistique.
               </p>
               <Link
                 href="/account"

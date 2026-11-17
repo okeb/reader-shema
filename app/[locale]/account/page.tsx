@@ -146,7 +146,7 @@ export default function AccountPage() {
                     }
                     className="text-[12px] text-muted-foreground underline underline-offset-2 transition-colors hover:text-foreground"
                   >
-                    Utiliser ma clé de récupération
+                    Mot de passe oublié&nbsp;? Utiliser ma clé de récupération
                   </button>
                 </div>
               </div>

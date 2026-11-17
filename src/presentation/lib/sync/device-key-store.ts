@@ -9,11 +9,12 @@
  *
  * Pourquoi IndexedDB (pas localStorage) : un `CryptoKey` est structured-cloneable et se stocke dans
  * IndexedDB tout en restant non-extractable — pas d'octets bruts sur disque, contrairement à une
- * base64 en localStorage. Le compromis friction/sécurité est assumé (opt-in) : quiconque accède à
+ * base64 en localStorage. Le compromis friction/sécurité est assumé : quiconque accède à
  * l'appareil peut utiliser le DEK tant qu'il est valide, mais ne l'exfiltre pas en octets.
  *
- * Opt-in : l'entrée n'est créée que si l'utilisateur coche « se souvenir de cet appareil » à
- * l'étape `unlock-password` / `unlock-recovery`. Elle est purgée au signOut / suppression de compte.
+ * Systématique : l'entrée est créée à chaque déverrouillage (connexion par mot de passe ou clé de
+ * récupération) et son échéance est repoussée à chaque visite. Elle est purgée au signOut /
+ * suppression de compte.
  */
 
 const DB_NAME = 'bym:device-keys';

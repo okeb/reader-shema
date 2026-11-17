@@ -8,8 +8,7 @@ import { BODY_TEXT, CODE_BLOCK, MUTED_TEXT } from '@/lib/email/theme';
  * Pas de bouton : c'est un **code à conserver**, pas à cliquer. Affichée dans un bloc `<code>`
  * monospace adaptatif (`CODE_BLOCK` : fond `code`/`code-dark`, bord `line`/`line-dark`, bascule
  * `dark:` générée par `<Tailwind>`), `break-all`. C'est la clé d'URGENCE pour retrouver l'accès
- * aux données synchronisées si le mot de passe est perdu (ou déverrouillage routine pour les
- * comptes magic-link). Jamais persistée serveur.
+ * aux données synchronisées si le mot de passe est perdu. Jamais persistée serveur.
  */
 export function RecoveryKeyEmail({ recoveryKey, unsubscribeUrl }: { recoveryKey: string; unsubscribeUrl?: string }) {
   return (

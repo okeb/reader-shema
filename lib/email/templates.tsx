@@ -21,12 +21,11 @@
 import { renderEmail } from '@/lib/email/render';
 import { VerificationEmail } from '@/lib/email/templates/verification';
 import { ResetPasswordEmail } from '@/lib/email/templates/reset-password';
-import { MagicLinkEmail } from '@/lib/email/templates/magic-link';
 import { RecoveryKeyEmail } from '@/lib/email/templates/recovery-key';
 import { WelcomeEmail } from '@/lib/email/templates/welcome';
 
 // Composants React ré-exportés (prévisualisation / réutilisation).
-export { VerificationEmail, ResetPasswordEmail, MagicLinkEmail, RecoveryKeyEmail, WelcomeEmail };
+export { VerificationEmail, ResetPasswordEmail, RecoveryKeyEmail, WelcomeEmail };
 
 /** E-mail de vérification d'adresse (click → `/api/auth/verify-email?token=…`). */
 export async function verificationEmailHtml(url: string, unsubscribeUrl?: string): Promise<string> {
@@ -36,11 +35,6 @@ export async function verificationEmailHtml(url: string, unsubscribeUrl?: string
 /** E-mail de réinitialisation de mot de passe (click → `/api/auth/reset-password/:token?…`). */
 export async function resetPasswordEmailHtml(url: string, unsubscribeUrl?: string): Promise<string> {
   return renderEmail(<ResetPasswordEmail url={url} unsubscribeUrl={unsubscribeUrl} />);
-}
-
-/** Lien magique de connexion (click → `/api/auth/magic-link/verify?token=…`). */
-export async function magicLinkEmailHtml(email: string, url: string, unsubscribeUrl?: string): Promise<string> {
-  return renderEmail(<MagicLinkEmail email={email} url={url} unsubscribeUrl={unsubscribeUrl} />);
 }
 
 /**

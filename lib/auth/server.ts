@@ -1,6 +1,5 @@
 import { betterAuth } from 'better-auth';
 import { nextCookies } from 'better-auth/next-js';
-import { magicLink } from 'better-auth/plugins/magic-link';
 import { env } from '@/env.mjs';
 import { pool } from '@/src/infrastructure/database/pg-pool';
 import { sendEmail } from '@/lib/email/transport';
@@ -8,7 +7,6 @@ import { createUnsubscribeUrl } from '@/lib/email/unsubscribe';
 import {
   verificationEmailHtml,
   resetPasswordEmailHtml,
-  magicLinkEmailHtml,
   welcomeEmailHtml,
 } from '@/lib/email/templates';
 
@@ -17,7 +15,7 @@ import {
  *
  * Remplace le wrapper Neon Managed Better Auth : on possède désormais les tables d'auth
  * (`user`, `session`, `account`, `verification`) dans `public`, et on câble `sendEmail`
- * (Resend) pour la vérification d'e-mail, le mot de passe oublié et le lien magique.
+ * (Resend) pour la vérification d'e-mail, le mot de passe oublié (la connexion par lien magique a été retirée : e-mail + mot de passe uniquement).
  *
  * API Better Auth 1.4.18 (vérifiée contre le package installé) :
  *  - `database` accepte un `pg.Pool` (duck-typé vers Kysely `PostgresDialect`) — d'où le cast.
@@ -96,21 +94,11 @@ export const auth = configured
       },
       plugins: [
         nextCookies(), // propagation Set-Cookie en App Router (obligatoire)
-        magicLink({
-          expiresIn: 5 * 60, // 5 min, à usage unique
-          sendMagicLink: async ({ email, url }) => {
-            await sendEmail({
-              to: email,
-              subject: 'Votre lien de connexion — ShemaProject',
-              html: await magicLinkEmailHtml(email, url, createUnsubscribeUrl(email)),
-            });
-          },
-        }),
       ],
       // Mail de bienvenue post-inscription (spec 32) — déclenché une fois à la création du user.
       // API vérifiée contre better-auth@1.4.18 : `databaseHooks.user.create.after(user, ctx)`.
       // Idempotent par construction (le hook ne se déclenche qu'une fois par user). `name` peut
-      // être absent (compte magic-link sans profil) → chaîne vide. Le no-op transport dev
+      // être absent (compte sans profil) → chaîne vide. Le no-op transport dev
       // (`RESEND_API_KEY` absent) préserve le flux sans casser l'inscription.
       databaseHooks: {
         user: {

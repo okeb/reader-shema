@@ -4,7 +4,7 @@ import { auth } from '@/lib/auth/server';
 /**
  * Handler d'API catch-all pour Better Auth (self-hosted) — spec 26.
  * Expose `/api/auth/*` (sign-in, sign-up, sign-out, get-session, verify-email,
- * request-password-reset, reset-password, magic-link/*, …).
+ * request-password-reset, reset-password, …).
  * 503 tant que Better Auth n'est pas configuré (mode local-only).
  */
 const handler = auth ? toNextJsHandler(auth) : null;
