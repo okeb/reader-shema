@@ -88,11 +88,14 @@ function scheduleFlush(): void {
 
 // --- push ----------------------------------------------------------------------
 
-async function pushKind(kind: SyncKind): Promise<void> {
+/**
+ * Pousse un kind. Renvoie `false` si le serveur a rejeté le blob (LWW : le distant est plus récent).
+ */
+async function pushKind(kind: SyncKind): Promise<boolean> {
   const adapter = syncAdapters[kind];
-  if (!adapter || !isKindActive(kind)) return;
+  if (!adapter || !isKindActive(kind)) return true;
   const masterKey = useCryptoSession.getState().masterKey;
-  if (!masterKey) return; // verrouillé : on garde en file, on réessaiera au déblocage
+  if (!masterKey) return true; // verrouillé : on garde en file, on réessaiera au déblocage
 
   const plaintext = adapter.serialize();
   const { ciphertext, nonce } = await encryptBlob(masterKey, plaintext);
@@ -100,17 +103,30 @@ async function pushKind(kind: SyncKind): Promise<void> {
   // enfile les kinds sans « bumper » le méta (meta[kind] === 0) ; si on poussait 0, le
   // blob serait daté 0 et ignoré au pull sur un autre appareil (`remote.updatedAt >
   // localTs` → `0 > 0` = faux). On date donc au moment du push quand l'horloge est vide.
+  // Kind « ensemble » : le payload vient d'être fusionné avec le distant (pull avant push) →
+  // il le contient, on le date maintenant pour qu'il passe la garde LWW.
   const metaTs = useSyncMeta.getState().get(kind);
-  const updatedAt = metaTs > 0 ? metaTs : Date.now();
+  const updatedAt = adapter.merge ? Math.max(Date.now(), metaTs + 1) : metaTs > 0 ? metaTs : Date.now();
   const blob: EncryptedBlob = { ciphertext, nonce, updatedAt };
 
   const bus = getCqrsBus();
   const res = await bus.executeCommand<ICommandResult<{ updatedAt: number }>>(
     new PushSyncCommand(kind, blob),
   );
-  // Le serveur renvoie l'horodatage retenu (LWW) — on aligne l'horloge locale.
-  useSyncMeta.getState().set(kind, res.data.updatedAt);
+  const accepted = res.data.updatedAt === updatedAt;
+  if (!accepted && adapter.merge) {
+    // Un autre appareil a écrit entre notre pull et notre push : on reste en file, le prochain
+    // flush re-fusionnera avant de repousser (rien n'est perdu).
+    return false;
+  }
+  if (accepted) {
+    // Le serveur renvoie l'horodatage retenu — on aligne l'horloge locale.
+    useSyncMeta.getState().set(kind, res.data.updatedAt);
+  }
+  // Rejet LWW d'un kind « remplacement » : on n'avance PAS l'horloge, pour que le pull qui suit
+  // hydrate la version distante plus récente au lieu de l'ignorer.
   useSyncQueue.getState().markPushed(kind);
+  return accepted;
 }
 
 /** Pousse tous les kinds en attente (file offline). */
@@ -119,10 +135,17 @@ export async function flush(): Promise<void> {
   if (!isOnline()) return;
   if (!useCryptoSession.getState().unlocked) return;
 
+  // Kind « ensemble » en attente : on tire et fusionne d'abord, pour que le push porte l'union
+  // des appareils au lieu d'écraser les entrées des autres.
+  if (useSyncQueue.getState().pending.some((k) => syncAdapters[k]?.merge)) {
+    await pullAndMerge();
+  }
+
+  let rejected = false;
   const pending = [...useSyncQueue.getState().pending];
   for (const kind of pending) {
     try {
-      await pushKind(kind);
+      if (!(await pushKind(kind))) rejected = true;
     } catch (err) {
       if (err instanceof NotAuthenticatedError || err instanceof AuthNotConfiguredError) {
         // Pas de compte / Neon absent : on garde la file, mode local-only silencieux.
@@ -132,6 +155,9 @@ export async function flush(): Promise<void> {
       console.warn(`sync: echec push ${kind}`, err);
     }
   }
+  // Un push rejeté = le distant est plus récent : on le récupère tout de suite (le pull
+  // replanifie un flush si une union reste à republier).
+  if (rejected) await pullAndMerge();
 }
 
 // --- pull ----------------------------------------------------------------------
@@ -166,6 +192,20 @@ export async function pullAndMerge(): Promise<void> {
       if (!adapter || !remote || !isKindActive(kind)) continue;
 
       const localTs = useSyncMeta.getState().get(kind);
+      if (adapter.merge) {
+        // Kind « ensemble » : fusion à chaque pull, quel que soit l'horodatage (une horloge locale
+        // plus récente ne doit pas faire ignorer les entrées d'un autre appareil).
+        try {
+          const plaintext = await decryptBlob(masterKey, remote.ciphertext, remote.nonce);
+          adapter.hydrate(plaintext ? JSON.parse(plaintext) : null);
+          useSyncMeta.getState().set(kind, Math.max(localTs, remote.updatedAt));
+          // Le local contient des entrées absentes du distant → on republie l'union.
+          if (adapter.serialize() !== plaintext) useSyncQueue.getState().enqueue(kind);
+        } catch (err) {
+          console.warn(`sync: echec decrypt ${kind}`, err);
+        }
+        continue;
+      }
       if (remote.updatedAt > localTs) {
         try {
           const plaintext = await decryptBlob(masterKey, remote.ciphertext, remote.nonce);
@@ -181,6 +221,8 @@ export async function pullAndMerge(): Promise<void> {
   } finally {
     suppress = false;
   }
+  // Modifs locales faites pendant le verrouillage, ou union à republier après fusion.
+  if (useSyncQueue.getState().pending.length > 0) scheduleFlush();
 }
 
 // --- suppression du compte cloud ----------------------------------------------
@@ -262,23 +304,47 @@ export async function migrate(): Promise<void> {
 
 let listenersAttached = false;
 
-/** Branche `online` + `visibilitychange` (hidden) pour vider la file. */
+/** Intervalle minimal entre deux pulls déclenchés par un retour sur l'onglet. */
+const PULL_THROTTLE_MS = 30_000;
+let lastPullAt = 0;
+
+/** Tire les changements des autres appareils (throttlé), puis vide la file. */
+async function refreshFromCloud(): Promise<void> {
+  if (!isOnline() || !useCryptoSession.getState().unlocked) return;
+  const now = Date.now();
+  if (now - lastPullAt < PULL_THROTTLE_MS) return;
+  lastPullAt = now;
+  await pullAndMerge();
+}
+
+/**
+ * Branche `online` + `visibilitychange` : on vide la file en quittant l'onglet (hidden) et on tire
+ * les changements des autres appareils en y revenant (visible / focus / retour en ligne) — c'est ce
+ * qui permet de reprendre sur une machine ce qu'on a lu sur une autre sans recharger la page.
+ */
 export function attachSyncListeners(): () => void {
   if (listenersAttached || typeof window === 'undefined') {
     return () => void 0;
   }
   listenersAttached = true;
 
-  const onOnline = () => void flush();
+  const onOnline = () => {
+    lastPullAt = 0;
+    void refreshFromCloud().then(flush);
+  };
   const onVisibility = () => {
     if (document.visibilityState === 'hidden') void flush();
+    else void refreshFromCloud();
   };
+  const onFocus = () => void refreshFromCloud();
 
   window.addEventListener('online', onOnline);
+  window.addEventListener('focus', onFocus);
   document.addEventListener('visibilitychange', onVisibility);
 
   return () => {
     window.removeEventListener('online', onOnline);
+    window.removeEventListener('focus', onFocus);
     document.removeEventListener('visibilitychange', onVisibility);
     listenersAttached = false;
   };
@@ -348,6 +414,9 @@ export async function unlockWithPassword(password: string): Promise<UnlockResult
     return 'wrong';
   }
   useCryptoSession.getState().setMasterKey(dek);
+  // Déverrouillage explicite sur cet appareil = la sync y devient active (sinon un 2ᵉ appareil
+  // tirait le cloud une fois mais ne poussait jamais ses propres changements).
+  useAccount.getState().setSyncEnabled(true);
   await pullAndMerge();
   return 'ok';
 }
@@ -372,6 +441,9 @@ export async function unlockWithRecoveryKey(recoveryKey: string): Promise<Unlock
     return 'wrong';
   }
   useCryptoSession.getState().setMasterKey(dek);
+  // Déverrouillage explicite sur cet appareil = la sync y devient active (sinon un 2ᵉ appareil
+  // tirait le cloud une fois mais ne poussait jamais ses propres changements).
+  useAccount.getState().setSyncEnabled(true);
   await pullAndMerge();
   return 'ok';
 }

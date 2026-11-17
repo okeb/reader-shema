@@ -40,6 +40,12 @@ export interface SyncAdapter {
   readonly kind: SyncKind;
   /** `true` si le kind n'est sync qu'avec l'opt-in réglages. */
   optIn?: boolean;
+  /**
+   * `true` pour un kind « ensemble » : au pull, `hydrate` FUSIONNE le distant dans le local (pas de
+   * LWW). Le moteur fusionne alors à chaque pull, et tire avant chaque push pour ne jamais écraser
+   * les entrées d'un autre appareil.
+   */
+  merge?: boolean;
   serialize(): string;
   hydrate(parsed: unknown): void;
   hasLocal(): boolean;
@@ -161,6 +167,7 @@ function mergeSelections(a: string[] | undefined, b: string[] | undefined): stri
 
 const historyAdapter: SyncAdapter = {
   kind: 'history',
+  merge: true,
   serialize() {
     return JSON.stringify(useNavigationHistory.getState().history);
   },
