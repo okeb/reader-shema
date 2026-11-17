@@ -11,6 +11,14 @@ import { cn } from '@/lib/utils';
 export const GLASS_PILL = 'glass bg-foreground/[0.02] backdrop-blur-2xl';
 
 /**
+ * Surface de la barre de sélection de verset (et de ses menus) : toujours sombre et opaque, même
+ * en mode clair, pour que l'outil se détache nettement du texte. La classe `dark` rebascule les
+ * tokens du thème (`--foreground`, `--accent`…) sur leurs valeurs sombres pour ce sous-arbre ; à
+ * combiner après `GLASS_PILL` via `cn` (le fond opaque remplace la teinte translucide).
+ */
+export const SELECTION_SURFACE = 'dark border border-white/[8%] bg-[#1f1e1c] text-foreground';
+
+/**
  * Style de base d'un élément du dock : bouton-icône plat (sans ombre ni bordure). Le relief est
  * porté par le conteneur du dock, façon dock macOS.
  */

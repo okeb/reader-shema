@@ -2,7 +2,11 @@
 
 import { Icon } from '@iconify/react';
 import { cn } from '@/lib/utils';
-import { FloatingButton, GLASS_PILL } from '@/src/presentation/components/atoms/a-floating-button';
+import {
+  FloatingButton,
+  GLASS_PILL,
+  SELECTION_SURFACE,
+} from '@/src/presentation/components/atoms/a-floating-button';
 import { ReadingSettings } from './m-reading-settings';
 import { VersionPicker } from './m-version-picker';
 import { DockOverflow } from './m-dock-overflow';
@@ -67,9 +71,10 @@ export function ReaderDock({
         'fixed bottom-5 left-1/2 z-30 flex max-w-[calc(100vw-1.5rem)] -translate-x-1/2 items-center gap-1',
         GLASS_PILL,
         'border border-foreground/5',
-        // Sélection : barre d'actions sur deux lignes, sur toute la largeur (cibles tactiles larges).
+        // Sélection : barre d'actions sur deux lignes, sur toute la largeur (cibles tactiles larges),
+        // toujours sombre même en mode clair (SELECTION_SURFACE).
         clusterMode
-          ? 'w-[calc(100vw-1.5rem)] max-w-md overflow-visible rounded-[22px]'
+          ? cn(SELECTION_SURFACE, 'w-[calc(100vw-1.5rem)] max-w-md overflow-visible rounded-[22px]')
           : 'overflow-x-auto rounded-full px-1.5 py-1',
       )}
     >

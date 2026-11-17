@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { BOOKMARK_COLORS } from '@/src/domain/entities';
 import type { BookmarkGroup } from '@/src/domain/entities';
 import { PortalPopover } from '@/src/presentation/components/atoms/a-portal-popover';
+import { SELECTION_SURFACE } from '@/src/presentation/components/atoms/a-floating-button';
 
 export interface BookmarkPickerProps {
   /** Ancre du popover (bouton ⋯ du cluster) — portailé pour échapper au backdrop-root du dock. */
@@ -58,7 +59,8 @@ export function BookmarkPicker({
       align="right"
       width={224}
       onClose={onClose}
-      className="w-56 overflow-hidden rounded-xl p-1"
+      // Ouvert depuis la barre de sélection : même surface sombre qu'elle (cf. SELECTION_SURFACE).
+      className={cn(SELECTION_SURFACE, 'w-56 overflow-hidden rounded-xl p-1')}
     >
       {!creating ? (
         <>

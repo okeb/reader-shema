@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type MouseEvent } from 'react';
 import { Icon } from '@iconify/react';
 import { cn } from '@/lib/utils';
-import { GLASS_PILL } from '@/src/presentation/components/atoms/a-floating-button';
+import { GLASS_PILL, SELECTION_SURFACE } from '@/src/presentation/components/atoms/a-floating-button';
 import { PortalPopover } from '@/src/presentation/components/atoms/a-portal-popover';
 import { BookmarkPicker } from '@/src/presentation/components/molecules/m-bookmark-picker';
 import { HIGHLIGHT_COLORS } from '@/src/domain/entities';
@@ -80,7 +80,7 @@ const ACTION_BTN_BARE =
   'flex h-14 min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-[14px] text-foreground transition-colors hover:bg-accent hover:text-primary';
 
 /** Libellé sous l'icône. */
-const LABEL_CLS = 'font-sans font-medium leading-none';
+const LABEL_CLS = 'font-sans font-medium';
 
 /**
  * Cluster d'actions présentationnel qui s'applique à toute la sélection : partager, favori,
@@ -131,9 +131,11 @@ export function VerseActions({
   const iconCls = bare ? 'h-[22px] w-[22px]' : 'h-4 w-4';
   // Dock : 11 px, 10 px sur les très petits écrans (< 360 px) ; « Hébreu/Grec » peut alors passer
   // sur deux lignes après le « / » plutôt que déborder de son bouton.
+  // (`leading-none` après la taille : tailwind-merge écarte un interligne placé avant `text-*`.)
   const labelCls = cn(
     LABEL_CLS,
     bare ? 'text-center text-[11px] max-[359px]:text-[10px]' : 'whitespace-nowrap text-[10px]',
+    'leading-none',
   );
   // Emplacement d'un bouton à popover (envoi, menu ⋯) : prend sa part de largeur dans le dock.
   const slotCls = bare ? 'relative flex min-w-0 flex-1' : 'relative inline-flex';
@@ -191,7 +193,7 @@ export function VerseActions({
             anchorRef={sendRef}
             align="left"
             onClose={() => setSendOpen(false)}
-            className="flex w-44 flex-col gap-0.5 rounded-xl p-1"
+            className={cn(SELECTION_SURFACE, 'flex w-44 flex-col gap-0.5 rounded-xl p-1')}
           >
             {onCopyVerse && (
               <button
@@ -290,7 +292,8 @@ export function VerseActions({
           </span>
           <span className={labelCls}>
             Hébreu/
-            <wbr />
+            {/* Coupure possible seulement dans le dock (Chrome coupe au <wbr> malgré nowrap). */}
+            {bare && <wbr />}
             Grec
           </span>
         </button>
@@ -336,7 +339,7 @@ export function VerseActions({
             anchorRef={overflowRef}
             align="right"
             onClose={() => setMenuOpen(false)}
-            className="flex w-44 flex-col gap-0.5 rounded-xl p-1"
+            className={cn(SELECTION_SURFACE, 'flex w-44 flex-col gap-0.5 rounded-xl p-1')}
           >
             {groups && onBookmark && (
               <button
@@ -401,7 +404,7 @@ export function VerseActions({
             align="right"
             width={220}
             onClose={() => setHlPickerOpen(false)}
-            className="flex items-center gap-1.5 rounded-xl p-2"
+            className={cn(SELECTION_SURFACE, 'flex items-center gap-1.5 rounded-xl p-2')}
           >
             {HIGHLIGHT_COLORS.map((c) => (
               <button
@@ -474,7 +477,9 @@ export function VerseActions({
   return (
     <span
       className={cn(
-        `inline-flex flex-row items-center gap-1 rounded-full ${GLASS_PILL} p-1 shadow-lg`,
+        'inline-flex flex-row items-center gap-1 rounded-full p-1 shadow-lg',
+        GLASS_PILL,
+        SELECTION_SURFACE,
         className,
       )}
     >
