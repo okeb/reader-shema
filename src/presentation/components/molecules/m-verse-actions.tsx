@@ -64,18 +64,26 @@ export interface VerseActionsProps {
  */
 export type VerseActionsBundle = Omit<VerseActionsProps, 'bare' | 'className' | 'onMenuToggle'>;
 
+/**
+ * Bouton d'action libellé : icône + mot court dessous, pour que chaque action se comprenne sans
+ * info-bulle (absente au tactile). Libellés en 10 px pour que la barre tienne sur un petit écran.
+ */
 const ACTION_BTN =
-  'flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary';
+  'flex h-10 min-w-[44px] flex-col items-center justify-center gap-0.5 rounded-xl px-1 text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary';
 
-/** Variante « dock » : boutons 44 px alignés sur FLOATING_BTN (cf. a-floating-button). Plats —
- *  le relief est porté par le conteneur du dock (mode cluster tactile). Icônes en
- *  text-foreground (noir en clair / blanc en sombre). */
+/** Variante « dock » : cibles 44 px minimum (cf. a-floating-button). Plates — le relief est porté
+ *  par le conteneur du dock (mode cluster tactile). Icônes en text-foreground (noir en clair /
+ *  blanc en sombre). */
 const ACTION_BTN_BARE =
-  'flex h-11 w-11 items-center justify-center rounded-xl text-foreground transition-colors hover:bg-accent hover:text-primary';
+  'flex h-[52px] min-w-[44px] flex-col items-center justify-center gap-0.5 rounded-xl px-1 text-foreground transition-colors hover:bg-accent hover:text-primary';
+
+/** Libellé sous l'icône. */
+const LABEL_CLS = 'whitespace-nowrap font-sans text-[10px] font-medium leading-none';
 
 /**
- * Cluster d'actions présentationnel (horizontal, compact) qui s'applique à toute la sélection :
- * copier, favori, signet, Strong, effacer.
+ * Cluster d'actions présentationnel (horizontal) qui s'applique à toute la sélection : partager,
+ * favori, Hébreu/Grec (Strong), note, plus (signet, surlignage), effacer. Chaque bouton porte un
+ * libellé visible sous son icône.
  */
 export function VerseActions({
   count,
@@ -150,7 +158,8 @@ export function VerseActions({
     <span
       className={cn(
         bare
-          ? 'inline-flex flex-row items-center gap-0.5'
+          ? // Sans espacement : les boutons libellés tiennent dans le dock d'un écran de 375 px.
+            'inline-flex flex-row items-center'
           : `inline-flex flex-row items-center gap-0.5 rounded-full ${GLASS_PILL} p-1 shadow-lg`,
         className,
       )}
@@ -176,6 +185,7 @@ export function VerseActions({
               icon={linkCopied || verseCopied || shared ? 'hugeicons:checkmark-square-03' : 'hugeicons:share-04'}
               className={cn(iconCls, (linkCopied || verseCopied || shared) && 'text-green-500')}
             />
+            <span className={LABEL_CLS}>Partager</span>
           </button>
 
           <PortalPopover
@@ -258,29 +268,52 @@ export function VerseActions({
         onClick={stop(onToggleFavorite)}
       >
         <Icon icon={favorited ? 'ph:heart-fill' : 'ph:heart'} className={cn(iconCls, favorited && 'text-primary')} />
+        <span className={LABEL_CLS}>Favori</span>
       </button>
 
+      {/* Mots originaux (concordance Strong) : la lettre א dit « langue d'origine » mieux qu'un
+          livre ouvert. Surligné tant que le panneau est ouvert (interrupteur). */}
       {onStrongs && (
         <button
           type="button"
-          className={cn(btnCls, strongsOpen && 'text-primary')}
-          title={strongsOpen ? 'Masquer les Strong' : 'Afficher les Strong'}
+          className={cn(btnCls, strongsOpen && 'bg-primary/10 text-primary')}
+          title={strongsOpen ? 'Masquer les mots hébreux / grecs' : 'Afficher les mots hébreux / grecs (Strong)'}
+          aria-pressed={strongsOpen}
           onClick={stop(onStrongs)}
         >
-          <Icon icon="hugeicons:book-open-01" className={iconCls} />
+          <span
+            aria-hidden="true"
+            className={cn(
+              'flex items-center justify-center font-serif font-semibold leading-none',
+              bare ? 'h-5 w-5 text-[19px]' : 'h-4 w-4 text-[15px]',
+            )}
+          >
+            א
+          </span>
+          <span className={LABEL_CLS}>Hébreu/Grec</span>
         </button>
       )}
 
       {/* Note — promue au premier niveau (spec 30) : accès direct à l'éditeur de la sélection,
-          sans popover intermédiaire. `sticky-note-01` sans note, `note-edit` accentué avec note. */}
+          sans popover intermédiaire. Crayon identique avec ou sans note ; un point signale qu'une
+          note existe déjà. */}
       {onNote && (
         <button
           type="button"
-          className={cn(btnCls, hasNote && 'text-primary')}
+          className={btnCls}
           title={hasNote ? 'Modifier la note' : 'Noter'}
           onClick={stop(onNote!)}
         >
-          <Icon icon={hasNote ? 'hugeicons:note-edit' : 'hugeicons:sticky-note-01'} className={iconCls} />
+          <span className="relative flex">
+            <Icon icon="hugeicons:pencil-edit-02" className={iconCls} />
+            {hasNote && (
+              <span
+                aria-hidden="true"
+                className="absolute -right-1 -top-0.5 h-[7px] w-[7px] rounded-full bg-primary"
+              />
+            )}
+          </span>
+          <span className={LABEL_CLS}>Note</span>
         </button>
       )}
 
@@ -293,6 +326,7 @@ export function VerseActions({
             onClick={stop(() => setMenuOpen((v) => !v))}
           >
             <Icon icon="hugeicons:more-vertical-circle-01" className={cn(iconCls, 'rotate-90')} />
+            <span className={LABEL_CLS}>Plus</span>
           </button>
 
           <PortalPopover
@@ -403,7 +437,18 @@ export function VerseActions({
         </span>
       )}
 
-      <button type="button" className={cn(btnCls, 'text-primary')} title="Effacer la sélection" onClick={stop(onClear)}>
+      {/* Effacer : action de sortie, séparée des actions sur le verset. */}
+      <span aria-hidden="true" className="mx-0.5 h-6 w-px bg-border" />
+      <button
+        type="button"
+        className={cn(
+          'flex items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary',
+          bare ? 'h-11 w-10' : 'h-8 w-8',
+        )}
+        title="Effacer la sélection"
+        aria-label="Effacer la sélection"
+        onClick={stop(onClear)}
+      >
         <Icon icon="hugeicons:cancel-01" className={iconCls} />
       </button>
     </span>
