@@ -10,8 +10,10 @@ import { HIGHLIGHT_COLORS } from '@/src/domain/entities';
 import type { BookmarkGroup } from '@/src/domain/entities';
 
 export interface VerseActionsProps {
-  /** Nombre de versets sélectionnés (badge). */
+  /** Nombre de versets sélectionnés (pastille « N ✕ » / en-tête du dock). */
   count: number;
+  /** Référence lisible de la sélection (ex. « Jean 3:16-17 »), affichée en tête du dock mobile. */
+  reference?: string;
   /** État « lien copié » (feedback d'icône) — propage le thème appliqué dans l'URL (spec 14). */
   linkCopied?: boolean;
   onCopyLink?: () => void;
@@ -66,27 +68,30 @@ export type VerseActionsBundle = Omit<VerseActionsProps, 'bare' | 'className' | 
 
 /**
  * Bouton d'action libellé : icône + mot court dessous, pour que chaque action se comprenne sans
- * info-bulle (absente au tactile). Libellés en 10 px pour que la barre tienne sur un petit écran.
+ * info-bulle (absente au tactile).
  */
 const ACTION_BTN =
-  'flex h-10 min-w-[44px] flex-col items-center justify-center gap-0.5 rounded-xl px-1 text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary';
+  'flex h-10 min-w-[52px] flex-col items-center justify-center gap-0.5 rounded-xl px-1.5 text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary';
 
-/** Variante « dock » : cibles 44 px minimum (cf. a-floating-button). Plates — le relief est porté
- *  par le conteneur du dock (mode cluster tactile). Icônes en text-foreground (noir en clair /
- *  blanc en sombre). */
+/** Variante « dock » (mobile) : les actions se partagent toute la largeur de la barre (~68 px
+ *  chacune sur un téléphone). Plates — le relief est porté par le conteneur du dock. Icônes en
+ *  text-foreground (noir en clair / blanc en sombre). */
 const ACTION_BTN_BARE =
-  'flex h-[52px] min-w-[44px] flex-col items-center justify-center gap-0.5 rounded-xl px-1 text-foreground transition-colors hover:bg-accent hover:text-primary';
+  'flex h-14 min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-[14px] text-foreground transition-colors hover:bg-accent hover:text-primary';
 
 /** Libellé sous l'icône. */
-const LABEL_CLS = 'whitespace-nowrap font-sans text-[10px] font-medium leading-none';
+const LABEL_CLS = 'font-sans font-medium leading-none';
 
 /**
- * Cluster d'actions présentationnel (horizontal) qui s'applique à toute la sélection : partager,
- * favori, Hébreu/Grec (Strong), note, plus (signet, surlignage), effacer. Chaque bouton porte un
- * libellé visible sous son icône.
+ * Cluster d'actions présentationnel qui s'applique à toute la sélection : partager, favori,
+ * Hébreu/Grec (Strong), note, plus (signet, surlignage), désélectionner. Chaque bouton porte un
+ * libellé visible sous son icône. Deux formes : pilule flottante (ordinateur, pastille « N ✕ » en
+ * bout) et dock mobile sur deux lignes (`bare` : référence + « Désélectionner », puis les actions
+ * sur toute la largeur).
  */
 export function VerseActions({
   count,
+  reference,
   linkCopied = false,
   onCopyLink,
   verseCopied = false,
@@ -120,9 +125,19 @@ export function VerseActions({
     fn();
   };
 
-  // En mode « dock » (bare) : boutons 44 px, icônes plus grandes, pas de chrome de pilule.
+  // En mode « dock » (bare) : barre sur deux lignes, boutons pleine largeur, icônes plus grandes,
+  // pas de chrome de pilule.
   const btnCls = bare ? ACTION_BTN_BARE : ACTION_BTN;
-  const iconCls = bare ? 'h-5 w-5' : 'h-4 w-4';
+  const iconCls = bare ? 'h-[22px] w-[22px]' : 'h-4 w-4';
+  // Dock : 11 px, 10 px sur les très petits écrans (< 360 px) ; « Hébreu/Grec » peut alors passer
+  // sur deux lignes après le « / » plutôt que déborder de son bouton.
+  const labelCls = cn(
+    LABEL_CLS,
+    bare ? 'text-center text-[11px] max-[359px]:text-[10px]' : 'whitespace-nowrap text-[10px]',
+  );
+  // Emplacement d'un bouton à popover (envoi, menu ⋯) : prend sa part de largeur dans le dock.
+  const slotCls = bare ? 'relative flex min-w-0 flex-1' : 'relative inline-flex';
+  const versesLabel = `${count} verset${count > 1 ? 's' : ''}`;
 
   const [pickerOpen, setPickerOpen] = useState(false);
   const [hlPickerOpen, setHlPickerOpen] = useState(false);
@@ -154,27 +169,10 @@ export function VerseActions({
   // conteneur du dock (frontière de backdrop), donc on ne peut pas se fier à un `contains` sur
   // `sendRef` / `overflowRef`.
 
-  return (
-    <span
-      className={cn(
-        bare
-          ? // Sans espacement : les boutons libellés tiennent dans le dock d'un écran de 375 px.
-            'inline-flex flex-row items-center'
-          : `inline-flex flex-row items-center gap-0.5 rounded-full ${GLASS_PILL} p-1 shadow-lg`,
-        className,
-      )}
-    >
-      <span
-        className={cn(
-          'flex items-center justify-center rounded-full bg-primary/10 font-bold leading-none text-primary',
-          bare ? 'h-6 min-w-[24px] px-1.5 text-xs' : 'h-5 min-w-[20px] px-1 text-[11px]',
-        )}
-      >
-        {count}
-      </span>
-
+  const actions = (
+    <>
       {hasSend && (
-        <span ref={sendRef} className="relative inline-flex">
+        <span ref={sendRef} className={slotCls}>
           <button
             type="button"
             className={cn(btnCls, sendOpen && 'text-primary')}
@@ -185,7 +183,7 @@ export function VerseActions({
               icon={linkCopied || verseCopied || shared ? 'hugeicons:checkmark-square-03' : 'hugeicons:share-04'}
               className={cn(iconCls, (linkCopied || verseCopied || shared) && 'text-green-500')}
             />
-            <span className={LABEL_CLS}>Partager</span>
+            <span className={labelCls}>Partager</span>
           </button>
 
           <PortalPopover
@@ -268,7 +266,7 @@ export function VerseActions({
         onClick={stop(onToggleFavorite)}
       >
         <Icon icon={favorited ? 'ph:heart-fill' : 'ph:heart'} className={cn(iconCls, favorited && 'text-primary')} />
-        <span className={LABEL_CLS}>Favori</span>
+        <span className={labelCls}>Favori</span>
       </button>
 
       {/* Mots originaux (concordance Strong) : la lettre א dit « langue d'origine » mieux qu'un
@@ -285,12 +283,16 @@ export function VerseActions({
             aria-hidden="true"
             className={cn(
               'flex items-center justify-center font-serif font-semibold leading-none',
-              bare ? 'h-5 w-5 text-[19px]' : 'h-4 w-4 text-[15px]',
+              bare ? 'h-[22px] w-[22px] text-[21px]' : 'h-4 w-4 text-[15px]',
             )}
           >
             א
           </span>
-          <span className={LABEL_CLS}>Hébreu/Grec</span>
+          <span className={labelCls}>
+            Hébreu/
+            <wbr />
+            Grec
+          </span>
         </button>
       )}
 
@@ -313,12 +315,12 @@ export function VerseActions({
               />
             )}
           </span>
-          <span className={LABEL_CLS}>Note</span>
+          <span className={labelCls}>Note</span>
         </button>
       )}
 
       {hasOverflow && (
-        <span ref={overflowRef} className="relative inline-flex">
+        <span ref={overflowRef} className={slotCls}>
           <button
             type="button"
             className={cn(btnCls, menuOpen && 'text-primary')}
@@ -326,7 +328,7 @@ export function VerseActions({
             onClick={stop(() => setMenuOpen((v) => !v))}
           >
             <Icon icon="hugeicons:more-vertical-circle-01" className={cn(iconCls, 'rotate-90')} />
-            <span className={LABEL_CLS}>Plus</span>
+            <span className={labelCls}>Plus</span>
           </button>
 
           <PortalPopover
@@ -437,19 +439,55 @@ export function VerseActions({
         </span>
       )}
 
-      {/* Effacer : action de sortie, séparée des actions sur le verset. */}
-      <span aria-hidden="true" className="mx-0.5 h-6 w-px bg-border" />
+    </>
+  );
+
+  // Dock mobile : deux lignes. En tête, la référence de la sélection et « Désélectionner » ; en
+  // dessous, les actions réparties sur toute la largeur.
+  if (bare) {
+    return (
+      <span className={cn('flex w-full flex-col', className)}>
+        <span className="flex items-center justify-between gap-2 border-b border-foreground/[7%] py-1.5 pl-3.5 pr-1">
+          <span className="min-w-0 truncate font-sans text-[13px] text-foreground">
+            {reference && <strong className="font-semibold">{reference}</strong>}
+            <span className="text-muted-foreground">
+              {reference ? ' · ' : ''}
+              {versesLabel}
+            </span>
+          </span>
+          <button
+            type="button"
+            className="flex h-9 shrink-0 items-center gap-1 rounded-full px-2.5 font-sans text-[13px] font-medium text-primary transition-colors hover:bg-primary/10"
+            onClick={stop(onClear)}
+          >
+            <Icon icon="hugeicons:cancel-01" className="h-3.5 w-3.5" />
+            Désélectionner
+          </button>
+        </span>
+        <span className="flex w-full items-center px-1.5 pb-1.5 pt-1">{actions}</span>
+      </span>
+    );
+  }
+
+  // Pilule flottante (ordinateur) : le nombre de versets et l'effacement ne font qu'une pastille
+  // « N ✕ » en bout de barre.
+  return (
+    <span
+      className={cn(
+        `inline-flex flex-row items-center gap-1 rounded-full ${GLASS_PILL} p-1 shadow-lg`,
+        className,
+      )}
+    >
+      {actions}
       <button
         type="button"
-        className={cn(
-          'flex items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary',
-          bare ? 'h-11 w-10' : 'h-8 w-8',
-        )}
-        title="Effacer la sélection"
-        aria-label="Effacer la sélection"
+        className="ml-0.5 flex h-8 shrink-0 items-center gap-1 rounded-full bg-primary/10 pl-3 pr-2.5 font-sans text-xs font-bold text-primary transition-colors hover:bg-primary/20"
+        title={`${versesLabel} sélectionné${count > 1 ? 's' : ''} — désélectionner`}
+        aria-label={`${versesLabel} sélectionné${count > 1 ? 's' : ''} — désélectionner`}
         onClick={stop(onClear)}
       >
-        <Icon icon="hugeicons:cancel-01" className={iconCls} />
+        {count}
+        <Icon icon="hugeicons:cancel-01" className="h-3.5 w-3.5" />
       </button>
     </span>
   );

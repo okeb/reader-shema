@@ -159,6 +159,19 @@ export function useVerseActions({
   // Partage la sélection via la feuille native (`navigator.share`) : texte formaté + lien qui encode
   // la sélection (read → `v=` compressé, refs → URL `refs=` courante) + thème appliqué. Repli copie
   // `texte\nlien` sur desktop sans Web Share. Pas de feedback si la feuille est annulée.
+  // Référence lisible de la sélection (« Jean 3:16-17 » en lecture, 1ʳᵉ carte en mode renvois) :
+  // affichée en tête de la barre d'actions mobile et utilisée comme titre de partage.
+  const selectionReference = useMemo(() => {
+    const items = selection.selectedIds
+      .map((id) => selectionData.get(id))
+      .filter((d): d is SelectionEntry => d != null)
+      .sort((a, b) => a.sortKey - b.sortKey);
+    if (items.length === 0) return '';
+    if (mode !== 'read') return items[0].reference;
+    const versesNos = items.map((it) => it.verse ?? 0).filter((n) => n > 0);
+    return `${bookName} ${chapter}:${compressVerses(versesNos)}`;
+  }, [selection.selectedIds, selectionData, mode, bookName, chapter]);
+
   const shareSelected = useCallback(async () => {
     if (typeof window === 'undefined') return;
     const items = selection.selectedIds
@@ -180,22 +193,17 @@ export function useVerseActions({
       'theme',
       document.documentElement.classList.contains('dark') ? 'dark' : 'light',
     );
-    let reference: string;
     if (mode === 'read') {
       const versesNos = items.map((it) => it.verse ?? 0).filter((n) => n > 0);
-      const range = compressVerses(versesNos);
-      reference = `${bookName} ${chapter}:${range}`;
-      if (versesNos.length > 0) url.searchParams.set('v', range);
-    } else {
-      // refs mode: l'URL porte déjà `refs=` ; pas de schéma pour une sous-sélection de cartes.
-      reference = items[0].reference;
+      if (versesNos.length > 0) url.searchParams.set('v', compressVerses(versesNos));
     }
+    // refs mode : l'URL porte déjà `refs=` ; pas de schéma pour une sous-sélection de cartes.
 
-    const outcome = await shareOrCopy({ title: reference, text, url: url.toString() });
+    const outcome = await shareOrCopy({ title: selectionReference, text, url: url.toString() });
     if (outcome === 'cancelled') return; // feuille fermée → pas de feedback de succès
     setShared(true);
     setTimeout(() => setShared(false), 2000);
-  }, [selection.selectedIds, selectionData, mode, bookName, chapter, version]);
+  }, [selection.selectedIds, selectionData, mode, bookName, chapter, version, selectionReference]);
 
   const favoriteSelected = useCallback(() => {
     if (selection.count === 0) return;
@@ -348,6 +356,7 @@ export function useVerseActions({
 
   return {
     selectionData,
+    selectionReference,
     linkCopied,
     copyLink,
     verseCopied,

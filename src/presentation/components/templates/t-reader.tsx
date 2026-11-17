@@ -697,6 +697,7 @@ export function TReader({
 
   const verseActionsBundle: VerseActionsBundle = {
     count: selection.count,
+    reference: verseActions.selectionReference,
     linkCopied: verseActions.linkCopied,
     onCopyLink: verseActions.copyLink,
     verseCopied: verseActions.verseCopied,

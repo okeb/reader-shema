@@ -64,14 +64,17 @@ export function ReaderDock({
   return (
     <div
       className={cn(
-        'fixed bottom-5 left-1/2 z-30 flex max-w-[calc(100vw-1.5rem)] -translate-x-1/2 items-center gap-1 rounded-full px-1.5 py-1',
+        'fixed bottom-5 left-1/2 z-30 flex max-w-[calc(100vw-1.5rem)] -translate-x-1/2 items-center gap-1',
         GLASS_PILL,
         'border border-foreground/5',
-        clusterMode ? 'overflow-visible' : 'overflow-x-auto',
+        // Sélection : barre d'actions sur deux lignes, sur toute la largeur (cibles tactiles larges).
+        clusterMode
+          ? 'w-[calc(100vw-1.5rem)] max-w-md overflow-visible rounded-[22px]'
+          : 'overflow-x-auto rounded-full px-1.5 py-1',
       )}
     >
       {clusterMode ? (
-        <div className="animate-fade-in-up flex items-center">
+        <div className="animate-fade-in-up flex w-full items-center">
           <VerseActions bare {...verseActions} />
         </div>
       ) : (
