@@ -1,8 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Image from 'next/image';
-import dynamic from 'next/dynamic';
 import { Icon } from '@iconify/react';
 import { cn } from '@/lib/utils';
 import { Link, useRouter } from '@/i18n/routing';
@@ -15,16 +14,10 @@ import { ThemeMenu } from '@/src/presentation/components/molecules/m-theme-menu'
 import { PassageLauncher } from '@/src/presentation/components/molecules/m-passage-launcher';
 import { SiteFooter } from '@/src/presentation/components/molecules/m-footer';
 import { ShortcutsHelp } from '@/src/presentation/components/molecules/m-shortcuts-help';
-import { DoodleCard } from '@/src/presentation/components/molecules/m-doodle-card';
+import { DoodleLogo } from '@/src/presentation/components/molecules/m-doodle-logo';
+import { useCoarsePointer } from '@/src/presentation/hooks/use-coarse-pointer';
 import { BRAND_ICON_LOGOS, appIconPath } from '@/src/shared/constants/brand-logos';
 import { useReaderPreferences } from '@/src/presentation/stores/reader-preferences.store';
-
-// DoodleRenderer importé en `dynamic({ ssr:false })` : le runtime Rive (WASM) ne se monte que côté
-// client ; évite un flash/mismatch SSR (spec 18). Cf. même montage que `o-reader-topbar`.
-const DoodleRenderer = dynamic(
-  () => import('@/src/presentation/components/molecules/m-doodle-renderer').then((m) => m.DoodleRenderer),
-  { ssr: false },
-);
 
 /** Ratio natif des fichiers icône (1254 × 1254, carré). */
 const ICON_W = 1254;
@@ -75,28 +68,16 @@ export function HomeScreen() {
 
   // Doodle (spec 18) : un doodle actif remplace l'icône du bloc marque par sa variante animée Rive.
   // Même montage que la topbar (`o-reader-topbar`) : résolution client (`useDoodle`), repli sur
-  // l'icône normale si l'asset `.riv` échoue, carte d'explication au clic (fermée par clic extérieur).
+  // l'icône normale si l'asset `.riv` échoue ; clic → animation, icône d'info → dropdown (v2).
   const { doodle } = useDoodle();
-  const [cardOpen, setCardOpen] = useState(false);
+  const coarse = useCoarsePointer();
   const [doodleFailed, setDoodleFailed] = useState(false);
-  const logoWrapRef = useRef<HTMLSpanElement>(null);
   const showDoodle = !!(doodle?.animate) && !doodleFailed;
 
-  // (Re)joue le doodle quand l'occasion change : réarme l'affichage et ferme la carte.
+  // (Re)joue le doodle quand l'occasion change : réarme l'affichage.
   useEffect(() => {
     setDoodleFailed(false);
-    setCardOpen(false);
   }, [doodle?.id]);
-
-  // Ferme la carte au clic extérieur (le bouton doodle + la carte sont dans `logoWrapRef`).
-  useEffect(() => {
-    if (!cardOpen) return;
-    const onDocClick = (e: MouseEvent) => {
-      if (!logoWrapRef.current?.contains(e.target as Node)) setCardOpen(false);
-    };
-    document.addEventListener('mousedown', onDocClick);
-    return () => document.removeEventListener('mousedown', onDocClick);
-  }, [cardOpen]);
 
   // Raccourcis : « Échap » reprend la lecture (auto-reprise), « ? » affiche l'aide (miroir favoris).
   useEffect(() => {
@@ -136,30 +117,16 @@ export function HomeScreen() {
         </div>
 
         {/* Bloc marque — icône carrée themed sur tuile, logotype, tagline serif. Un doodle actif
-            (spec 18) remplace l'icône par sa variante animée Rive ; clic → carte d'explication. */}
+            (spec 18) remplace l'icône par sa variante animée Rive (clic → animation, icône d'info →
+            dropdown d'explication). */}
         <header className="flex flex-col items-center pt-16 text-center">
           {showDoodle ? (
-            <span ref={logoWrapRef} className="relative inline-block">
-              <button
-                type="button"
-                title={`${doodle!.label} — en savoir plus`}
-                aria-label={`${doodle!.label} — en savoir plus`}
-                onClick={() => setCardOpen((o) => !o)}
-                className="inline-block"
-              >
-                <DoodleRenderer
-                  id={doodle!.id}
-                  animate={doodle!.animate!}
-                  label={doodle!.label}
-                  className="h-28"
-                  onError={() => {
-                    setDoodleFailed(true);
-                    setCardOpen(false);
-                  }}
-                />
-              </button>
-              {cardOpen && <DoodleCard doodle={doodle!} onClose={() => setCardOpen(false)} />}
-            </span>
+            <DoodleLogo
+              doodle={{ ...doodle!, animate: doodle!.animate! }}
+              coarse={coarse}
+              className="h-28"
+              onError={() => setDoodleFailed(true)}
+            />
           ) : (
             <div className="flex h-28 w-28 items-center justify-center">
               {/* Icône carrée colorée (cf. favicon `/brand-icon`) : variante choisie par

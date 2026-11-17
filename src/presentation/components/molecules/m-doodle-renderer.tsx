@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type PointerEvent } from 'react';
 import { useRive, Fit, Alignment, Layout, type RiveState } from '@rive-app/react-canvas';
 import { cn } from '@/lib/utils';
 import { useDoodleSeen } from '@/src/presentation/stores/doodle-seen.store';
@@ -36,6 +36,10 @@ export interface DoodleRendererProps {
  *   complété d'un timeout de garde (6 s) si la runtime n'est pas prête (repli silencieux, spec
  *   §4.5) **sans** marquer `seen` (un deploy correctif plus tard dans la journée rejouera l'entrée).
  * - **Survol (desktop)** : tente de jouer `hoverState` (best-effort, dépend de l'artboard).
+ * - **Clic (v2, §4.6)** : `clickState` (booléen true au press / false au relâché) ou `clickTrigger`
+ *   (tiré au press). Rien de déclaré → clic inerte.
+ * - **Suivi de souris (v2, §4.6)** : `trackMouse.pointerX/Y` (entrées nombre) nourries à chaque
+ *   `pointermove`, dans le repère de l'artboard. Figé si `prefers-reduced-motion` ou en focus.
  * - **Thème runtime** : TODO — la surcharge des variables de couleur Rive selon `.dark` dépend des
  *   variables déclarées dans l'artboard. À brancher dès qu'un `.riv` avec variables `light`/`dark`
  *   sera livré (cf. spec §4.4 / §5.5). Non implémenté ici faute d'art à tester.
@@ -55,6 +59,31 @@ const LOAD_TIMEOUT_MS = 6000;
  * `@rive-app/canvas` (la ré-export des types suffit).
  */
 const SM_INPUT_BOOLEAN = 59;
+/** `StateMachineInputType.Number` (= 56) et `.Trigger` (= 58) dans la runtime Rive. */
+const SM_INPUT_NUMBER = 56;
+const SM_INPUT_TRIGGER = 58;
+
+/** Entrées de la state machine résolues au `onRiveReady` (toutes optionnelles). */
+interface DoodleInputs {
+  hover: DoodleSMInput | null;
+  clickBool: DoodleSMInput | null;
+  clickTrigger: DoodleSMInput | null;
+  pointerX: DoodleSMInput | null;
+  pointerY: DoodleSMInput | null;
+}
+
+const NO_INPUTS: DoodleInputs = {
+  hover: null,
+  clickBool: null,
+  clickTrigger: null,
+  pointerX: null,
+  pointerY: null,
+};
+
+/** `true` si l'utilisateur demande moins de mouvement. */
+function prefersReducedMotion(): boolean {
+  return typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
 
 /**
  * Forme d'une entrée de state machine Rive (`StateMachineInput`), typée structurellement pour ne
@@ -122,10 +151,13 @@ export function DoodleRenderer({
   const readyRef = useRef(false);
   const onErrorRef = useRef(onError);
   onErrorRef.current = onError;
-  // Entrée booléenne de la SM qui pilote le survol (auto-détectée au `onRiveReady`). Beaucoup de
-  // doodles interactifs ont un idle statique : l'animation ne se déclenche qu'en basculant cette
-  // entrée (ex. « IsTracking »). `null` = pas d'entrée booléenne → repli sur `play(hoverState)`.
-  const hoverInputRef = useRef<DoodleSMInput | null>(null);
+  // Entrées de la SM (auto-détectées au `onRiveReady`). Survol : beaucoup de doodles interactifs ont
+  // un idle statique, l'animation ne se déclenche qu'en basculant une entrée booléenne (ex.
+  // « IsTracking ») ; absente → repli sur `play(hoverState)`. Clic / suivi de souris : seulement si
+  // l'occasion les déclare (« automatiquement opérationnel si le doodle le possède »).
+  const inputsRef = useRef<DoodleInputs>(NO_INPUTS);
+  // Dimensions de l'artboard (repère des entrées `trackMouse`).
+  const artboardRef = useRef({ w: 0, h: 0 });
 
   const onRiveReady = (rive: RiveState['rive']) => {
     readyRef.current = true;
@@ -135,7 +167,10 @@ export function DoodleRenderer({
       if (b && typeof b.maxX === 'number' && typeof b.maxY === 'number') {
         const w = b.maxX - (b.minX ?? 0);
         const h = b.maxY - (b.minY ?? 0);
-        if (w > 0 && h > 0) setAspect(w / h);
+        if (w > 0 && h > 0) {
+          setAspect(w / h);
+          artboardRef.current = { w, h };
+        }
       }
     } catch {
       /* bounds indisponibles — on garde le ratio par défaut (carré) */
@@ -145,14 +180,23 @@ export function DoodleRenderer({
       const names = (rive?.stateMachineNames ?? []) as readonly string[];
       const smName = animate.stateMachine ?? names[0];
       if (smName && rive) {
-        const inputs = rive.stateMachineInputs(smName) ?? [];
-        const boolInput = animate.hoverState
-          ? inputs.find((i) => i.name === animate.hoverState && i.type === SM_INPUT_BOOLEAN)
-          : inputs.find((i) => i.type === SM_INPUT_BOOLEAN);
-        hoverInputRef.current = boolInput ?? null;
+        const inputs = (rive.stateMachineInputs(smName) ?? []) as DoodleSMInput[];
+        const byName = (name: string | undefined, type: number) =>
+          name ? (inputs.find((i) => i.name === name && i.type === type) ?? null) : null;
+        // Survol : l'entrée nommée `hoverState`, sinon la 1ʳᵉ booléenne qui n'est pas celle du clic.
+        const hover = animate.hoverState
+          ? byName(animate.hoverState, SM_INPUT_BOOLEAN)
+          : (inputs.find((i) => i.type === SM_INPUT_BOOLEAN && i.name !== animate.clickState) ?? null);
+        inputsRef.current = {
+          hover,
+          clickBool: byName(animate.clickState, SM_INPUT_BOOLEAN),
+          clickTrigger: byName(animate.clickTrigger, SM_INPUT_TRIGGER),
+          pointerX: byName(animate.trackMouse?.pointerX, SM_INPUT_NUMBER),
+          pointerY: byName(animate.trackMouse?.pointerY, SM_INPUT_NUMBER),
+        };
       }
     } catch {
-      hoverInputRef.current = null;
+      inputsRef.current = NO_INPUTS;
     }
     markSeen(id);
   };
@@ -187,7 +231,7 @@ export function DoodleRenderer({
   // 2) Repli → joue l'animation nommée `hoverState`. Hors `motionAllowed` on ne déclenche rien.
   const onHover = () => {
     if (!motionAllowed) return;
-    const input = hoverInputRef.current;
+    const input = inputsRef.current.hover;
     if (input) {
       try {
         input.value = true;
@@ -206,13 +250,54 @@ export function DoodleRenderer({
 
   const onHoverEnd = () => {
     if (!motionAllowed) return;
-    const input = hoverInputRef.current;
+    const input = inputsRef.current.hover;
     if (input) {
       try {
         input.value = false;
       } catch {
         /* entrée invalide — on ignore */
       }
+    }
+    release();
+  };
+
+  // Clic (v2) : press → booléen à true et/ou trigger tiré ; relâché → booléen à false.
+  const onPointerDown = () => {
+    if (!motionAllowed) return;
+    const { clickBool, clickTrigger } = inputsRef.current;
+    try {
+      if (clickBool) clickBool.value = true;
+      clickTrigger?.fire();
+    } catch {
+      /* entrée invalide — on ignore */
+    }
+  };
+
+  const release = () => {
+    const { clickBool } = inputsRef.current;
+    if (!clickBool) return;
+    try {
+      clickBool.value = false;
+    } catch {
+      /* entrée invalide — on ignore */
+    }
+  };
+
+  // Suivi de souris (v2) : position du pointeur ramenée dans le repère de l'artboard.
+  const onPointerMove = (e: PointerEvent<HTMLSpanElement>) => {
+    const { pointerX, pointerY } = inputsRef.current;
+    if (!motionAllowed || (!pointerX && !pointerY) || e.pointerType !== 'mouse') return;
+    if (prefersReducedMotion()) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return;
+    const { w, h } = artboardRef.current;
+    const x = ((e.clientX - rect.left) / rect.width) * (w || rect.width);
+    const y = ((e.clientY - rect.top) / rect.height) * (h || rect.height);
+    try {
+      if (pointerX) pointerX.value = x;
+      if (pointerY) pointerY.value = y;
+    } catch {
+      /* entrée invalide — on ignore */
     }
   };
 
@@ -222,6 +307,10 @@ export function DoodleRenderer({
       aria-label={label}
       onMouseEnter={onHover}
       onMouseLeave={onHoverEnd}
+      onPointerDown={onPointerDown}
+      onPointerUp={release}
+      onPointerCancel={release}
+      onPointerMove={onPointerMove}
       className={cn('inline-block', className)}
       style={{ aspectRatio: aspect }}
     >

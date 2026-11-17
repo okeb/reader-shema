@@ -22,6 +22,18 @@ export interface DoodleAnimation {
   stateMachine?: string;
   /** État joué au survol (desktop), optionnel. */
   hoverState?: string;
+  /**
+   * Animation de clic (spec §4.6) — entrée booléenne de la state machine, mise à `true` au
+   * `pointerdown` et `false` au `pointerup` (réaction « press »). Ex. "isPressed".
+   */
+  clickState?: string;
+  /** Animation de clic — trigger de la state machine tiré une fois au clic. Ex. "onTap". */
+  clickTrigger?: string;
+  /**
+   * Suivi de souris (spec §4.6) — entrées nombre de la state machine nourries à chaque
+   * `pointermove` avec la position du pointeur dans le repère de l'artboard. Inactif si absent.
+   */
+  trackMouse?: { pointerX: string; pointerY: string };
 }
 
 /** Verset lié à l'occasion — ouvre la lecture en contexte via la route `/read` existante. */
@@ -65,8 +77,12 @@ export interface Doodle {
   label: string;
   /** Description courte (1–2 phrases) affichée dans la carte. */
   description?: string;
-  /** Verset lié → « Lire en contexte ». */
+  /** Verset lié (v1). Repli du dropdown quand `verses` est absent. */
   verseRef?: DoodleVerseRef;
+  /** Versets liés affichés dans le dropdown (spec §4.6). `label` remplace la référence calculée. */
+  verses?: { ref: DoodleVerseRef; label?: string }[];
+  /** Lien externe facultatif (« En savoir plus → »). */
+  source?: { label: string; url: string };
   when: DoodleWhen;
   /** Priorité : la plus haute gagne en cas de chevauchement (une fête bat une saison). */
   priority: number;

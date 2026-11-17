@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import { Icon } from '@iconify/react';
@@ -11,7 +11,7 @@ import { GLASS_PILL } from '@/src/presentation/components/atoms/a-floating-butto
 import { BookChapterSelector } from '@/src/presentation/components/molecules/m-book-chapter-selector';
 import { ReferenceChips } from '@/src/presentation/components/molecules/m-reference-chips';
 import { AppearanceMenu } from '@/src/presentation/components/molecules/m-appearance-menu';
-import { DoodleCard } from '@/src/presentation/components/molecules/m-doodle-card';
+import { DoodleLogo } from '@/src/presentation/components/molecules/m-doodle-logo';
 import { useDoodle } from '@/src/presentation/hooks/use-doodle';
 import { useReaderPreferences } from '@/src/presentation/stores/reader-preferences.store';
 import { appIconPath } from '@/src/shared/constants/brand-logos';
@@ -85,9 +85,7 @@ export function ReaderTopbar({
   // topbar ; `'auto'` conserve le `<Logo>` habituel. Les doodles restent prioritaires (plus bas).
   const appIcon = useReaderPreferences((s) => s.appIcon);
   const brandIconSrc = appIconPath(appIcon);
-  const [cardOpen, setCardOpen] = useState(false);
   const [doodleFailed, setDoodleFailed] = useState(false);
-  const logoWrapRef = useRef<HTMLSpanElement>(null);
 
   // Un doodle ne s'affiche que s'il a une animation (asset `.riv`) et n'a pas échoué à charger.
   const showDoodle = !!(doodle?.animate) && !doodleFailed;
@@ -95,46 +93,23 @@ export function ReaderTopbar({
   // Réinitialise l'état local quand l'occasion change (changement de jour au passage minuit).
   useEffect(() => {
     setDoodleFailed(false);
-    setCardOpen(false);
   }, [doodle?.id]);
-
-  // Ferme la carte au clic extérieur (le bouton logo + la carte sont dans `logoWrapRef`).
-  useEffect(() => {
-    if (!cardOpen) return;
-    const onDocClick = (e: globalThis.MouseEvent) => {
-      if (!logoWrapRef.current?.contains(e.target as Node)) setCardOpen(false);
-    };
-    document.addEventListener('mousedown', onDocClick);
-    return () => document.removeEventListener('mousedown', onDocClick);
-  }, [cardOpen]);
 
   return (
     <div className="pointer-events-none fixed inset-x-0 top-4 z-40 px-4">
       <div className="relative mx-auto flex max-w-[1600px] items-center justify-between">
         {/* Logo du projet — mène à `/accueil`. En mode focus, persiste sans dim et bascule sur le
-            mark discret. Doodle actif : variante animée Rive (hors focus, clic → carte ; en focus,
-            discret). Sur échec d'asset, repli sur le logo normal. */}
+            mark discret. Doodle actif : variante animée Rive (hors focus : clic → animation, icône
+            d'info → dropdown avec « Accueil » ; en focus, discret). Sur échec d'asset, repli sur le
+            logo normal. */}
         {showDoodle && !focusMode ? (
-          <span ref={logoWrapRef} className="pointer-events-auto relative inline-block">
-            <button
-              type="button"
-              title={`${doodle!.label} — en savoir plus`}
-              aria-label={`${doodle!.label} — en savoir plus`}
-              onClick={() => setCardOpen((o) => !o)}
-              className="inline-block"
-            >
-              <DoodleRenderer
-                id={doodle!.id}
-                animate={doodle!.animate!}
-                label={doodle!.label}
-                className="h-18 md:h-20"
-                onError={() => {
-                  setDoodleFailed(true);
-                  setCardOpen(false);
-                }}
-              />
-            </button>
-            {cardOpen && <DoodleCard doodle={doodle!} onClose={() => setCardOpen(false)} />}
+          <span className="pointer-events-auto inline-block">
+            <DoodleLogo
+              doodle={{ ...doodle!, animate: doodle!.animate! }}
+              coarse={coarse}
+              className="h-[4.5rem] md:h-20"
+              onError={() => setDoodleFailed(true)}
+            />
           </span>
         ) : showDoodle && focusMode ? (
           // Focus : doodle discret (autoplay=false), pas de carte, clic inchangé (spec §4.5).
@@ -144,7 +119,7 @@ export function ReaderTopbar({
               animate={doodle!.animate!}
               label={doodle!.label}
               focus
-              className="h-18 md:h-20"
+              className="h-[4.5rem] md:h-20"
               onError={() => setDoodleFailed(true)}
             />
           </Link>
