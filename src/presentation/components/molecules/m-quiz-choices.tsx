@@ -103,8 +103,8 @@ export function QuizChoices({
             <label
               key={choice.id}
               className={cn(
-                'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-all duration-400 cursor-pointer hover:bg-accent/40 hover:scale-[102%]',
-                isSelected && 'bg-primary/20 hover:bg-primary/40',
+                'flex items-center gap-3 rounded-lg border border-transparent px-3 py-2.5 text-sm transition-all duration-400 cursor-pointer hover:bg-accent/40 hover:scale-[102%]',
+                isSelected && 'border-primary bg-primary/20 hover:bg-primary/30',
               )}
             >
               {isMultiple ? (
@@ -114,7 +114,7 @@ export function QuizChoices({
                   value={choice.id}
                   checked={isSelected}
                   onChange={() => onToggleChoice(choice.id)}
-                  className="shrink-0 accent-primary rounded"
+                  className="h-4 w-4 shrink-0 accent-primary rounded"
                 />
               ) : (
                 <input
@@ -123,10 +123,13 @@ export function QuizChoices({
                   value={choice.id}
                   checked={isSelected}
                   onChange={() => onToggleChoice(choice.id)}
-                  className="shrink-0 accent-primary"
+                  className="h-4 w-4 shrink-0 accent-primary"
                 />
               )}
               <span className="text-base font-medium tracking-tight">{choice.text}</span>
+              {isSelected && (
+                <Icon icon="ph:check-bold" className="ml-auto h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+              )}
             </label>
           );
         })

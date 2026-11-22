@@ -11,6 +11,8 @@ divulguée. La cohérence est vérifiée par `pnpm changelog:check`.
 
 ### Corrigé
 
+- **Quiz des chapitres** : après avoir validé, les choix restent affichés et la correction est explicite. Ta réponse est marquée « Ta réponse », en vert si elle est juste et en rouge sinon, et la bonne réponse est signalée. Pour les questions à plusieurs réponses, les bonnes réponses non cochées apparaissent comme « Oubliée ». Pour les questions d'ordre, chaque position est corrigée et l'ordre correct est rappelé. Un bandeau « Bonne réponse ! » ou « Raté » s'affiche aussitôt, et le choix sélectionné est plus visible avant de valider.
+- **Quiz de Matthieu 5** : l'explication de la question sur les béatitudes cite désormais les versets correspondant aux bonnes réponses (pauvres d'esprit, doux d'esprit, pacificateurs) et précise d'où vient « humble de cœur » (Matthieu 11:29).
 - **Sélecteur de passages** : Malachie compte désormais 3 chapitres et Joël 4, conformément à la numérotation hébraïque de la BYM. Le chapitre 4 de Malachie, qui n'existe pas, n'est plus proposé ; le chapitre 4 de Joël est maintenant accessible.
 
 ## [0.7.0] : 2026-09-04

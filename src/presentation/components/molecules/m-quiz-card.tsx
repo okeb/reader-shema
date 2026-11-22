@@ -6,6 +6,7 @@ import { useQuizState } from '@/src/presentation/hooks/use-quiz-state';
 import { QuizPrompt } from './m-quiz-prompt';
 import { QuizChoices } from './m-quiz-choices';
 import { QuizExplanation } from './m-quiz-explanation';
+import { QuizReview } from './m-quiz-review';
 
 export interface QuizCardProps {
   quizzes: Quiz[];
@@ -14,8 +15,9 @@ export interface QuizCardProps {
 }
 
 /**
- * Carte quiz du chapitre : invite à répondre, puis choix de réponse, puis résultat explicatif.
- * Compose `QuizPrompt` / `QuizChoices` / `QuizExplanation` (scission Phase 6) ; l'état local est
+ * Carte quiz du chapitre : invite à répondre, puis choix de réponse, puis correction (choix
+ * annotés) et résultat explicatif.
+ * Compose `QuizPrompt` / `QuizChoices` / `QuizReview` / `QuizExplanation` (scission Phase 6) ; l'état local est
  * porté par `useQuizState`. Les cartes empilées derrière signalent d'autres questions
  * (décoratif — `activeIndex` reste à 0).
  *
@@ -79,6 +81,16 @@ export function QuizCard({ quizzes, onNavigate, onSeen }: QuizCardProps) {
             onOrderDragOver={s.handleOrderDragOver}
             onOrderDrop={s.handleOrderDrop}
             onOrderDragEnd={s.handleOrderDragEnd}
+          />
+        )}
+
+        {answered && (
+          <QuizReview
+            quiz={quiz}
+            isMultiple={s.isMultiple}
+            isOrder={s.isOrder}
+            selected={s.selected}
+            correctAnswer={s.correctAnswer}
           />
         )}
 

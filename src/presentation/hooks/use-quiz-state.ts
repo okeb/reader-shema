@@ -93,7 +93,8 @@ export function useQuizState({ quizzes, onSeen }: UseQuizStateArgs) {
     if (selected.length === 0 || !quiz) return;
     setAnswered(true);
     onSeen(quiz.id);
-    setTimeout(() => setShowResult(true), 600);
+    // Les choix annotés (`QuizReview`) s'affichent tout de suite ; le bandeau suit de près.
+    setTimeout(() => setShowResult(true), 150);
   }, [selected, quiz?.id, onSeen, quiz]);
 
   const handleReset = useCallback(() => {
