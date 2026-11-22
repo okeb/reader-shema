@@ -4,9 +4,8 @@ import { useEffect, useRef, useState } from 'react';
 import { Icon } from '@iconify/react';
 import { cn } from '@/lib/utils';
 import { BIBLE_BOOKS, BOOK_SECTIONS, getBookById, searchBooks } from '@/src/shared/constants/bible-books';
-import { HighlightDots } from '@/src/presentation/components/atoms/a-highlight-dots';
 import { useChapterMarkers } from '@/src/presentation/hooks/use-chapter-markers';
-import { ChapterGrid } from './m-chapter-grid';
+import { BookMarkers, ChapterGrid, bookMarkerLabel } from './m-chapter-grid';
 
 interface BookChapterSelectorProps {
   bookId: string;
@@ -46,7 +45,7 @@ export function BookChapterSelector({
   const popBook = getBookById(popBookId) ?? book;
 
   // Livres contenant des surlignages (version active) : points de couleur dans la liste.
-  const { bookHighlights } = useChapterMarkers();
+  const { bookHighlights, bookNotes } = useChapterMarkers();
 
   useEffect(() => {
     if (open) {
@@ -90,6 +89,7 @@ export function BookChapterSelector({
         {books.map((b) => {
           const active = b.id === popBookId;
           const hl = bookHighlights(b.id);
+          const nNotes = bookNotes(b.id);
           return (
             <button
               key={b.id}
@@ -98,7 +98,7 @@ export function BookChapterSelector({
                 setPopBookId(b.id);
                 setSearch('');
               }}
-              aria-label={hl ? `${b.name}, ${hl.count} verset${hl.count > 1 ? 's' : ''} surligné${hl.count > 1 ? 's' : ''}` : undefined}
+              aria-label={bookMarkerLabel(b.name, hl?.count ?? 0, nNotes)}
               className={cn(
                 'flex w-full items-center gap-1.5 px-3 py-1.5 text-left text-xs transition-colors',
                 active
@@ -107,7 +107,7 @@ export function BookChapterSelector({
               )}
             >
               <span className="min-w-0 truncate">{b.name}</span>
-              {hl && <HighlightDots colors={hl.colors} max={2} className="ml-auto shrink-0" />}
+              <BookMarkers colors={hl?.colors} hasNotes={nNotes > 0} />
             </button>
           );
         })}

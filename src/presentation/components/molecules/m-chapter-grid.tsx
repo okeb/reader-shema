@@ -17,13 +17,15 @@ interface ChapterGridProps {
  * Grille des chapitres d'un livre, lisible d'un coup d'œil :
  *  - chiffre en couleur d'accent = audio disponible ;
  *  - points de couleur sous le chiffre = couleurs des versets surlignés (version active) ;
+ *  - icône de note en haut à droite = au moins une note sur ce chapitre (version active) ;
  *  - légende d'une ligne en bas, limitée à ce que le livre contient.
  * Partagée par le sélecteur du lecteur et le lanceur de l'accueil.
  */
 export function ChapterGrid({ bookId, chapters, currentChapter, onSelect }: ChapterGridProps) {
-  const { audioChaptersOf, chapterHighlights, bookHighlights } = useChapterMarkers();
+  const { audioChaptersOf, chapterHighlights, bookHighlights, chapterNotes, bookNotes } = useChapterMarkers();
   const audio = audioChaptersOf(bookId);
   const bookHl = bookHighlights(bookId);
+  const bookHasNotes = bookNotes(bookId) > 0;
   const hasAnyAudio = (audio?.size ?? 0) > 0;
 
   return (
@@ -34,10 +36,12 @@ export function ChapterGrid({ bookId, chapters, currentChapter, onSelect }: Chap
             const current = n === currentChapter;
             const hasAudio = audio?.has(n) ?? false;
             const hl = chapterHighlights(bookId, n);
+            const nNotes = chapterNotes(bookId, n);
             const label = [
               `Chapitre ${n}`,
               hasAudio && 'audio',
               hl && `${hl.count} verset${hl.count > 1 ? 's' : ''} surligné${hl.count > 1 ? 's' : ''}`,
+              nNotes > 0 && `${nNotes} note${nNotes > 1 ? 's' : ''}`,
             ]
               .filter(Boolean)
               .join(', ');
@@ -59,7 +63,17 @@ export function ChapterGrid({ bookId, chapters, currentChapter, onSelect }: Chap
                 {current && hasAudio && (
                   <Icon
                     icon="hugeicons:volume-high"
-                    className="pointer-events-none absolute right-1 top-1 h-2.5 w-2.5 opacity-70"
+                    className="pointer-events-none absolute left-1 top-1 h-2.5 w-2.5 opacity-70"
+                    aria-hidden="true"
+                  />
+                )}
+                {nNotes > 0 && (
+                  <Icon
+                    icon="hugeicons:note-01"
+                    className={cn(
+                      'pointer-events-none absolute right-1 top-1 h-2.5 w-2.5',
+                      current ? 'opacity-80' : 'text-muted-foreground',
+                    )}
                     aria-hidden="true"
                   />
                 )}
@@ -76,7 +90,7 @@ export function ChapterGrid({ bookId, chapters, currentChapter, onSelect }: Chap
         </div>
       </div>
 
-      {(hasAnyAudio || bookHl) && (
+      {(hasAnyAudio || bookHl || bookHasNotes) && (
         <div className="flex shrink-0 items-center gap-3 border-t border-foreground/10 px-3 py-1.5 text-[10px] text-muted-foreground">
           {hasAnyAudio && (
             <span className="flex items-center gap-1">
@@ -88,9 +102,34 @@ export function ChapterGrid({ bookId, chapters, currentChapter, onSelect }: Chap
               <HighlightDots colors={bookHl.colors} max={2} /> surlignés
             </span>
           )}
+          {bookHasNotes && (
+            <span className="flex items-center gap-1">
+              <Icon icon="hugeicons:note-01" className="h-2.5 w-2.5" aria-hidden="true" /> notes
+            </span>
+          )}
         </div>
       )}
     </div>
+  );
+}
+
+/** Libellé accessible d'un livre dans la liste (surlignages + notes), ou `undefined` si rien. */
+export function bookMarkerLabel(name: string, hlCount: number, notesCount: number): string | undefined {
+  const parts = [
+    hlCount > 0 && `${hlCount} verset${hlCount > 1 ? 's' : ''} surligné${hlCount > 1 ? 's' : ''}`,
+    notesCount > 0 && `${notesCount} note${notesCount > 1 ? 's' : ''}`,
+  ].filter(Boolean);
+  return parts.length ? `${name}, ${parts.join(', ')}` : undefined;
+}
+
+/** Repères d'un livre dans la liste : points de surlignage + icône de note. */
+export function BookMarkers({ colors, hasNotes }: { colors?: string[]; hasNotes: boolean }) {
+  if (!colors?.length && !hasNotes) return null;
+  return (
+    <span className="ml-auto flex shrink-0 items-center gap-1">
+      {colors && colors.length > 0 && <HighlightDots colors={colors} max={2} />}
+      {hasNotes && <Icon icon="hugeicons:note-01" className="h-2.5 w-2.5 opacity-60" aria-hidden="true" />}
+    </span>
   );
 }
 

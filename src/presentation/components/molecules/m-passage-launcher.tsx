@@ -5,9 +5,8 @@ import { Icon } from '@iconify/react';
 import { cn } from '@/lib/utils';
 import { GLASS_PILL } from '@/src/presentation/components/atoms/a-floating-button';
 import { BIBLE_BOOKS, BOOK_SECTIONS, getBookById, searchBooks } from '@/src/shared/constants/bible-books';
-import { HighlightDots } from '@/src/presentation/components/atoms/a-highlight-dots';
 import { useChapterMarkers } from '@/src/presentation/hooks/use-chapter-markers';
-import { ChapterGrid } from './m-chapter-grid';
+import { BookMarkers, ChapterGrid, bookMarkerLabel } from './m-chapter-grid';
 
 interface PassageLauncherProps {
   /** Livre présélectionné à l'ouverture du panneau (défaut : « jean », point d'entrée du lecteur). */
@@ -34,7 +33,7 @@ export function PassageLauncher({ defaultBookId = 'jean', onSelect }: PassageLau
   const activeBookRef = useRef<HTMLButtonElement | null>(null);
 
   const popBook = getBookById(popBookId) ?? BIBLE_BOOKS[0];
-  const { bookHighlights } = useChapterMarkers();
+  const { bookHighlights, bookNotes } = useChapterMarkers();
 
   // Réinitialise la recherche et le livre présélectionné à chaque ouverture.
   useEffect(() => {
@@ -91,6 +90,7 @@ export function PassageLauncher({ defaultBookId = 'jean', onSelect }: PassageLau
         {books.map((b) => {
           const active = b.id === popBookId;
           const hl = bookHighlights(b.id);
+          const nNotes = bookNotes(b.id);
           return (
             <button
               key={b.id}
@@ -99,7 +99,7 @@ export function PassageLauncher({ defaultBookId = 'jean', onSelect }: PassageLau
                 setPopBookId(b.id);
                 setSearch('');
               }}
-              aria-label={hl ? `${b.name}, ${hl.count} verset${hl.count > 1 ? 's' : ''} surligné${hl.count > 1 ? 's' : ''}` : undefined}
+              aria-label={bookMarkerLabel(b.name, hl?.count ?? 0, nNotes)}
               className={cn(
                 'flex w-full items-center gap-1.5 px-3 py-1.5 text-left text-xs transition-colors',
                 active
@@ -108,7 +108,7 @@ export function PassageLauncher({ defaultBookId = 'jean', onSelect }: PassageLau
               )}
             >
               <span className="min-w-0 truncate">{b.name}</span>
-              {hl && <HighlightDots colors={hl.colors} max={2} className="ml-auto shrink-0" />}
+              <BookMarkers colors={hl?.colors} hasNotes={nNotes > 0} />
             </button>
           );
         })}

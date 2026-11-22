@@ -19,13 +19,15 @@ const summarize = (byColor: Map<string, number>): HighlightSummary => ({
 });
 
 /**
- * Repères du sélecteur de passages : chapitres avec audio et surlignages par chapitre / par livre.
- * Les surlignages sont ceux de la **version active** (clé `${version}:${bookId}:${chapter}:${verse}`),
- * pour correspondre à ce que l'on verra en ouvrant le chapitre.
+ * Repères du sélecteur de passages : chapitres avec audio, surlignages et notes par chapitre /
+ * par livre. Surlignages et notes sont ceux de la **version active**
+ * (clé `${version}:${bookId}:${chapter}:${verse}`), pour correspondre à ce que l'on verra en
+ * ouvrant le chapitre. Une note liée à plusieurs versets d'un même chapitre compte une fois.
  */
 export function useChapterMarkers() {
   const primaryId = useActiveVersion((s) => s.primaryId);
   const highlights = useAnnotations((s) => s.highlights);
+  const notes = useAnnotations((s) => s.notes);
   const { chaptersByOsis } = useAudioManifest();
 
   // bookId → chapitre → couleur → nb de versets.
@@ -47,6 +49,27 @@ export function useChapterMarkers() {
     }
     return out;
   }, [highlights, primaryId]);
+
+  // bookId → chapitre → ids de notes ; bookId → ids de notes.
+  const notesIndex = useMemo(() => {
+    const byChapter = new Map<string, Map<number, Set<string>>>();
+    const byBook = new Map<string, Set<string>>();
+    const prefix = `${primaryId}:`;
+    for (const note of Object.values(notes)) {
+      for (const v of note.verses) {
+        if (!v.verseId.startsWith(prefix)) continue;
+        let chapters = byChapter.get(v.bookId);
+        if (!chapters) byChapter.set(v.bookId, (chapters = new Map()));
+        let ids = chapters.get(v.chapter);
+        if (!ids) chapters.set(v.chapter, (ids = new Set()));
+        ids.add(note.id);
+        let bookIds = byBook.get(v.bookId);
+        if (!bookIds) byBook.set(v.bookId, (bookIds = new Set()));
+        bookIds.add(note.id);
+      }
+    }
+    return { byChapter, byBook };
+  }, [notes, primaryId]);
 
   const bookSummaries = useMemo(() => {
     const out = new Map<string, HighlightSummary>();
@@ -82,5 +105,17 @@ export function useChapterMarkers() {
     [bookSummaries],
   );
 
-  return { audioChaptersOf, chapterHighlights, bookHighlights };
+  /** Nombre de notes touchant ce chapitre (0 si aucune). */
+  const chapterNotes = useCallback(
+    (bookId: string, chapter: number): number => notesIndex.byChapter.get(bookId)?.get(chapter)?.size ?? 0,
+    [notesIndex],
+  );
+
+  /** Nombre de notes touchant ce livre (0 si aucune). */
+  const bookNotes = useCallback(
+    (bookId: string): number => notesIndex.byBook.get(bookId)?.size ?? 0,
+    [notesIndex],
+  );
+
+  return { audioChaptersOf, chapterHighlights, bookHighlights, chapterNotes, bookNotes };
 }

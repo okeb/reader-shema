@@ -11,7 +11,7 @@ divulguée. La cohérence est vérifiée par `pnpm changelog:check`.
 
 ### Ajouté
 
-- **Sélecteur de passages** : on voit d'un coup d'œil ce que contient chaque chapitre. Les numéros des chapitres disposant de l'audio s'affichent en couleur, et de petits points montrent les couleurs des versets surlignés (dans la version active). Les livres contenant des surlignages portent aussi ces points dans la liste, et une légende rappelle leur signification. Valable dans le sélecteur du lecteur comme dans le lanceur de l'accueil.
+- **Sélecteur de passages** : on voit d'un coup d'œil ce que contient chaque chapitre. Les numéros des chapitres disposant de l'audio s'affichent en couleur, de petits points montrent les couleurs des versets surlignés, et une icône signale les chapitres où tu as écrit une note (dans la version active). Les livres contenant des surlignages ou des notes portent aussi ces repères dans la liste, et une légende rappelle leur signification. Valable dans le sélecteur du lecteur comme dans le lanceur de l'accueil.
 
 ### Corrigé
 
