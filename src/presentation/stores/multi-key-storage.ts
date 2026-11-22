@@ -5,8 +5,9 @@ import type { StateStorage } from 'zustand/middleware';
  * localStorage (ex. `bymBookmarkGroups` + `bymBookmarks`), en préservant le format verbatim
  * de l'ancien projet.
  *
- * `keys` mappe `champ du state → clé localStorage`. La lecture agrège les clés en un objet ;
- * l'écriture découpe l'état persisté selon `partialize` du store et répartit chaque champ.
+ * `keys` mappe `champ du state → clé localStorage`. La lecture agrège les clés en un objet
+ * (enveloppé en `{ state, version }` pour `persist`) ; l'écriture découpe l'état persisté selon
+ * `partialize` du store et répartit chaque champ. Chaque clé garde le format brut historique.
  */
 
 interface MultiKeyDescriptor {
@@ -30,13 +31,16 @@ export function createMultiKeyStorage(descriptors: MultiKeyDescriptor[]): StateS
           aggregated[d.field] = null;
         }
       }
-      return JSON.stringify(aggregated);
+      // Enveloppe attendue par `persist` (zustand) : `{ state, version }`. Sans elle, l'état
+      // n'était jamais réhydraté et la 1re écriture remplaçait chaque clé par `null`.
+      return JSON.stringify({ state: aggregated, version: 0 });
     },
     setItem: (_name: string, value: string): void => {
-      const parsed = JSON.parse(value) as Record<string, unknown>;
+      const parsed = JSON.parse(value) as { state?: Record<string, unknown> } & Record<string, unknown>;
+      const state = (parsed.state ?? parsed) as Record<string, unknown>;
       for (const d of descriptors) {
         try {
-          localStorage.setItem(d.key, JSON.stringify(parsed[d.field] ?? null));
+          localStorage.setItem(d.key, JSON.stringify(state[d.field] ?? null));
         } catch {
           /* stockage indisponible — on ignore */
         }
