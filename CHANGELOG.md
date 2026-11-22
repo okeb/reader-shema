@@ -9,6 +9,10 @@ divulguée. La cohérence est vérifiée par `pnpm changelog:check`.
 
 ## [Unreleased]
 
+### Ajouté
+
+- **Sélecteur de passages** : on voit d'un coup d'œil ce que contient chaque chapitre. Les numéros des chapitres disposant de l'audio s'affichent en couleur, et de petits points montrent les couleurs des versets surlignés (dans la version active). Les livres contenant des surlignages portent aussi ces points dans la liste, et une légende rappelle leur signification. Valable dans le sélecteur du lecteur comme dans le lanceur de l'accueil.
+
 ### Corrigé
 
 - **Surlignages et notes** : sans compte connecté, ils sont désormais bien conservés après un rechargement de la page ; auparavant, ils disparaissaient à chaque visite.

@@ -5,6 +5,9 @@ import { Icon } from '@iconify/react';
 import { cn } from '@/lib/utils';
 import { GLASS_PILL } from '@/src/presentation/components/atoms/a-floating-button';
 import { BIBLE_BOOKS, BOOK_SECTIONS, getBookById, searchBooks } from '@/src/shared/constants/bible-books';
+import { HighlightDots } from '@/src/presentation/components/atoms/a-highlight-dots';
+import { useChapterMarkers } from '@/src/presentation/hooks/use-chapter-markers';
+import { ChapterGrid } from './m-chapter-grid';
 
 interface PassageLauncherProps {
   /** Livre présélectionné à l'ouverture du panneau (défaut : « jean », point d'entrée du lecteur). */
@@ -31,6 +34,7 @@ export function PassageLauncher({ defaultBookId = 'jean', onSelect }: PassageLau
   const activeBookRef = useRef<HTMLButtonElement | null>(null);
 
   const popBook = getBookById(popBookId) ?? BIBLE_BOOKS[0];
+  const { bookHighlights } = useChapterMarkers();
 
   // Réinitialise la recherche et le livre présélectionné à chaque ouverture.
   useEffect(() => {
@@ -78,7 +82,7 @@ export function PassageLauncher({ defaultBookId = 'jean', onSelect }: PassageLau
 
   const renderGroup = (label: string, books: typeof BIBLE_BOOKS) =>
     books.length > 0 && (
-      <div>
+      <div key={label}>
         {!q && (
           <div className="sticky top-0 select-none bg-input/10 px-3 py-2 text-[8px] font-medium uppercase tracking-wider text-muted-foreground/70 backdrop-blur-md">
             {label}
@@ -86,6 +90,7 @@ export function PassageLauncher({ defaultBookId = 'jean', onSelect }: PassageLau
         )}
         {books.map((b) => {
           const active = b.id === popBookId;
+          const hl = bookHighlights(b.id);
           return (
             <button
               key={b.id}
@@ -94,14 +99,16 @@ export function PassageLauncher({ defaultBookId = 'jean', onSelect }: PassageLau
                 setPopBookId(b.id);
                 setSearch('');
               }}
+              aria-label={hl ? `${b.name}, ${hl.count} verset${hl.count > 1 ? 's' : ''} surligné${hl.count > 1 ? 's' : ''}` : undefined}
               className={cn(
-                'w-full truncate px-3 py-1.5 text-left text-xs transition-colors',
+                'flex w-full items-center gap-1.5 px-3 py-1.5 text-left text-xs transition-colors',
                 active
                   ? 'bg-primary/10 font-semibold text-primary'
                   : 'text-foreground/80 hover:bg-foreground/5 hover:text-foreground',
               )}
             >
-              {b.name}
+              <span className="min-w-0 truncate">{b.name}</span>
+              {hl && <HighlightDots colors={hl.colors} max={2} className="ml-auto shrink-0" />}
             </button>
           );
         })}
@@ -156,19 +163,7 @@ export function PassageLauncher({ defaultBookId = 'jean', onSelect }: PassageLau
                 <p className="truncate text-[13px] font-semibold">{popBook.name}</p>
                 <p className="text-[10px] text-muted-foreground">{popBook.chapters} chapitres</p>
               </div>
-              <div className="flex-1 overflow-y-auto p-2">
-                <div className="grid grid-cols-5 gap-1">
-                  {Array.from({ length: popBook.chapters }, (_, i) => i + 1).map((n) => (
-                    <button
-                      key={n}
-                      onClick={() => onSelect(popBook.id, n)}
-                      className="h-8 rounded-md text-xs font-medium text-foreground/80 transition-all hover:bg-primary/10 hover:text-primary"
-                    >
-                      {n}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <ChapterGrid bookId={popBook.id} chapters={popBook.chapters} onSelect={(n) => onSelect(popBook.id, n)} />
             </div>
           </div>
         </div>
