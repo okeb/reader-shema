@@ -9,6 +9,10 @@ divulguée. La cohérence est vérifiée par `pnpm changelog:check`.
 
 ## [Unreleased]
 
+### Corrigé
+
+- **Sélecteur de passages** : Malachie compte désormais 3 chapitres et Joël 4, conformément à la numérotation hébraïque de la BYM. Le chapitre 4 de Malachie, qui n'existe pas, n'est plus proposé ; le chapitre 4 de Joël est maintenant accessible.
+
 ## [0.7.0] : 2026-09-04
 
 ### Ajouté
