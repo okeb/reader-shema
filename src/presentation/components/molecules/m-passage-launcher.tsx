@@ -33,7 +33,7 @@ export function PassageLauncher({ defaultBookId = 'jean', onSelect }: PassageLau
   const activeBookRef = useRef<HTMLButtonElement | null>(null);
 
   const popBook = getBookById(popBookId) ?? BIBLE_BOOKS[0];
-  const { bookHighlights, bookNotes } = useChapterMarkers();
+  const { bookHighlights, bookNotes, bookBookmarks } = useChapterMarkers();
 
   // Réinitialise la recherche et le livre présélectionné à chaque ouverture.
   useEffect(() => {
@@ -91,6 +91,7 @@ export function PassageLauncher({ defaultBookId = 'jean', onSelect }: PassageLau
           const active = b.id === popBookId;
           const hl = bookHighlights(b.id);
           const nNotes = bookNotes(b.id);
+          const bm = bookBookmarks(b.id);
           return (
             <button
               key={b.id}
@@ -99,7 +100,7 @@ export function PassageLauncher({ defaultBookId = 'jean', onSelect }: PassageLau
                 setPopBookId(b.id);
                 setSearch('');
               }}
-              aria-label={bookMarkerLabel(b.name, hl?.count ?? 0, nNotes)}
+              aria-label={bookMarkerLabel(b.name, hl?.count ?? 0, nNotes, bm?.count ?? 0)}
               className={cn(
                 'flex w-full items-center gap-1.5 px-3 py-1.5 text-left text-xs transition-colors',
                 active
@@ -108,7 +109,7 @@ export function PassageLauncher({ defaultBookId = 'jean', onSelect }: PassageLau
               )}
             >
               <span className="min-w-0 truncate">{b.name}</span>
-              <BookMarkers colors={hl?.colors} hasNotes={nNotes > 0} />
+              <BookMarkers colors={hl?.colors} hasNotes={nNotes > 0} bookmarkColor={bm?.colors[0]} />
             </button>
           );
         })}

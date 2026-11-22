@@ -3,13 +3,14 @@
 import { useCallback, useMemo } from 'react';
 import { getBookById } from '@/src/shared/constants/bible-books';
 import { useAnnotations } from '@/src/presentation/stores/annotations.store';
+import { useBookmarks } from '@/src/presentation/stores/bookmarks.store';
 import { useActiveVersion } from '@/src/presentation/stores/active-version.store';
 import { useAudioManifest } from '@/src/presentation/hooks/use-audio-manifest';
 
-/** Couleurs de surlignage d'un chapitre ou d'un livre, triées par fréquence décroissante. */
+/** Couleurs (surlignages, groupes de signets) d'un chapitre ou d'un livre, triées par fréquence décroissante. */
 export interface HighlightSummary {
   colors: string[];
-  /** Nombre de versets surlignés. */
+  /** Nombre de versets concernés. */
   count: number;
 }
 
@@ -19,8 +20,8 @@ const summarize = (byColor: Map<string, number>): HighlightSummary => ({
 });
 
 /**
- * Repères du sélecteur de passages : chapitres avec audio, surlignages et notes par chapitre /
- * par livre. Surlignages et notes sont ceux de la **version active**
+ * Repères du sélecteur de passages : chapitres avec audio, surlignages, notes et signets par
+ * chapitre / par livre. Surlignages, notes et signets sont ceux de la **version active**
  * (clé `${version}:${bookId}:${chapter}:${verse}`), pour correspondre à ce que l'on verra en
  * ouvrant le chapitre. Une note liée à plusieurs versets d'un même chapitre compte une fois.
  */
@@ -28,6 +29,8 @@ export function useChapterMarkers() {
   const primaryId = useActiveVersion((s) => s.primaryId);
   const highlights = useAnnotations((s) => s.highlights);
   const notes = useAnnotations((s) => s.notes);
+  const bookmarks = useBookmarks((s) => s.bookmarks);
+  const groups = useBookmarks((s) => s.groups);
   const { chaptersByOsis } = useAudioManifest();
 
   // bookId → chapitre → couleur → nb de versets.
@@ -70,6 +73,27 @@ export function useChapterMarkers() {
     }
     return { byChapter, byBook };
   }, [notes, primaryId]);
+
+  // Signets : bookId → chapitre → couleur de groupe → nb ; bookId → couleur → nb.
+  const bookmarksIndex = useMemo(() => {
+    const colorOf = new Map(groups.map((g) => [g.id, g.color]));
+    const byChapter = new Map<string, Map<number, Map<string, number>>>();
+    const byBook = new Map<string, Map<string, number>>();
+    for (const b of bookmarks) {
+      if (b.version !== primaryId) continue;
+      const color = colorOf.get(b.groupId);
+      if (!color) continue;
+      let chapters = byChapter.get(b.bookId);
+      if (!chapters) byChapter.set(b.bookId, (chapters = new Map()));
+      let colors = chapters.get(b.chapter);
+      if (!colors) chapters.set(b.chapter, (colors = new Map()));
+      colors.set(color, (colors.get(color) ?? 0) + 1);
+      let bookColors = byBook.get(b.bookId);
+      if (!bookColors) byBook.set(b.bookId, (bookColors = new Map()));
+      bookColors.set(color, (bookColors.get(color) ?? 0) + 1);
+    }
+    return { byChapter, byBook };
+  }, [bookmarks, groups, primaryId]);
 
   const bookSummaries = useMemo(() => {
     const out = new Map<string, HighlightSummary>();
@@ -117,5 +141,31 @@ export function useChapterMarkers() {
     [notesIndex],
   );
 
-  return { audioChaptersOf, chapterHighlights, bookHighlights, chapterNotes, bookNotes };
+  /** Signets du chapitre (couleurs de groupe par fréquence), ou `undefined` si aucun. */
+  const chapterBookmarks = useCallback(
+    (bookId: string, chapter: number): HighlightSummary | undefined => {
+      const colors = bookmarksIndex.byChapter.get(bookId)?.get(chapter);
+      return colors ? summarize(colors) : undefined;
+    },
+    [bookmarksIndex],
+  );
+
+  /** Signets du livre (couleurs de groupe par fréquence), ou `undefined` si aucun. */
+  const bookBookmarks = useCallback(
+    (bookId: string): HighlightSummary | undefined => {
+      const colors = bookmarksIndex.byBook.get(bookId);
+      return colors ? summarize(colors) : undefined;
+    },
+    [bookmarksIndex],
+  );
+
+  return {
+    audioChaptersOf,
+    chapterHighlights,
+    bookHighlights,
+    chapterNotes,
+    bookNotes,
+    chapterBookmarks,
+    bookBookmarks,
+  };
 }

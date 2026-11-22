@@ -45,7 +45,7 @@ export function BookChapterSelector({
   const popBook = getBookById(popBookId) ?? book;
 
   // Livres contenant des surlignages (version active) : points de couleur dans la liste.
-  const { bookHighlights, bookNotes } = useChapterMarkers();
+  const { bookHighlights, bookNotes, bookBookmarks } = useChapterMarkers();
 
   useEffect(() => {
     if (open) {
@@ -90,6 +90,7 @@ export function BookChapterSelector({
           const active = b.id === popBookId;
           const hl = bookHighlights(b.id);
           const nNotes = bookNotes(b.id);
+          const bm = bookBookmarks(b.id);
           return (
             <button
               key={b.id}
@@ -98,7 +99,7 @@ export function BookChapterSelector({
                 setPopBookId(b.id);
                 setSearch('');
               }}
-              aria-label={bookMarkerLabel(b.name, hl?.count ?? 0, nNotes)}
+              aria-label={bookMarkerLabel(b.name, hl?.count ?? 0, nNotes, bm?.count ?? 0)}
               className={cn(
                 'flex w-full items-center gap-1.5 px-3 py-1.5 text-left text-xs transition-colors',
                 active
@@ -107,7 +108,7 @@ export function BookChapterSelector({
               )}
             >
               <span className="min-w-0 truncate">{b.name}</span>
-              <BookMarkers colors={hl?.colors} hasNotes={nNotes > 0} />
+              <BookMarkers colors={hl?.colors} hasNotes={nNotes > 0} bookmarkColor={bm?.colors[0]} />
             </button>
           );
         })}

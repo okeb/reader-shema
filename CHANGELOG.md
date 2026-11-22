@@ -11,11 +11,11 @@ divulguée. La cohérence est vérifiée par `pnpm changelog:check`.
 
 ### Ajouté
 
-- **Sélecteur de passages** : on voit d'un coup d'œil ce que contient chaque chapitre. Les numéros des chapitres disposant de l'audio s'affichent en couleur, de petits points montrent les couleurs des versets surlignés, et une icône signale les chapitres où tu as écrit une note (dans la version active). Les livres contenant des surlignages ou des notes portent aussi ces repères dans la liste, et une légende rappelle leur signification. Valable dans le sélecteur du lecteur comme dans le lanceur de l'accueil.
+- **Sélecteur de passages** : on voit d'un coup d'œil ce que contient chaque chapitre. Les numéros des chapitres disposant de l'audio s'affichent en couleur, de petits points montrent les couleurs des versets surlignés, une icône signale les chapitres où tu as écrit une note, et un signet, à la couleur de son groupe, ceux où tu as placé des signets (dans la version active). Les livres contenant des surlignages, des notes ou des signets portent aussi ces repères dans la liste, et une légende rappelle leur signification. Valable dans le sélecteur du lecteur comme dans le lanceur de l'accueil.
 
 ### Corrigé
 
-- **Surlignages et notes** : sans compte connecté, ils sont désormais bien conservés après un rechargement de la page ; auparavant, ils disparaissaient à chaque visite.
+- **Surlignages, notes et signets** : sans compte connecté, ils sont désormais bien conservés après un rechargement de la page ; auparavant, ils disparaissaient à chaque visite.
 - **Quiz des chapitres** : après avoir validé, les choix restent affichés et la correction est explicite. Ta réponse est marquée « Ta réponse », en vert si elle est juste et en rouge sinon, et la bonne réponse est signalée. Pour les questions à plusieurs réponses, les bonnes réponses non cochées apparaissent comme « Oubliée ». Pour les questions d'ordre, chaque position est corrigée et l'ordre correct est rappelé. Un bandeau « Bonne réponse ! » ou « Raté » s'affiche aussitôt, et le choix sélectionné est plus visible avant de valider.
 - **Quiz de Matthieu 5** : l'explication de la question sur les béatitudes cite désormais les versets correspondant aux bonnes réponses (pauvres d'esprit, doux d'esprit, pacificateurs) et précise d'où vient « humble de cœur » (Matthieu 11:29).
 - **Sélecteur de passages** : Malachie compte désormais 3 chapitres et Joël 4, conformément à la numérotation hébraïque de la BYM. Le chapitre 4 de Malachie, qui n'existe pas, n'est plus proposé ; le chapitre 4 de Joël est maintenant accessible.
