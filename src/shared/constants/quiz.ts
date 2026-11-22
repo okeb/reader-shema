@@ -154,7 +154,7 @@ const QUIZZES: Quiz[] = [
     ],
     answer: ["a", "b", "d"],
     explanation:
-      "Les béatitudes (Matthieu 5:3-12) incluent les pauvres d'esprit, les miséricordieux et les persécutés. En revanche, «  Bénis, les humbles de cœur » n'est pas cité ; Yéhoshoua enseigne plutôt le jeûne doit se faire dans le secret (Matthieu 6).",
+      "Les pauvres d'esprit (v. 3), les doux d'esprit (v. 5) et les pacificateurs (v. 9) figurent bien parmi les béatitudes de Matthieu 5:3-12. En revanche, « Bénis, les humbles de cœur » n'en fait pas partie : l'expression rappelle Matthieu 11:29, où Yéhoshoua dit de lui-même qu'il est « doux et humble de cœur ».",
     verseRef: { bookId: "matthieu", chapter: 5, verse: "3-12" },
     icon: "fluent-emoji:mountain",
   },
