@@ -76,12 +76,11 @@ export const HOST = {
 /**
  * Hébergement des données de synchronisation (compte facultatif) — spec 22 §8, spec 26.
  *
- * Les blobs synchronisés sont chiffrés bout-en-bout côté client (AES-GCM) ; le serveur
- * ne stocke que des blobs opaques (jamais la clé de chiffrement DEK, jamais le clair).
- * Depuis la spec 28, la clé de récupération d'urgence est e-mailée à l'adresse du compte
- * (à l'inscription et au re-keying) : elle est vue fugacement par le serveur pour la passer
- * à Resend, mais n'est jamais persistée côté serveur. Région réelle confirmée en console
- * Neon au provisionnement — ne pas promettre une localisation non effectivement sélectionnée.
+ * Depuis la spec 39, les données synchronisées ne sont plus chiffrées de bout en bout : elles
+ * sont stockées en clair (table `user_sync`), associées au compte, chiffrées au repos par Neon et
+ * en transit (TLS). L'archive chiffrée d'avant la spec 39 (`user_data`) est conservée au plus tard
+ * jusqu'au 2027-06-01, le temps de sa conversion. Région réelle confirmée en console Neon au
+ * provisionnement — ne pas promettre une localisation non effectivement sélectionnée.
  *
  * Région active : `eu-west-2` (AWS Londres, Royaume-Uni). Le Royaume-Uni n'est pas dans
  * l'Union européenne (Brexit) mais bénéficie d'une décision d'adéquation RGPD de l'UE :
@@ -103,16 +102,15 @@ export const SYNC_HOSTING = {
  * E-mails transactionnels du compte (spec 26) — sous-traitement à mentionner (RGPD art. 28).
  *
  * Better Auth raw appelle `sendEmail` (vérification e-mail, reset mot de passe) ;
- * l'envoi est délégué à Resend. Aucune donnée de lecture ni blob chiffré ne transite par ce canal —
- * uniquement l'adresse e-mail de l'utilisateur et le lien signé. No-op en dev si la clé absente.
+ * l'envoi est délégué à Resend. Aucune donnée de lecture ne transite par ce canal — uniquement
+ * l'adresse e-mail de l'utilisateur et le lien signé. No-op en dev si la clé absente.
  */
 export const EMAIL_PROVIDER = {
   provider: "Resend",
   url: "https://resend.com",
-  /** Ce qui transite par ce canal : l'adresse e-mail, des liens signés à courte expiration, et (spec 28)
-   *  la clé de récupération d'urgence e-mailée à l'inscription / au re-keying (jamais persistée serveur). */
+  /** Ce qui transite par ce canal : l'adresse e-mail et des liens signés à courte expiration. */
   scope:
-    "L'adresse e-mail, des liens signés à courte expiration (vérification, reset) et la clé de récupération d'urgence (e-mailée à l'adresse du compte, jamais persistée).",
+    "Seuls transitent l'adresse e-mail et des liens signés à courte expiration (vérification, réinitialisation).",
 } as const;
 
 /** Liens des pages informationnelles (footer + sitemap). */
@@ -124,11 +122,10 @@ export const INFO_LINKS = [
 ] as const;
 
 /**
- * Clés `localStorage` (et un store `IndexedDB`) utilisées par l'application — listées sur la page
- * Confidentialité pour la transparence RGPD. Par défaut, aucune ne quitte l'appareil. Si vous
- * activez un compte (facultatif), les données marquées « (sync) » sont chiffrées bout-en-bout puis
- * envoyées sous forme de blobs opaques au serveur — jamais en clair (cf. section « Compte &
- * synchronisation »).
+ * Clés `localStorage` utilisées par l'application — listées sur la page Confidentialité pour la
+ * transparence RGPD. Par défaut, aucune ne quitte l'appareil. Avec un compte (facultatif), les
+ * données marquées « (sync) » sont aussi enregistrées sur le serveur, associées au compte
+ * (cf. section « Compte & synchronisation », spec 39).
  */
 export const STORAGE_KEYS: { key: string; label: string }[] = [
   { key: "bymFavorites", label: "Versets favoris (sync)" },
@@ -138,13 +135,8 @@ export const STORAGE_KEYS: { key: string; label: string }[] = [
   { key: "reader-preferences", label: "Réglages de lecture (police, taille, thème, disposition) (sync opt-in)" },
   { key: "reading-position", label: "Dernière position de lecture, reprise (sync)" },
   { key: "bym:nav-history", label: "Historique de navigation / recherches récentes (sync)" },
-  { key: "bym:account", label: "Préférences de synchronisation (sync activée, opt-in réglages)" },
+  { key: "bym:account", label: "Préférences de synchronisation (pause, opt-in réglages)" },
   { key: "bym:sync-meta / bym:sync-queue", label: "Horloges et file d'attente de synchronisation locales" },
-  {
-    key: "bym:device-keys (IndexedDB)",
-    label:
-      "Clé de déverrouillage persistée « se souvenir de cet appareil » (30 jours, opt-in — spec 28) : handle crypto non-extractable, pas d'octets bruts sur disque",
-  },
 ];
 
 /** Crédits divers (les versions de Bible sont créditées via `lib/bible-versions.ts`). */

@@ -1,28 +1,17 @@
 'use client';
 
 /**
- * Store du DEK « se souvenir de cet appareil » — spec 28.
+ * Clé de l'appareil d'avant la spec 39 (« se souvenir de cet appareil », spec 28) — lecture seule.
  *
- * Persiste le DEK (`CryptoKey` non-extractable à steady state) côté appareil dans IndexedDB, clé par
- * `userId`, avec une expiration (30 j par défaut). Au rechargement, si une entrée valide existe, on
- * restaure le DEK en mémoire (`useCryptoSession.setMasterKey`) sans redemander le mot de passe.
- *
- * Pourquoi IndexedDB (pas localStorage) : un `CryptoKey` est structured-cloneable et se stocke dans
- * IndexedDB tout en restant non-extractable — pas d'octets bruts sur disque, contrairement à une
- * base64 en localStorage. Le compromis friction/sécurité est assumé : quiconque accède à
- * l'appareil peut utiliser le DEK tant qu'il est valide, mais ne l'exfiltre pas en octets.
- *
- * Systématique : l'entrée est créée à chaque déverrouillage (connexion par mot de passe ou clé de
- * récupération) et son échéance est repoussée à chaque visite. Elle est purgée au signOut /
- * suppression de compte.
+ * Jusqu'à la spec 39, le DEK de la sync chiffrée était gardé 30 jours dans IndexedDB
+ * (`bym:device-keys`, clé = `userId`). La sync étant désormais en clair, on ne fait plus que le
+ * **lire** pour convertir l'archive chiffrée sans rien demander à l'utilisateur, puis le purger.
+ * À supprimer le 2027-06-01 avec l'archive.
  */
 
 const DB_NAME = 'bym:device-keys';
 const STORE_NAME = 'deks';
 const DB_VERSION = 1;
-
-/** Durée de vie par défaut d'un DEK persisté sur l'appareil (30 jours). */
-export const DEVICE_DEK_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 interface StoredDek {
   dek: CryptoKey;
@@ -38,74 +27,40 @@ function openDb(): Promise<IDBDatabase | null> {
     const req = indexedDB.open(DB_NAME, DB_VERSION);
     req.onupgradeneeded = () => {
       const db = req.result;
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME);
-      }
+      if (!db.objectStoreNames.contains(STORE_NAME)) db.createObjectStore(STORE_NAME);
     };
     req.onsuccess = () => resolve(req.result);
-    req.onerror = () => resolve(null); // stockage indisponible → mode sans souvenir
+    req.onerror = () => resolve(null);
   });
   return dbPromise;
 }
 
-function tx(
-  db: IDBDatabase,
-  mode: IDBTransactionMode,
-): IDBObjectStore {
-  return db.transaction(STORE_NAME, mode).objectStore(STORE_NAME);
-}
+const store = (db: IDBDatabase, mode: IDBTransactionMode): IDBObjectStore =>
+  db.transaction(STORE_NAME, mode).objectStore(STORE_NAME);
 
 /**
- * Persiste le DEK pour `userId` avec une expiration `ttlMs` (défaut 30 j).
- * Best-effort : échoue silencieusement si IndexedDB n'est pas disponible.
- */
-export async function storeDeviceDek(
-  userId: string,
-  dek: CryptoKey,
-  ttlMs: number = DEVICE_DEK_TTL_MS,
-): Promise<void> {
-  const db = await openDb();
-  if (!db) return;
-  const entry: StoredDek = { dek, expiresAt: Date.now() + ttlMs };
-  await new Promise<void>((resolve) => {
-    const req = tx(db, 'readwrite').put(entry, userId);
-    req.onsuccess = () => resolve();
-    req.onerror = () => resolve();
-  });
-}
-
-/**
- * Charge le DEK persisté pour `userId` s'il est encore valide (non expiré).
- * @returns le `CryptoKey`, ou `null` si absent / expiré / stockage indisponible. Les entrées
- *          expirées sont purgées au passage.
+ * Charge le DEK de l'appareil pour `userId` s'il est encore valide.
+ * @returns le `CryptoKey`, ou `null` si absent / expiré / stockage indisponible.
  */
 export async function loadDeviceDek(userId: string): Promise<CryptoKey | null> {
   const db = await openDb();
   if (!db) return null;
   return new Promise<CryptoKey | null>((resolve) => {
-    const req = tx(db, 'readonly').get(userId);
+    const req = store(db, 'readonly').get(userId);
     req.onsuccess = () => {
       const entry = req.result as StoredDek | undefined;
-      if (!entry || !entry.dek) return resolve(null);
-      if (Date.now() >= entry.expiresAt) {
-        // Expiré : on purge et considère comme absent.
-        const del = tx(db, 'readwrite').delete(userId);
-        del.onsuccess = () => resolve(null);
-        del.onerror = () => resolve(null);
-        return;
-      }
-      resolve(entry.dek);
+      resolve(entry?.dek && Date.now() < entry.expiresAt ? entry.dek : null);
     };
     req.onerror = () => resolve(null);
   });
 }
 
-/** Purge le DEK persisté pour `userId` (au signOut / suppression de compte). Best-effort. */
+/** Purge le DEK de l'appareil pour `userId`. Best-effort. */
 export async function clearDeviceDek(userId: string): Promise<void> {
   const db = await openDb();
   if (!db) return;
   await new Promise<void>((resolve) => {
-    const req = tx(db, 'readwrite').delete(userId);
+    const req = store(db, 'readwrite').delete(userId);
     req.onsuccess = () => resolve();
     req.onerror = () => resolve();
   });

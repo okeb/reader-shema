@@ -4,19 +4,25 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import { AccountDialog } from '@/src/presentation/components/molecules/m-account-dialog';
 import { authClient } from '@/lib/auth/client';
 import { useAccount } from '@/src/presentation/stores/account.store';
-import { useCryptoSession } from '@/src/presentation/stores/crypto-session.store';
-import { attachSyncListeners, pullAndMerge } from '@/src/presentation/lib/sync/sync-engine';
+import {
+  attachSyncListeners,
+  convertLegacy,
+  migrate,
+  setSyncUser,
+} from '@/src/presentation/lib/sync/sync-engine';
 import { attachSyncSubscribers } from '@/src/presentation/lib/sync/sync-subscribers';
-import { loadDeviceDek, storeDeviceDek } from '@/src/presentation/lib/sync/device-key-store';
+import { clearDeviceDek, loadDeviceDek } from '@/src/presentation/lib/sync/device-key-store';
 
 /**
  * Fournit la disponibilité du compte (auth+DB configurées) au reste de l'arbre —
  * spec 22 §7. Les entrées « Retrouver sur tous vos appareils » (panneaux notes/signets,
  * page favoris) et l'indicateur de session s'affichent uniquement si `authEnabled`.
  *
- * Monte la modale de compte (via l'event `bym:open-account`, miroir de `bym:open-search`)
- * et branche les écouteurs de sync (online / visibility + abonnés aux stores) quand la
- * sync est activée. Le moteur reste inerte tant que la master key n'est pas déverrouillée.
+ * Monte la modale de compte (via l'event `bym:open-account`, miroir de `bym:open-search`) et
+ * pilote la sync (spec 39) : connecté = synchronisé. Dès qu'une session existe, on déclare
+ * l'utilisateur au moteur, on branche les abonnés (mutations locales) et les écouteurs (online /
+ * visibility), puis on rapproche le local du cloud (`migrate`). Si l'appareil a encore la clé de
+ * l'ancienne sync chiffrée, l'archive est convertie au passage, sans rien demander.
  */
 
 const AccountAvailabilityContext = createContext<{ authEnabled: boolean }>({ authEnabled: false });
@@ -27,86 +33,72 @@ export function useAccountAvailability(): { authEnabled: boolean } {
 }
 
 interface AccountProviderProps {
-  /** Auth Neon + DB configurées côté serveur ? (calculé par le layout serveur). */
+  /** Auth + DB configurées côté serveur ? (calculé par le layout serveur). */
   authEnabled: boolean;
   children: ReactNode;
 }
 
 export function AccountProvider({ authEnabled, children }: AccountProviderProps) {
   const [open, setOpen] = useState(false);
-  // spec 28 : hint d'ouverture « recovery » pour atterrir directement sur `unlock-recovery` (lien
-  // « utiliser ma clé de récupération » de la page /account). `null` = comportement par défaut.
-  const [openHint, setOpenHint] = useState<'recovery' | null>(null);
-  const syncEnabled = useAccount((s) => s.syncEnabled);
   const session = authClient.useSession();
+  const userId = session.data?.user?.id ?? null;
+  const syncPaused = useAccount((s) => s.syncPaused);
 
-  // Ouverture cross-panels via event (miroir de `bym:open-search`). `detail.recovery=true` force
-  // l'étape `unlock-recovery` (lien secondaire page /account).
+  // Ouverture cross-panels via event (miroir de `bym:open-search`).
   useEffect(() => {
     if (!authEnabled) return;
-    const onOpen = (e: Event) => {
-      const detail = (e as CustomEvent).detail as { recovery?: boolean } | undefined;
-      setOpenHint(detail?.recovery ? 'recovery' : null);
-      setOpen(true);
-    };
+    const onOpen = () => setOpen(true);
     window.addEventListener('bym:open-account', onOpen);
     return () => window.removeEventListener('bym:open-account', onOpen);
   }, [authEnabled]);
 
-  // Hydratation de l'appareil mémorisé (spec 28) : au chargement, si une session est
-  // présente, la master key absente et qu'un DEK persisté valide existe pour cet utilisateur, on le
-  // restaure silencieusement (setMasterKey + pullAndMerge) — déverrouillage transparent sans
-  // redemander le mot de passe. DEK absent/expiré → l'étape `unlock-password` à l'ouverture de la
-  // modale. Best-effort : tout échec est silencieux (le dialog reste le filet).
+  // Utilisateur de la sync : suit la session (déconnexion → `null`, file + horloges vidées).
   useEffect(() => {
-    if (!authEnabled) return;
-    const userId = session.data?.user?.id;
-    if (!userId || session.isPending) return;
-    if (useCryptoSession.getState().unlocked) return;
-    let cancelled = false;
-    void (async () => {
-      const dek = await loadDeviceDek(userId);
-      if (cancelled || !dek) return;
-      if (useCryptoSession.getState().unlocked) return; // déverrouillé entre-temps (dialog)
-      useCryptoSession.getState().setMasterKey(dek);
-      // Expiration glissante : chaque visite repousse l'échéance (30 j sans visite → mot de passe).
-      void storeDeviceDek(userId, dek);
-      try {
-        await pullAndMerge();
-      } catch {
-        console.warn('sync: hydratation DEK device — pullAndMerge échoué');
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [authEnabled, session.data?.user?.id, session.isPending]);
+    if (!authEnabled || session.isPending) return;
+    setSyncUser(userId);
+  }, [authEnabled, session.isPending, userId]);
 
-  // Sync : branche abonnés (mutations locales) + écouteurs (online / visibility) uniquement
-  // quand la sync est activée. Détache (sans perte) si l'utilisateur désactive le toggle.
+  // Abonnés + écouteurs tant qu'une session existe. En pause, les modifications sont mises en
+  // file (et partent à la reprise) ; seuls les échanges réseau sont suspendus.
   useEffect(() => {
-    if (!authEnabled || !syncEnabled) return;
+    if (!authEnabled || !userId) return;
     const detachListeners = attachSyncListeners();
     const detachSubscribers = attachSyncSubscribers();
     return () => {
       detachListeners();
       detachSubscribers();
     };
-  }, [authEnabled, syncEnabled]);
+  }, [authEnabled, userId]);
+
+  // Au chargement / à la connexion / à la reprise : conversion de l'archive chiffrée si l'appareil
+  // en a encore la clé (spec 39 §4.3), puis rapprochement local ↔ cloud. Best-effort, silencieux.
+  useEffect(() => {
+    if (!authEnabled || !userId || syncPaused) return;
+    let cancelled = false;
+    void (async () => {
+      setSyncUser(userId); // l'effet ci-dessus peut ne pas avoir encore tourné
+      try {
+        const dek = await loadDeviceDek(userId);
+        if (cancelled) return;
+        if (dek) {
+          const r = await convertLegacy({ dek });
+          // Clé inutile désormais (archive convertie, absente ou illisible avec elle).
+          if (r !== 'partial') await clearDeviceDek(userId);
+        }
+        if (!cancelled) await migrate();
+      } catch (err) {
+        console.warn('sync: rapprochement au chargement échoué', err);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [authEnabled, userId, syncPaused]);
 
   return (
     <AccountAvailabilityContext.Provider value={{ authEnabled }}>
       {children}
-      {authEnabled && (
-        <AccountDialog
-          open={open}
-          openHint={openHint}
-          onClose={() => {
-            setOpen(false);
-            setOpenHint(null);
-          }}
-        />
-      )}
+      {authEnabled && <AccountDialog open={open} onClose={() => setOpen(false)} />}
     </AccountAvailabilityContext.Provider>
   );
 }

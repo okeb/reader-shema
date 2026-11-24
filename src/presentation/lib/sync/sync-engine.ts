@@ -3,44 +3,47 @@
 import { configureContainer, getCqrsBus } from '@/src/infrastructure/di/container';
 import type { ICommandResult } from '@/src/domain/use-cases/base.command.interface';
 import type { IQueryResult } from '@/src/domain/use-cases/base.query.interface';
-import type { EncryptedBlob, SyncBlobMap, SyncKind } from '@/src/domain/entities/sync.entity';
-import { PullAllSyncQuery } from '@/src/application/queries/sync/queries';
-import { PushSyncCommand, DeleteAccountCommand } from '@/src/application/commands/sync/commands';
+import type {
+  LegacyBlobMap,
+  SyncBlob,
+  SyncBlobMap,
+  SyncKind,
+} from '@/src/domain/entities/sync.entity';
+import { PullAllSyncQuery, PullLegacySyncQuery } from '@/src/application/queries/sync/queries';
+import {
+  PushSyncCommand,
+  DeleteAccountCommand,
+  DeleteLegacySyncCommand,
+} from '@/src/application/commands/sync/commands';
 import {
   NotAuthenticatedError,
   AuthNotConfiguredError,
 } from '@/src/infrastructure/repositories/sync.repository.impl';
 import {
-  encryptBlob,
   decryptBlob,
-  generateRecoveryKey,
-  deriveMasterKey,
-  generateDek,
-  generatePwSalt,
   deriveKekPw,
-  wrapDek,
-  unwrapDek,
-  buildEnvelope,
-  serializeEnvelope,
+  deriveMasterKey,
   parseEnvelope,
-  envelopePlaceholderNonce,
+  unwrapDek,
 } from '@/src/infrastructure/crypto/crypto.service';
-import { useCryptoSession } from '@/src/presentation/stores/crypto-session.store';
 import { useSyncMeta } from '@/src/presentation/stores/sync-meta.store';
 import { useSyncQueue } from '@/src/presentation/stores/sync-queue.store';
+import { useSyncStatus } from '@/src/presentation/stores/sync-status.store';
 import { useAccount } from '@/src/presentation/stores/account.store';
+import { useBookmarks } from '@/src/presentation/stores/bookmarks.store';
 import { syncAdapters } from './sync-adapters';
 
 /**
- * Moteur de synchronisation — spec 22 §4.
+ * Moteur de synchronisation — spec 22 §4, spec 39.
  *
- * Orchestre le pull (déchiffrement + fusion LWW + hydratation des stores), le push
- * (sérialisation + chiffrement + commande) et la migration du local vers le cloud
- * au premier login. La master key vient de `useCryptoSession` (en mémoire seule) ;
- * sans elle, le moteur est inerte (pas de sync, pas de perte de données).
+ * Orchestre le pull (fusion LWW + hydratation des stores), le push (sérialisation + commande) et
+ * la migration du local vers le cloud à la connexion. Depuis la spec 39, il n'y a plus de clé :
+ * la sync est active dès qu'une session existe (`setSyncUser`) et que l'utilisateur ne l'a pas
+ * mise en pause (`syncPaused`).
  *
- * File offline : `notifyLocalChange` enfile le kind sale + planifie un `flush`
- * debouncé. Le flush se déclenche aussi sur `online` / `visibilitychange` (hidden).
+ * File offline : `notifyLocalChange` enfile le kind sale + planifie un `flush` debouncé. Le flush
+ * se déclenche aussi sur `online` / `visibilitychange` (hidden). En pause, les modifications
+ * restent en file et partent à la reprise.
  */
 
 const FLUSH_DEBOUNCE_MS = 2000;
@@ -49,6 +52,8 @@ let configured = false;
 let flushTimer: ReturnType<typeof setTimeout> | null = null;
 /** Supprime l'écho : quand on hydrate depuis le cloud, on ne renfile pas la modif. */
 let suppress = false;
+/** Utilisateur connecté dont on synchronise les données (`null` = pas de session). */
+let syncUserId: string | null = null;
 
 function ensureConfigured(): void {
   if (!configured) {
@@ -61,6 +66,34 @@ function isOnline(): boolean {
   return typeof navigator === 'undefined' || navigator.onLine;
 }
 
+/**
+ * Déclare l'utilisateur connecté (ou `null` à la déconnexion) — spec 39 §4.1.
+ *
+ * Changement d'utilisateur : on vide la file et les horloges locales, pour que les modifications en
+ * attente d'un compte ne partent jamais dans un autre et que le local soit rapproché du nouveau
+ * compte par `migrate()`.
+ */
+export function setSyncUser(userId: string | null): void {
+  if (userId === syncUserId) return;
+  const previous = syncUserId;
+  syncUserId = userId;
+  if (previous !== null) resetSyncState();
+}
+
+/** Vide la file, les horloges et l'état d'affichage (déconnexion / changement de compte). */
+export function resetSyncState(): void {
+  if (flushTimer) clearTimeout(flushTimer);
+  flushTimer = null;
+  useSyncQueue.getState().clear();
+  useSyncMeta.getState().clear();
+  useSyncStatus.getState().reset();
+}
+
+/** La sync échange-t-elle avec le serveur ? (session présente et pas en pause). */
+export function isSyncActive(): boolean {
+  return syncUserId !== null && !useAccount.getState().syncPaused;
+}
+
 /** Un kind opt-in (réglages) n'est actif que si l'utilisateur a opté pour la sync des réglages. */
 function isKindActive(kind: SyncKind): boolean {
   const adapter = syncAdapters[kind];
@@ -69,13 +102,13 @@ function isKindActive(kind: SyncKind): boolean {
   return true;
 }
 
-/** Sera appelé par `sync-subscribers` quand un store syncé mute. */
+/** Appelé par `sync-subscribers` quand un store syncé mute. */
 export function notifyLocalChange(kind: SyncKind): void {
   if (suppress) return; // hydratation depuis le cloud → pas d'écho-push
   if (!isKindActive(kind)) return;
   useSyncMeta.getState().bump(kind);
   useSyncQueue.getState().enqueue(kind);
-  scheduleFlush();
+  if (isSyncActive()) scheduleFlush();
 }
 
 function scheduleFlush(): void {
@@ -93,24 +126,22 @@ function scheduleFlush(): void {
  */
 async function pushKind(kind: SyncKind): Promise<boolean> {
   const adapter = syncAdapters[kind];
-  if (!adapter || !isKindActive(kind)) return true;
-  const masterKey = useCryptoSession.getState().masterKey;
-  if (!masterKey) return true; // verrouillé : on garde en file, on réessaiera au déblocage
+  if (!adapter || !isKindActive(kind)) {
+    useSyncQueue.getState().markPushed(kind);
+    return true;
+  }
 
-  const plaintext = adapter.serialize();
-  const { ciphertext, nonce } = await encryptBlob(masterKey, plaintext);
-  // Horloge LWW : on ne pousse jamais un horodatage nul. La migration premier-login
-  // enfile les kinds sans « bumper » le méta (meta[kind] === 0) ; si on poussait 0, le
-  // blob serait daté 0 et ignoré au pull sur un autre appareil (`remote.updatedAt >
-  // localTs` → `0 > 0` = faux). On date donc au moment du push quand l'horloge est vide.
-  // Kind « ensemble » : le payload vient d'être fusionné avec le distant (pull avant push) →
-  // il le contient, on le date maintenant pour qu'il passe la garde LWW.
+  const payload = adapter.serialize();
+  // Horloge LWW : on ne pousse jamais un horodatage nul. La migration enfile des kinds sans
+  // « bumper » le méta (meta[kind] === 0) ; poussé à 0, le blob serait ignoré au pull d'un autre
+  // appareil (`0 > 0` = faux). On date donc au moment du push quand l'horloge est vide.
+  // Kind « ensemble » : le payload vient d'être fusionné avec le distant (pull avant push) → il le
+  // contient, on le date maintenant pour qu'il passe la garde LWW.
   const metaTs = useSyncMeta.getState().get(kind);
   const updatedAt = adapter.merge ? Math.max(Date.now(), metaTs + 1) : metaTs > 0 ? metaTs : Date.now();
-  const blob: EncryptedBlob = { ciphertext, nonce, updatedAt };
+  const blob: SyncBlob = { payload, updatedAt };
 
-  const bus = getCqrsBus();
-  const res = await bus.executeCommand<ICommandResult<{ updatedAt: number }>>(
+  const res = await getCqrsBus().executeCommand<ICommandResult<{ updatedAt: number }>>(
     new PushSyncCommand(kind, blob),
   );
   const accepted = res.data.updatedAt === updatedAt;
@@ -132,8 +163,7 @@ async function pushKind(kind: SyncKind): Promise<boolean> {
 /** Pousse tous les kinds en attente (file offline). */
 export async function flush(): Promise<void> {
   ensureConfigured();
-  if (!isOnline()) return;
-  if (!useCryptoSession.getState().unlocked) return;
+  if (!isOnline() || !isSyncActive()) return;
 
   // Kind « ensemble » en attente : on tire et fusionne d'abord, pour que le push porte l'union
   // des appareils au lieu d'écraser les entrées des autres.
@@ -142,19 +172,22 @@ export async function flush(): Promise<void> {
   }
 
   let rejected = false;
+  let failed = false;
   const pending = [...useSyncQueue.getState().pending];
   for (const kind of pending) {
     try {
       if (!(await pushKind(kind))) rejected = true;
     } catch (err) {
       if (err instanceof NotAuthenticatedError || err instanceof AuthNotConfiguredError) {
-        // Pas de compte / Neon absent : on garde la file, mode local-only silencieux.
+        // Session expirée / base absente : on garde la file, elle repartira à la reconnexion.
         return;
       }
       // Erreur transitoire (réseau) : on laisse en file pour le prochain flush.
+      failed = true;
       console.warn(`sync: echec push ${kind}`, err);
     }
   }
+  if (!failed && pending.length > 0) useSyncStatus.getState().markSynced();
   // Un push rejeté = le distant est plus récent : on le récupère tout de suite (le pull
   // replanifie un flush si une union reste à republier).
   if (rejected) await pullAndMerge();
@@ -162,67 +195,135 @@ export async function flush(): Promise<void> {
 
 // --- pull ----------------------------------------------------------------------
 
+/** Kinds « collection » fusionnables entrée par entrée (listes à `id`, ou maps). */
+const COLLECTION_KINDS: SyncKind[] = ['favorites', 'bookmarkGroups', 'bookmarks', 'notes', 'highlights'];
+
+const isPlainObject = (v: unknown): v is Record<string, unknown> =>
+  typeof v === 'object' && v !== null && !Array.isArray(v);
+
 /**
- * Tire tous les kinds, déchiffre et hydrate les stores quand le remote est plus
- * récent que l'horloge LWW locale. À appeler au déblocage (recovery key saisie)
- * et au retour en ligne.
+ * Union de deux versions d'une collection, `primary` prioritaire en cas de conflit. `null` si les
+ * formes ne s'y prêtent pas.
  */
-export async function pullAndMerge(): Promise<void> {
-  ensureConfigured();
-  const masterKey = useCryptoSession.getState().masterKey;
-  if (!masterKey) return;
-
-  const bus = getCqrsBus();
-  let remoteMap;
+function unionEntries(primaryPayload: string, otherPayload: string): string | null {
   try {
-    const res = await bus.executeQuery<IQueryResult<SyncBlobMap>>(new PullAllSyncQuery());
-    remoteMap = res.data ?? {};
-  } catch (err) {
-    if (err instanceof NotAuthenticatedError || err instanceof AuthNotConfiguredError) return;
-    console.warn('sync: echec pull', err);
-    return;
+    const primary: unknown = JSON.parse(primaryPayload);
+    const other: unknown = JSON.parse(otherPayload);
+    if (Array.isArray(primary) && Array.isArray(other)) {
+      const ids = new Set(primary.map((e) => (isPlainObject(e) ? e.id : undefined)));
+      const extra = other.filter((e) => isPlainObject(e) && typeof e.id === 'string' && !ids.has(e.id));
+      return JSON.stringify([...primary, ...extra]);
+    }
+    if (isPlainObject(primary) && isPlainObject(other)) return JSON.stringify({ ...other, ...primary });
+  } catch {
+    // Payload illisible : rien à fusionner.
   }
+  return null;
+}
 
+/**
+ * Ajoute au local les entrées de `payload` qui lui manquent (le local l'emporte en cas de conflit),
+ * puis date et enfile le kind pour publier l'union.
+ */
+function addMissingEntries(kind: SyncKind, payload: string): void {
+  const adapter = syncAdapters[kind];
+  if (!adapter) return;
+  const local = adapter.serialize();
+  const union = unionEntries(local, payload);
+  if (union === null || union === local) return;
   suppress = true;
   try {
-    for (const kindStr of Object.keys(remoteMap)) {
-      const kind = kindStr as SyncKind;
-      const adapter = syncAdapters[kind];
-      const remote = remoteMap[kind];
-      if (!adapter || !remote || !isKindActive(kind)) continue;
-
-      const localTs = useSyncMeta.getState().get(kind);
-      if (adapter.merge) {
-        // Kind « ensemble » : fusion à chaque pull, quel que soit l'horodatage (une horloge locale
-        // plus récente ne doit pas faire ignorer les entrées d'un autre appareil).
-        try {
-          const plaintext = await decryptBlob(masterKey, remote.ciphertext, remote.nonce);
-          adapter.hydrate(plaintext ? JSON.parse(plaintext) : null);
-          useSyncMeta.getState().set(kind, Math.max(localTs, remote.updatedAt));
-          // Le local contient des entrées absentes du distant → on republie l'union.
-          if (adapter.serialize() !== plaintext) useSyncQueue.getState().enqueue(kind);
-        } catch (err) {
-          console.warn(`sync: echec decrypt ${kind}`, err);
-        }
-        continue;
-      }
-      if (remote.updatedAt > localTs) {
-        try {
-          const plaintext = await decryptBlob(masterKey, remote.ciphertext, remote.nonce);
-          const parsed = plaintext ? JSON.parse(plaintext) : null;
-          adapter.hydrate(parsed);
-          useSyncMeta.getState().set(kind, remote.updatedAt);
-        } catch (err) {
-          // Clé incorrecte ou blob corrompu : on garde le local, on ne plante pas.
-          console.warn(`sync: echec decrypt ${kind}`, err);
-        }
-      }
-    }
+    adapter.hydrate(JSON.parse(union));
   } finally {
     suppress = false;
   }
-  // Modifs locales faites pendant le verrouillage, ou union à republier après fusion.
+  // Le local contient maintenant plus que le cloud : on le date pour qu'il passe la garde LWW.
+  useSyncMeta.getState().bump(kind);
+  useSyncQueue.getState().enqueue(kind);
+}
+
+/**
+ * Entrées locales d'une collection jamais synchronisée, à conserver à la connexion. Les groupes de
+ * signets sans aucun signet sont écartés : chaque appareil crée d'office un groupe « Mes versets »
+ * vide, qui ferait doublon avec celui du compte.
+ */
+function unsyncedEntries(kind: SyncKind): string {
+  const payload = syncAdapters[kind]!.serialize();
+  if (kind !== 'bookmarkGroups') return payload;
+  const used = new Set(useBookmarks.getState().bookmarks.map((b) => b.groupId));
+  const groups = JSON.parse(payload) as { id: string }[];
+  return JSON.stringify(groups.filter((g) => used.has(g.id)));
+}
+
+/**
+ * Intègre un payload distant (JSON) dans le store local du kind — règles communes au pull et à la
+ * conversion de l'archive chiffrée (spec 39 §4.3) :
+ *  - kind « ensemble » : fusion à chaque fois, puis republication si le local contient plus ;
+ *  - kind « remplacement » : hydratation seulement si le distant est plus récent que l'horloge ;
+ *    une collection locale jamais synchronisée (horloge vide) garde alors ses entrées en plus.
+ */
+export function applyRemotePayload(kind: SyncKind, payload: string, remoteUpdatedAt: number): void {
+  const adapter = syncAdapters[kind];
+  if (!adapter || !isKindActive(kind)) return;
+  const localTs = useSyncMeta.getState().get(kind);
+
+  suppress = true;
+  try {
+    if (adapter.merge) {
+      adapter.hydrate(payload ? JSON.parse(payload) : null);
+      useSyncMeta.getState().set(kind, Math.max(localTs, remoteUpdatedAt));
+      // Le local contient des entrées absentes du distant → on republie l'union.
+      if (adapter.serialize() !== payload) useSyncQueue.getState().enqueue(kind);
+      return;
+    }
+    if (remoteUpdatedAt > localTs) {
+      // Collection locale jamais synchronisée (appareil utilisé sans compte avant la connexion) :
+      // on garde ses entrées en plus de celles du cloud au lieu de les écraser.
+      const unsynced =
+        localTs === 0 && COLLECTION_KINDS.includes(kind) && adapter.hasLocal() ? unsyncedEntries(kind) : null;
+      adapter.hydrate(payload ? JSON.parse(payload) : null);
+      useSyncMeta.getState().set(kind, remoteUpdatedAt);
+      if (unsynced !== null) addMissingEntries(kind, unsynced);
+    }
+  } catch (err) {
+    // Payload corrompu : on garde le local, on ne plante pas.
+    console.warn(`sync: payload illisible ${kind}`, err);
+  } finally {
+    suppress = false;
+  }
+}
+
+/**
+ * Tire tous les kinds et hydrate les stores quand le distant est plus récent que l'horloge LWW
+ * locale. Appelé à la connexion, au chargement, au retour sur l'onglet et au retour en ligne.
+ *
+ * @returns la carte distante, ou `null` si la sync est inactive ou le serveur injoignable.
+ */
+export async function pullAndMerge(): Promise<SyncBlobMap | null> {
+  ensureConfigured();
+  if (!isSyncActive()) return null;
+
+  let remoteMap: SyncBlobMap;
+  try {
+    const res = await getCqrsBus().executeQuery<IQueryResult<SyncBlobMap>>(new PullAllSyncQuery());
+    remoteMap = res.data ?? {};
+  } catch (err) {
+    if (!(err instanceof NotAuthenticatedError || err instanceof AuthNotConfiguredError)) {
+      console.warn('sync: echec pull', err);
+    }
+    return null;
+  }
+
+  for (const kindStr of Object.keys(remoteMap)) {
+    const kind = kindStr as SyncKind;
+    const remote = remoteMap[kind];
+    if (remote) applyRemotePayload(kind, remote.payload, remote.updatedAt);
+  }
+  useSyncStatus.getState().markSynced();
+
+  // Modifs locales en attente, ou union à republier après fusion.
   if (useSyncQueue.getState().pending.length > 0) scheduleFlush();
+  return remoteMap;
 }
 
 // --- suppression du compte cloud ----------------------------------------------
@@ -230,62 +331,33 @@ export async function pullAndMerge(): Promise<void> {
 /**
  * Supprime toutes les données cloud du compte — spec 22 §5.
  *
- * Exécute `DELETE /api/account` (purge des blobs `user_data`), verrouille la master
- * key et vide l'horloge + la file de sync locales. La fermeture de l'identité Neon
- * (signOut) est laissée à l'UI appelante. En cas de compte non configuré ou non
- * authentifié, l'appel est silencieux (mode local-only).
+ * Exécute `DELETE /api/account` (purge des données synchronisées et de l'archive chiffrée), puis
+ * vide l'horloge + la file de sync locales. La fermeture de session (signOut) est laissée à l'UI.
  */
 export async function deleteAccount(): Promise<void> {
   ensureConfigured();
-  const bus = getCqrsBus();
   try {
-    await bus.executeCommand<ICommandResult<void>>(new DeleteAccountCommand());
+    await getCqrsBus().executeCommand<ICommandResult<void>>(new DeleteAccountCommand());
   } catch (err) {
     if (err instanceof NotAuthenticatedError || err instanceof AuthNotConfiguredError) return;
     throw err;
   }
-  useCryptoSession.getState().lock();
-  useSyncMeta.getState().clear();
-  useSyncQueue.getState().clear();
+  resetSyncState();
 }
 
-// --- detection cloud (decide premier login vs retour) -------------------------
+// --- migration (connexion / chargement) -----------------------------------------
 
 /**
- * Indique si le compte possède déjà des blobs cloud — spec 22 §4.3.
+ * Rapproche le local du compte — spec 22 §4.3, spec 39.
  *
- * Sert à l'UI compte à distinguer le premier login (cloud vide → on génère une
- * recovery key et on migre le local) du retour sur un nouvel appareil (cloud
- * rempli → on demande la recovery key existante). Ne déchiffre rien : on regarde
- * seulement si la carte de blobs est non vide.
- *
- * @returns `true`/`false` si la requête aboutit, `null` si pas de compte / Neon
- *  absent (mode local-only).
- */
-export async function hasCloudData(): Promise<boolean | null> {
-  ensureConfigured();
-  const bus = getCqrsBus();
-  try {
-    const res = await bus.executeQuery<IQueryResult<SyncBlobMap>>(new PullAllSyncQuery());
-    return Object.keys(res.data ?? {}).length > 0;
-  } catch (err) {
-    if (err instanceof NotAuthenticatedError || err instanceof AuthNotConfiguredError) return null;
-    console.warn('sync: echec hasCloudData', err);
-    return null;
-  }
-}
-
-// --- migration premier login ---------------------------------------------------
-
-/**
- * Migration local → cloud au premier login — spec 22 §4.3.
- *
- * Tire d'abord le cloud (fusion LWW). Puis, pour chaque kind ayant une donnée
- * locale mais aucune trace d'horloge (`meta[kind] === 0`, i.e. jamais poussé), on
- * enfile et on pousse. Le cloud vide + local présent → le local devient la source.
+ * Tire d'abord le cloud (fusion LWW ; les collections locales jamais synchronisées y sont fusionnées
+ * plutôt qu'écrasées, cf. `applyRemotePayload`). Puis on enfile chaque kind qui a une donnée locale
+ * et qui n'est pas encore dans le cloud (jamais poussé, ou cloud vidé — cas du premier passage en clair, où
+ * le local d'avant la spec 39 a des horloges mais aucune ligne `user_sync`), et on pousse.
  */
 export async function migrate(): Promise<void> {
-  await pullAndMerge();
+  const remote = await pullAndMerge();
+  if (remote === null) return;
 
   const meta = useSyncMeta.getState();
   const queue = useSyncQueue.getState();
@@ -293,7 +365,7 @@ export async function migrate(): Promise<void> {
     const kind = kindStr as SyncKind;
     const adapter = syncAdapters[kind];
     if (!adapter || !isKindActive(kind)) continue;
-    if (meta.get(kind) === 0 && adapter.hasLocal()) {
+    if (adapter.hasLocal() && (meta.get(kind) === 0 || !remote[kind])) {
       queue.enqueue(kind);
     }
   }
@@ -310,7 +382,7 @@ let lastPullAt = 0;
 
 /** Tire les changements des autres appareils (throttlé), puis vide la file. */
 async function refreshFromCloud(): Promise<void> {
-  if (!isOnline() || !useCryptoSession.getState().unlocked) return;
+  if (!isOnline() || !isSyncActive()) return;
   const now = Date.now();
   if (now - lastPullAt < PULL_THROTTLE_MS) return;
   lastPullAt = now;
@@ -350,331 +422,140 @@ export function attachSyncListeners(): () => void {
   };
 }
 
-// --- Enveloppe DEK/KEK (spec 28) ----------------------------------------------
-//
-// Déverrouillage routine au mot de passe (KEK_pw) + urgence à la clé de récupération (KEK_rec).
-// L'enveloppe (DEK wrappé par les deux KEK + sel pw) vit dans `user_data` kind=`keyEnvelope` (pas
-// d'adapter — la moteur la skip dans pullAndMerge via `!adapter`). Le DEK unwrappé devient la
-// master key en mémoire (et peut être persisté sur l'appareil via device-key-store).
-
-/** Un autre appareil a créé l'enveloppe avant nous (race LWW perdue au bootstrap). */
-export class BootstrapLostError extends Error {
-  constructor() {
-    super('Enveloppe déjà créée par un autre appareil');
-    this.name = 'BootstrapLostError';
-  }
-}
-
-/** Résultat d'un déverrouillage par mot de passe. */
-export type UnlockResult = 'ok' | 'no-envelope' | 'no-pw-wrap' | 'wrong';
-
-/** Résultat d'un déverrouillage par clé de récupération. */
-export type UnlockRecoveryResult = 'ok' | 'no-envelope' | 'wrong';
+// --- Archive chiffrée d'avant la spec 39 (temporaire — à retirer le 2027-06-01) ----
 
 /**
- * Tire l'enveloppe DEK/KEK du cloud — spec 28.
+ * Conversion de l'archive chiffrée d'avant la spec 39 — spec 39 §4.3.
  *
- * Pull-all puis extrait le kind `keyEnvelope`. `null` si absent (premier login / compte legacy
- * pré-spec-28) ou mode local-only. Ne déchiffre rien : l'enveloppe est lue telle quelle (son contenu
- * est wrappé, pas chiffré au niveau de la row). Sert de gate premier-login vs retour : la PRÉSENCE
- * de l'enveloppe = « déjà configuré », indépendamment des blobs de données.
+ * L'archive (`user_data` : un blob AES-GCM par kind + l'enveloppe `keyEnvelope`) est gelée. Avec
+ * une clé (DEK de l'appareil, mot de passe ou clé de récupération), on la déchiffre, on l'intègre
+ * aux stores locaux, puis la sync en clair publie le résultat. L'archive n'est supprimée que si tout
+ * a été publié ; sinon elle reste, et la conversion (idempotente) pourra être rejouée.
+ *
+ * Intégration, kind par kind, APRÈS un pull du cloud en clair (le local est alors le plus à jour
+ * connu) : si l'archive est plus récente, elle remplace (LWW, comme un pull) ; sinon, pour les
+ * collections (favoris, signets, notes, surlignages), on fusionne ses entrées absentes du local —
+ * le local l'emporte en cas de conflit. Sans cette fusion, des entrées créées avant la mise à jour
+ * et jamais transférées seraient perdues à la suppression de l'archive.
+ *
+ * Jamais bloquant : sans clé, la sync en clair fonctionne déjà et l'archive attend.
+ * À supprimer le 2027-06-01 avec l'archive.
  */
-export async function getEnvelope(): Promise<EncryptedBlob | null> {
+
+/** Résultat d'une conversion. */
+export type ConvertResult =
+  /** Archive intégrée, publiée et supprimée. */
+  | 'ok'
+  /** Archive intégrée localement ; publication en attente (hors ligne / sync en pause) — archive gardée. */
+  | 'partial'
+  /** Aucune archive. */
+  | 'none'
+  /** La clé ne déchiffre rien (archive intacte). */
+  | 'wrong'
+  /** Le mot de passe ne peut pas ouvrir cette archive (pas d'enveloppe mot de passe) : clé de récupération requise. */
+  | 'no-pw-wrap';
+
+/** Secret permettant d'ouvrir l'archive. */
+export type LegacySecret = { dek: CryptoKey } | { password: string } | { recoveryKey: string };
+
+/** Intègre un kind de l'archive au local (voir la doc de la section). */
+function integrateArchiveKind(kind: SyncKind, payload: string, updatedAt: number): void {
+  const adapter = syncAdapters[kind];
+  if (!adapter || !isKindActive(kind)) return;
+  if (adapter.merge || updatedAt > useSyncMeta.getState().get(kind) || !COLLECTION_KINDS.includes(kind)) {
+    applyRemotePayload(kind, payload, updatedAt);
+    return;
+  }
+  addMissingEntries(kind, payload);
+}
+
+async function pullLegacy(): Promise<LegacyBlobMap | null> {
   ensureConfigured();
-  const bus = getCqrsBus();
   try {
-    const res = await bus.executeQuery<IQueryResult<SyncBlobMap>>(new PullAllSyncQuery());
-    return res.data?.keyEnvelope ?? null;
+    const res = await getCqrsBus().executeQuery<IQueryResult<LegacyBlobMap>>(new PullLegacySyncQuery());
+    return res.data ?? {};
   } catch (err) {
-    if (err instanceof NotAuthenticatedError || err instanceof AuthNotConfiguredError) return null;
-    console.warn('sync: echec getEnvelope', err);
+    if (!(err instanceof NotAuthenticatedError || err instanceof AuthNotConfiguredError)) {
+      console.warn('sync: echec lecture archive', err);
+    }
     return null;
   }
 }
 
-/**
- * Déverrouille la sync au mot de passe — spec 28 (routine).
- *
- * Tire l'enveloppe, dérive la KEK mot de passe (sel par-utilisateur), déwrap le DEK, le pose comme
- * master key puis tire et fusionne les blobs de données. `no-envelope` → l'UI bootstrappe ;
- * `no-pw-wrap` (magic-link) → l'UI bascule sur la recovery key ; `wrong` → mauvais mot de passe
- * (auth tag AES-GCM invalide).
- */
-export async function unlockWithPassword(password: string): Promise<UnlockResult> {
-  ensureConfigured();
-  const blob = await getEnvelope();
-  if (!blob) return 'no-envelope';
-  const env = parseEnvelope(blob.ciphertext);
-  if (!env || !env.pwWrapPresent || !env.pwWrap || !env.pwSalt) return 'no-pw-wrap';
-  let dek: CryptoKey;
+/** L'utilisateur connecté a-t-il une archive chiffrée à convertir ? `false` si indéterminable. */
+export async function hasLegacyArchive(): Promise<boolean> {
+  const map = await pullLegacy();
+  return map !== null && Object.keys(map).length > 0;
+}
+
+/** Résout la clé de déchiffrement des données de l'archive, ou la raison de l'échec. */
+async function resolveKey(
+  map: LegacyBlobMap,
+  secret: LegacySecret,
+): Promise<CryptoKey | 'wrong' | 'no-pw-wrap'> {
+  if ('dek' in secret) return secret.dek;
+  const env = map.keyEnvelope ? parseEnvelope(map.keyEnvelope.ciphertext) : null;
   try {
-    const kek = await deriveKekPw(password, env.pwSalt);
-    dek = await unwrapDek(kek, env.pwWrap.ct, env.pwWrap.nonce);
+    if ('password' in secret) {
+      if (!env?.pwWrap || !env.pwSalt) return 'no-pw-wrap';
+      const kek = await deriveKekPw(secret.password, env.pwSalt);
+      return await unwrapDek(kek, env.pwWrap.ct, env.pwWrap.nonce);
+    }
+    const kek = await deriveMasterKey(secret.recoveryKey.trim());
+    // Compte spec 28 : la clé de récupération déwrappe le DEK. Compte antérieur (pas d'enveloppe) :
+    // elle EST la clé de chiffrement des données.
+    return env ? await unwrapDek(kek, env.recoveryWrap.ct, env.recoveryWrap.nonce) : kek;
   } catch {
     return 'wrong';
   }
-  useCryptoSession.getState().setMasterKey(dek);
-  // Déverrouillage explicite sur cet appareil = la sync y devient active (sinon un 2ᵉ appareil
-  // tirait le cloud une fois mais ne poussait jamais ses propres changements).
-  useAccount.getState().setSyncEnabled(true);
-  await pullAndMerge();
-  return 'ok';
 }
 
 /**
- * Déverrouille la sync au moyen de la clé de récupération — spec 28 (urgence / magic-link / legacy).
+ * Convertit l'archive chiffrée de l'utilisateur connecté.
  *
- * Dérive la KEK recovery (réutilise `deriveMasterKey` + sel app global), déwrap le DEK depuis
- * `recoveryWrap`, le pose comme master key puis tire et fusionne. `wrong` si la clé est incorrecte.
+ * Rien n'est supprimé sans qu'au moins un kind ait été déchiffré.
  */
-export async function unlockWithRecoveryKey(recoveryKey: string): Promise<UnlockRecoveryResult> {
-  ensureConfigured();
-  const blob = await getEnvelope();
-  if (!blob) return 'no-envelope';
-  const env = parseEnvelope(blob.ciphertext);
-  if (!env) return 'wrong';
-  let dek: CryptoKey;
-  try {
-    const kek = await deriveMasterKey(recoveryKey.trim());
-    dek = await unwrapDek(kek, env.recoveryWrap.ct, env.recoveryWrap.nonce);
-  } catch {
-    return 'wrong';
-  }
-  useCryptoSession.getState().setMasterKey(dek);
-  // Déverrouillage explicite sur cet appareil = la sync y devient active (sinon un 2ᵉ appareil
-  // tirait le cloud une fois mais ne poussait jamais ses propres changements).
-  useAccount.getState().setSyncEnabled(true);
-  await pullAndMerge();
-  return 'ok';
-}
+export async function convertLegacy(secret: LegacySecret): Promise<ConvertResult> {
+  const map = await pullLegacy();
+  if (map === null || Object.keys(map).length === 0) return 'none';
 
-/** Options du bootstrap d'enveloppe. */
-export interface BootstrapOptions {
-  /** Mot de passe (comptes e-mail/mot de passe). Omis pour magic-link → `pwWrapPresent:false`. */
-  password?: string;
-  /** Clé de récupération à utiliser (sinon générée). */
-  recoveryKey?: string;
-  /** E-mailer la clé de récupération à l'adresse du compte (POST /api/email/recovery-key). */
-  emailKey?: boolean;
-}
+  const key = await resolveKey(map, secret);
+  if (key === 'wrong' || key === 'no-pw-wrap') return key;
 
-/**
- * Crée l'enveloppe DEK/KEK au premier login / reset legacy — spec 28.
- *
- * Génère un DEK + une clé de récupération (+ e-mail si `emailKey`) + un sel pw, wrap le DEK par la
- * KEK mot de passe (si `password`) et par la KEK recovery, pousse l'enveloppe, pose le DEK comme
- * master key. Après push, re-tire l'enveloppe pour détecter la race deux-appareils : si le
- * `ciphertext` stocké ≠ poussé, un autre appareil a gagné → `BootstrapLostError` (l'UI bascule en
- * `unlock-recovery` avec la clé e-mailée du gagnant ; le DEK local est abandonné).
- *
- * @returns la clé de récupération générée (à afficher en `recovery-display`).
- */
-export async function bootstrapEnvelope(opts: BootstrapOptions): Promise<string> {
-  ensureConfigured();
-  const dek = await generateDek();
-  const recoveryKey = opts.recoveryKey ?? generateRecoveryKey();
-  const recoveryKek = await deriveMasterKey(recoveryKey);
-  const recoveryWrap = await wrapDek(recoveryKek, dek);
-
-  let pwWrap: { ct: string; nonce: string } | undefined;
-  let pwSalt: string | undefined;
-  if (opts.password) {
-    pwSalt = generatePwSalt();
-    const pwKek = await deriveKekPw(opts.password, pwSalt);
-    pwWrap = await wrapDek(pwKek, dek);
-  }
-
-  const env = buildEnvelope({ pwSalt, pwWrap, recoveryWrap });
-  const blob: EncryptedBlob = {
-    ciphertext: serializeEnvelope(env),
-    nonce: envelopePlaceholderNonce(),
-    updatedAt: Date.now(),
-  };
-
-  const bus = getCqrsBus();
-  await bus.executeCommand<ICommandResult<{ updatedAt: number }>>(
-    new PushSyncCommand('keyEnvelope', blob),
-  );
-
-  // Race deux-appareils : si le `ciphertext` stocké ≠ poussé, un autre appareil a gagné.
-  const stored = await getEnvelope();
-  if (!stored || stored.ciphertext !== blob.ciphertext) {
-    throw new BootstrapLostError(); // DEK local orphelin — on ne le pose pas.
-  }
-
-  useCryptoSession.getState().setMasterKey(dek);
-  useAccount.getState().setSyncEnabled(true);
-
-  if (opts.emailKey) {
-    // Best-effort : la clé est aussi affichée en `recovery-display` ; l'e-mail est un filet.
-    void fetch('/api/email/recovery-key', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ recoveryKey }),
-    }).catch(() => {});
-  }
-
-  return recoveryKey;
-}
-
-/**
- * Purge les blobs cloud sans re-verrouiller ni vider les horloges locales — spec 28.
- *
- * Réutilise `DeleteAccountCommand` (DELETE /api/account purge `user_data`) mais SANS le lock/clear
- * de `deleteAccount()`. Sert avant un fresh bootstrap quand des blobs legacy indéchiffrables
- * existent (compte pré-spec-28 sans enveloppe, clé de récupération perdue).
- */
-export async function purgeCloudData(): Promise<void> {
-  ensureConfigured();
-  const bus = getCqrsBus();
-  try {
-    await bus.executeCommand<ICommandResult<void>>(new DeleteAccountCommand());
-  } catch (err) {
-    if (err instanceof NotAuthenticatedError || err instanceof AuthNotConfiguredError) return;
-    throw err;
-  }
-}
-
-/**
- * Migration legacy → enveloppe — spec 28.
- *
- * Pour un compte pré-spec-28 (blobs chiffrés à l'ancienne master key = `deriveMasterKey(oldKey)`,
- * pas d'enveloppe) où l'utilisateur a ENCORE son ancienne clé : on fusionne d'abord local+cloud sous
- * l'ancienne clé, puis on tire et décrypte tous les kinds, génère un nouveau DEK + enveloppe, et
- * re-chiffre chaque kind sous le nouveau DEK (horodatage frais → LWW écrase l'ancien blob). Aucune
- * perte. E-mail la nouvelle recovery key. One-shot.
- */
-export async function upgradeLegacyToEnvelope(
-  oldRecoveryKey: string,
-  password?: string,
-): Promise<void> {
-  ensureConfigured();
-  const oldMasterKey = await deriveMasterKey(oldRecoveryKey.trim());
-
-  // 1. On opère sous l'ancienne clé : hydrate le local depuis le cloud legacy (pull seul). Pas de
-  //    push avant d'avoir vérifié la clé : un flush sous mauvaise clé écrirait le cloud legacy en
-  //    chiffré illisible (horodatage frais → LWW écrase) = perte définitive des données.
-  useCryptoSession.getState().setMasterKey(oldMasterKey);
-  await pullAndMerge();
-
-  // 2. Tire le cloud legacy et décrypte chaque kind non-envelope sous l'ancienne clé — ceci VÉRIFIE
-  //    la clé. En mode legacy, hasCloudData()=true garantit au moins un blob de données, et tous les
-  //    blobs partagent la même ancienne clé (single-key pre-spec-28), donc 0 récupéré = clé fausse.
-  const bus = getCqrsBus();
-  const verifyRes = await bus.executeQuery<IQueryResult<SyncBlobMap>>(new PullAllSyncQuery());
-  const verifyMap = verifyRes.data ?? {};
+  // Déchiffre chaque kind de données. Une clé incorrecte échoue sur tous les blobs.
+  const decrypted: { kind: SyncKind; payload: string; updatedAt: number }[] = [];
   let attempted = 0;
-  let recovered = 0;
-  for (const kindStr of Object.keys(verifyMap)) {
+  for (const [kindStr, blob] of Object.entries(map)) {
+    if (kindStr === 'keyEnvelope' || !blob) continue;
     const kind = kindStr as SyncKind;
-    if (kind === 'keyEnvelope') continue;
-    const remote = verifyMap[kind];
-    if (!remote) continue;
+    if (!syncAdapters[kind]) continue;
     attempted++;
     try {
-      await decryptBlob(oldMasterKey, remote.ciphertext, remote.nonce);
-      recovered++;
+      decrypted.push({ kind, payload: await decryptBlob(key, blob.ciphertext, blob.nonce), updatedAt: blob.updatedAt });
     } catch (err) {
-      console.warn(`sync: legacy decrypt skip ${kind}`, err);
+      console.warn(`sync: archive indéchiffrable ${kind}`, err);
     }
   }
-  if (attempted > 0 && recovered === 0) {
-    // Ancienne clé fausse : rien n'a été poussé (cloud legacy préservé), on reverrouille.
-    useCryptoSession.getState().lock();
-    throw new Error('wrong-legacy-key');
-  }
+  if (attempted > 0 && decrypted.length === 0) return 'wrong';
 
-  // 3. Clé vérifiée : pousse le local en attente sous l'ancienne clé (safe), pour qu'il soit inclus
-  //    dans le re-chiffrement sous le nouveau DEK (mutations post-reload en mode local-only).
+  // 1. Rapproche d'abord du cloud en clair (un autre appareil a pu y publier entre-temps).
+  await pullAndMerge();
+
+  // 2. Intègre l'archive (LWW si plus récente, sinon fusion des collections), puis publie.
+  for (const { kind, payload, updatedAt } of decrypted) integrateArchiveKind(kind, payload, updatedAt);
+  const queue = useSyncQueue.getState();
+  for (const { kind } of decrypted) {
+    if (syncAdapters[kind]?.hasLocal()) queue.enqueue(kind);
+  }
   await flush();
 
-  // 4. Re-tire le cloud fusionné (inclut le flush) et décrypte sous l'ancienne clé → plaintexts.
-  const res = await bus.executeQuery<IQueryResult<SyncBlobMap>>(new PullAllSyncQuery());
-  const map = res.data ?? {};
-  const plaintexts: Partial<Record<SyncKind, string>> = {};
-  for (const kindStr of Object.keys(map)) {
-    const kind = kindStr as SyncKind;
-    if (kind === 'keyEnvelope') continue;
-    const remote = map[kind];
-    if (!remote) continue;
-    try {
-      plaintexts[kind] = await decryptBlob(oldMasterKey, remote.ciphertext, remote.nonce);
-    } catch (err) {
-      console.warn(`sync: legacy decrypt skip ${kind}`, err);
-    }
+  // 3. Supprime l'archive seulement si tout est publié.
+  if (!isSyncActive() || useSyncQueue.getState().pending.length > 0) return 'partial';
+  try {
+    await getCqrsBus().executeCommand<ICommandResult<void>>(new DeleteLegacySyncCommand());
+  } catch (err) {
+    console.warn('sync: suppression archive échouée', err);
+    return 'partial';
   }
-
-  // 5. Nouveau DEK + enveloppe (recovery + pw si password), pousse l'enveloppe.
-  const dek = await generateDek();
-  const recoveryKey = generateRecoveryKey();
-  const recoveryKek = await deriveMasterKey(recoveryKey);
-  const recoveryWrap = await wrapDek(recoveryKek, dek);
-  let pwWrap: { ct: string; nonce: string } | undefined;
-  let pwSalt: string | undefined;
-  if (password) {
-    pwSalt = generatePwSalt();
-    const pwKek = await deriveKekPw(password, pwSalt);
-    pwWrap = await wrapDek(pwKek, dek);
-  }
-  const env = buildEnvelope({ pwSalt, pwWrap, recoveryWrap });
-  const now = Date.now();
-  await bus.executeCommand<ICommandResult<{ updatedAt: number }>>(
-    new PushSyncCommand('keyEnvelope', {
-      ciphertext: serializeEnvelope(env),
-      nonce: envelopePlaceholderNonce(),
-      updatedAt: now,
-    }),
-  );
-
-  // 6. Pose le nouveau DEK, re-chiffre chaque kind sous le nouveau DEK (horodatage frais).
-  useCryptoSession.getState().setMasterKey(dek);
-  for (const kindStr of Object.keys(plaintexts)) {
-    const kind = kindStr as SyncKind;
-    const { ciphertext, nonce } = await encryptBlob(dek, plaintexts[kind]!);
-    await bus.executeCommand<ICommandResult<{ updatedAt: number }>>(
-      new PushSyncCommand(kind, { ciphertext, nonce, updatedAt: now }),
-    );
-    useSyncMeta.getState().set(kind, now);
-  }
-  useAccount.getState().setSyncEnabled(true);
-
-  // 7. E-mail la nouvelle recovery key (désormais l'unique filet d'urgence).
-  void fetch('/api/email/recovery-key', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ recoveryKey }),
-  }).catch(() => {});
-}
-
-/**
- * Re-wrap le DEK sous un nouveau mot de passe — spec 28 (filet post-reset mot de passe).
- *
- * Appelable tant que déverrouillé (DEK en mémoire, `extractable`). Régénère un sel pw, dérive la
- * nouvelle KEK, re-wrap le DEK (`recoveryWrap` inchangé), repousse l'enveloppe. Sert après un
- * déverrouillage via recovery key (urgence) pour re-lier le nouveau mot de passe — préserve la
- * doctrine « recovery = urgence uniquement ».
- */
-export async function rewrapPassword(newPassword: string): Promise<void> {
-  ensureConfigured();
-  const dek = useCryptoSession.getState().masterKey;
-  if (!dek) throw new Error('DEK absent (verrouillé) — rewrap impossible');
-
-  const blob = await getEnvelope();
-  if (!blob) throw new Error('Enveloppe absente');
-  const env = parseEnvelope(blob.ciphertext);
-  if (!env) throw new Error('Enveloppe illisible');
-
-  const pwSalt = generatePwSalt();
-  const pwKek = await deriveKekPw(newPassword, pwSalt);
-  const pwWrap = await wrapDek(pwKek, dek);
-
-  const newEnv = buildEnvelope({ pwSalt, pwWrap, recoveryWrap: env.recoveryWrap });
-  const bus = getCqrsBus();
-  await bus.executeCommand<ICommandResult<{ updatedAt: number }>>(
-    new PushSyncCommand('keyEnvelope', {
-      ciphertext: serializeEnvelope(newEnv),
-      nonce: envelopePlaceholderNonce(),
-      updatedAt: Date.now(),
-    }),
-  );
+  return 'ok';
 }

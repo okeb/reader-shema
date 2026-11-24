@@ -5,6 +5,12 @@
 > (déverrouillage mot de passe / clé de récupération). **Doctrine spec 00** : aucune métrique, même
 > pour compter les requêtes RGPD.
 
+> ⚠️ **Spec 39** : la sync n'est plus chiffrée de bout en bout (données en clair dans `user_sync`,
+> chiffrées au repos par Neon et en transit). Les mentions « E2EE / blobs chiffrés » ci-dessous sont à
+> relire à cette aune : registre (données lisibles par l'opérateur), sécurité (TLS + chiffrement au
+> repos), violations (impact non plus limité par construction), conservation de l'archive `user_data`
+> jusqu'au 2027-06-01. Resend ne reçoit plus de clé de récupération.
+
 ## 1. Objectif
 
 Le lecteur a maintenant un **backend runtime** (compte + sync E2EE, spec 22/26/28) : il traite des

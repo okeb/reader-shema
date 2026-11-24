@@ -26,8 +26,8 @@ import {
  *
  * `null` tant que Better Auth n'est pas configuré (`BETTER_AUTH_SECRET` + `DATABASE_URL` +
  * `baseURL`) : l'app démarre en mode local-only (lecture anonyme inchangée) et les
- * routes/features compte renvoient 503 / sont masquées. Le chiffrage E2EE (recovery key →
- * master key) est INTOUCHÉ.
+ * routes/features compte renvoient 503 / sont masquées. Depuis la spec 39, la session suffit à
+ * synchroniser (plus de chiffrement de bout en bout).
  *
  * Déploiement Vercel : `BETTER_AUTH_URL` (serveur) et `trustedOrigins` sont dérivés de
  * `VERCEL_URL` (injecté par Vercel à chaque déploiement) quand l'env explicite ne couvre pas
@@ -68,8 +68,7 @@ export const auth = configured
       ],
       emailAndPassword: {
         enabled: true,
-        // La data reste gated par la recovery key (E2EE) ; on n'exige pas un e-mail vérifié
-        // pour se connecter (Neon pouvait ne pas livrer ; ici Resend livre, mais on garde
+        // On n'exige pas un e-mail vérifié pour se connecter (Neon pouvait ne pas livrer ; ici Resend livre, mais on garde
         // la porte ouverte pour ne pas enfermer l'utilisateur hors de son compte).
         requireEmailVerification: false,
         minPasswordLength: 8,

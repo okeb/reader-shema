@@ -1,5 +1,9 @@
 # Spec 28 — Déverrouillage par mot de passe (enveloppe DEK/KEK) + clé de récupération e-mailée
 
+> ⛔ **Remplacée par la [spec 39](39-sync-sans-chiffrement.md)** (synchronisation sans chiffrement de
+> bout en bout). L'enveloppe, la clé de récupération et « se souvenir de cet appareil » sont retirés ;
+> seul le déchiffrement de l'archive subsiste, pour la conversion, jusqu'au 2027-06-01.
+
 > **Statut** : Proposé (décisions posées) · **Priorité** : 🔴 Haute · **Effort** : M ·
 > **Dépendances** : **Spec 22** (sync E2EE, blobs opaques `user_data`, `deriveMasterKey` + recovery key) ·
 > **Spec 26** (self-hosted Better Auth, Resend, e-mails transactionnels) · **Spec 25** (page `/account`).

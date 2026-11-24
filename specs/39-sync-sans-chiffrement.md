@@ -1,6 +1,6 @@
 # Spec 39 — Synchronisation sans chiffrement de bout en bout (connecté = synchronisé)
 
-> **Statut** : Proposé (décisions posées) · **Priorité** : 🔴 Haute · **Effort** : M ·
+> **Statut** : ✅ Implémenté · **Priorité** : 🔴 Haute · **Effort** : M ·
 > **Dépendances** : **Spec 22** (compte + sync, adapters, LWW) · **Spec 26** (Better Auth + Resend,
 > reset de mot de passe) · **Spec 25** (page `/account`) · **Remplace la spec 28** (enveloppe DEK/KEK,
 > clé de récupération) et la partie E2EE de la spec 22 · **Impacte la spec 33** (RGPD).
@@ -77,6 +77,10 @@ retire. **Être connecté = être synchronisé**, partout, sans étape suppléme
 
 - **Inscription / connexion** : session → `migrate()` (pull, fusion LWW puis push du local jamais
   poussé) → `done`. Aucune étape intermédiaire.
+- **Appareil déjà utilisé sans compte** : ses collections locales (favoris, signets, notes,
+  surlignages), jamais synchronisées (horloge vide), ne sont pas écrasées par le cloud au premier
+  pull. Leurs entrées s'ajoutent à celles du compte (le cloud l'emporte en cas de conflit), sauf le
+  groupe de signets « Mes versets » vide, créé d'office sur chaque appareil.
 - **Rechargement** : la session est restaurée par le cookie Better Auth, puis `pullAndMerge()` est
   lancé en silence. Rien à saisir.
 - **Mot de passe oublié** : reset Better Auth par e-mail (inchangé), puis reconnexion → tout est là.
@@ -91,11 +95,10 @@ L'archive `user_data` (blobs AES-GCM et `keyEnvelope`) est **gelée** : plus auc
 seule via `GET /api/sync/legacy`. La conversion fusionne l'archive dans les stores locaux, puis la
 sync en clair publie le résultat.
 
-1. **Clé de l'appareil disponible** (DEK valide dans IndexedDB `bym:device-keys`) : au premier
+1. **Clé de l'appareil disponible** (DEK valide dans IndexedDB `bym:device-keys`) : au
    chargement de la nouvelle version, si `GET /api/sync/legacy` n'est pas vide, on déchiffre chaque
-   kind avec le DEK et on l'**hydrate selon les règles de `pullAndMerge`** (union pour les kinds
-   `merge`, LWW contre `useSyncMeta` pour les autres). Ensuite viennent le `pullAndMerge()` en clair,
-   l'enfilage de tous les kinds actifs, le `flush()`, puis `DELETE /api/sync/legacy` et
+   kind avec le DEK. Viennent ensuite le `pullAndMerge()` en clair, l'intégration de l'archive (voir
+   ci-dessous), l'enfilage des kinds convertis, le `flush()`, puis `DELETE /api/sync/legacy` et
    `clearDeviceDek`.
 2. **Connexion par mot de passe** : si l'archive existe et contient une enveloppe avec `pwWrap`, le
    mot de passe saisi (déjà en mémoire au moment de la connexion) déverrouille le DEK. On applique
@@ -112,12 +115,16 @@ sync en clair publie le résultat.
    l'archive jusqu'à sa suppression.
 6. **Fin de l'archive** : la table `user_data` est supprimée le **2027-06-01**, soit environ six mois
    après la mise en production (migration `004`). Le code de conversion
-   (`legacy-e2ee.ts`, `device-key-store.ts`, primitives d'enveloppe) est retiré en même temps.
+   (section « archive » du moteur, `device-key-store.ts`, `crypto.service.ts`) est retiré en même temps.
 
-**Pourquoi on hydrate avant le pull en clair** : la conversion est ainsi indépendante de l'ordre des
-appareils. Un appareil sans clé a pu publier en clair avant celui qui convertit. Les kinds `merge`
-font l'union, les kinds de remplacement retiennent le plus récent selon les horodatages (ceux de
-l'archive sont conservés au déchiffrement).
+**Intégration de l'archive** : on tire d'abord le cloud en clair, puis, kind par kind, l'archive
+remplace le local si elle est plus récente (LWW). Sinon, pour les collections, ses entrées absentes
+s'ajoutent au local (le local l'emporte en cas de conflit), pour ne rien perdre au moment de la
+supprimer.
+
+**Pourquoi l'ordre des appareils n'importe pas** : un appareil sans clé a pu publier en clair avant
+celui qui convertit. Les horodatages de l'archive sont conservés au déchiffrement : le plus récent
+l'emporte, et les collections plus anciennes sont fusionnées au lieu d'être ignorées.
 
 ### 4.4 Cas limites
 
@@ -185,20 +192,24 @@ Les composants existants sont réutilisés. La ligne d'état est en `role="statu
     (additive, sans risque).
   - `app/api/sync/legacy/route.ts` : `GET` (blobs `user_data` de l'utilisateur, format actuel) et
     `DELETE` (purge de l'archive).
-  - `src/presentation/lib/sync/legacy-e2ee.ts` (temporaire) : `convertLegacy({ dek? , password?,
-    recoveryKey? })`, qui reprend `unwrapDek`, `deriveKekPw`, `deriveMasterKey` et `decryptBlob`.
-  - `src/presentation/components/molecules/m-legacy-recovery-card.tsx`.
+  - `src/presentation/components/molecules/m-legacy-recovery-card.tsx` et
+    `src/presentation/components/molecules/m-sync-status.tsx` (ligne d'état).
+  - `src/presentation/stores/sync-status.store.ts` (dernière synchronisation, mémoire seule).
   - `specs/39-sync-sans-chiffrement.md`.
 - **Modifiés** :
   - `src/domain/entities/sync.entity.ts` : `SyncBlob { payload: string; updatedAt }` remplace
-    `EncryptedBlob`. `keyEnvelope` sort de `SYNC_KINDS` (il reste un type interne à `legacy-e2ee`).
+    `EncryptedBlob`. `keyEnvelope` sort de `SYNC_KINDS` (il ne reste que dans `LegacyKind`, le type de l'archive).
   - `src/infrastructure/repositories/sync.repository.impl.ts`, ainsi que les commandes et requêtes
     sync : payload en clair.
   - `app/api/sync/route.ts` et `app/api/sync/[kind]/route.ts` : `user_sync`, body
     `{ payload, updatedAt }`, validation JSON et taille, même garde LWW.
   - `app/api/account/route.ts` : purge `user_sync` et `user_data`.
   - `src/presentation/lib/sync/sync-engine.ts` : suppression des gardes `masterKey` et `unlocked` et
-    du code d'enveloppe. Ajout de la garde `isSyncActive()` (session et `!syncPaused`).
+    du code d'enveloppe. Ajout de `setSyncUser()` et de la garde `isSyncActive()` (session et
+    `!syncPaused`). `migrate()` pousse aussi tout kind local absent du cloud (premier passage en
+    clair). Section temporaire « archive » : `convertLegacy({ dek } | { password } | { recoveryKey })`
+    et `hasLegacyArchive()` (dans le moteur plutôt qu'un module à part, pour ne pas ajouter une
+    dépendance presentation → infrastructure de plus à `pnpm arch:check`).
   - `src/presentation/stores/account.store.ts` : `syncPaused` remplace `syncEnabled`.
   - `src/presentation/components/organisms/o-account-provider.tsx` : branchement des listeners et
     subscribers selon la session. Conversion automatique au chargement (DEK de l'appareil). Plus de
@@ -215,8 +226,8 @@ Les composants existants sont réutilisés. La ligne d'état est en `role="statu
   - `src/presentation/stores/crypto-session.store.ts`.
   - `app/api/email/recovery-key/route.ts`.
   - `lib/email/templates/recovery-key.tsx`, ainsi que son export dans `lib/email/templates.tsx`.
-  - Les primitives d'enveloppe et de chiffrement de `crypto.service.ts` passent dans `legacy-e2ee.ts`
-    (supprimé le 2027-06-01).
+  - Les primitives de chiffrement de `crypto.service.ts` : il ne garde que le déchiffrement de
+    l'archive (supprimé le 2027-06-01). `device-key-store.ts` ne garde que la lecture et la purge.
 
 ### 6.2 Données & persistance
 
@@ -283,8 +294,8 @@ CREATE INDEX IF NOT EXISTS user_sync_user_id_idx ON user_sync (user_id);
   apparaît sur `/account`, et avec le mot de passe correct, les anciennes données sont fusionnées.
 - [ ] Mauvais mot de passe sur la carte : message d'erreur, archive intacte.
 - [ ] Suppression du compte : `user_sync` et `user_data` sont vides pour cet utilisateur.
-- [ ] Déconnexion puis connexion avec un autre compte : aucune donnée du premier compte n'est poussée
-  dans le second.
+- [ ] Déconnexion puis connexion avec un autre compte : les modifications en attente du premier compte
+  ne partent pas dans le second (la file et les horloges sont vidées à la déconnexion).
 - [ ] La ligne d'état de `/account` affiche « Synchronisé · il y a … », et « en attente » hors ligne.
 - [ ] La page Confidentialité et `legal.ts` ne mentionnent plus le chiffrement de bout en bout, la clé
   de récupération ni « se souvenir de cet appareil ».

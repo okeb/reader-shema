@@ -9,61 +9,33 @@ import { authClient } from '@/lib/auth/client';
 import { useScrollLock } from '@/src/presentation/hooks/use-scroll-lock';
 import { useFocusTrap } from '@/src/presentation/hooks/use-focus-trap';
 import { Link } from '@/i18n/routing';
-import { useCryptoSession } from '@/src/presentation/stores/crypto-session.store';
-import { useAccount } from '@/src/presentation/stores/account.store';
-import {
-  hasCloudData,
-  migrate,
-  getEnvelope,
-  unlockWithPassword,
-  unlockWithRecoveryKey,
-  bootstrapEnvelope,
-  purgeCloudData,
-  upgradeLegacyToEnvelope,
-  BootstrapLostError,
-  rewrapPassword,
-} from '@/src/presentation/lib/sync/sync-engine';
-import { storeDeviceDek, clearDeviceDek } from '@/src/presentation/lib/sync/device-key-store';
+import { convertLegacy, migrate, setSyncUser } from '@/src/presentation/lib/sync/sync-engine';
 
 type Step =
   | 'email' // saisie email → mot de passe
   | 'password' // saisie mot de passe (sign in / sign up)
   | 'forgot-password' // saisie email → envoi du reset (spec 26)
   | 'forgot-password-sent' // confirmation envoi reset
-  | 'unlock-password' // DEK de l'appareil absent / reset legacy : (re)saisie du mot de passe — spec 28
-  | 'unlock-recovery' // urgence (mot de passe réinitialisé) / legacy : clé de récupération — spec 28
-  | 'recovery-display' // 1ʳᵉ fois / reset : on montre la recovery key (e-mailée en filet) — spec 28
-  | 'migrating' // migration local → cloud en cours
   | 'done'; // compte ouvert + sync active
 
 interface AccountDialogProps {
   open: boolean;
-  /** spec 28 : `'recovery'` force l'étape `unlock-recovery` à l'ouverture (lien page /account). */
-  openHint?: 'recovery' | null;
   onClose: () => void;
 }
 
 /**
- * Modale de compte custom (pas de composants AuthView pré-construits) — spec 22 §7, spec 28.
+ * Modale de compte custom (pas de composants AuthView pré-construits) — spec 22 §7, spec 39.
  *
- * Machine à états spec 28 : la connexion e-mail + **mot de passe** déverrouille tout. La **clé de
- * récupération** ne sert qu'en urgence : mot de passe réinitialisé (l'ancien wrap ne s'ouvre plus) ou
- * compte legacy / ex-magic-link sans wrap mot de passe. Dans ces cas, une fois la clé saisie, le DEK
- * est re-wrappé sous le mot de passe de connexion (`rewrapPassword`) → la clé n'est plus redemandée.
- * Une enveloppe DEK/KEK (`kind='keyEnvelope'`) gate le premier-login vs retour : présente →
- * `unlockWithPassword` (transparent à la connexion) ; absente → `bootstrapEnvelope` (inscription) ou
- * migration legacy.
- *
- * L'appareil est toujours mémorisé après déverrouillage : le DEK (non-extractable) est persisté via
- * IndexedDB → déverrouillage silencieux au reload (hydraté dans `o-account-provider`), purgé au
- * signOut.
+ * Connecté = synchronisé (spec 39) : e-mail → mot de passe → terminé. Après la connexion, le mot
+ * de passe (en mémoire le temps de la modale) sert une seule fois, en silence, à convertir
+ * l'archive chiffrée d'avant la spec 39 si elle existe ; puis le local est rapproché du cloud.
  *
  * UI maison sous `createPortal`, `useScrollLock`, `role="dialog"`, piège à focus maison
  * (`use-focus-trap`), Échap pour fermer, bottom-sheet mobile / centré desktop.
  *
- * @see specs/28-deverouillage-mdp-enveloppe.md
+ * @see specs/39-sync-sans-chiffrement.md
  */
-export function AccountDialog({ open, openHint, onClose }: AccountDialogProps) {
+export function AccountDialog({ open, onClose }: AccountDialogProps) {
   const ref = useRef<HTMLDivElement>(null);
   useScrollLock(open);
   useFocusTrap(open, ref);
@@ -74,44 +46,31 @@ export function AccountDialog({ open, openHint, onClose }: AccountDialogProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [pwMode, setPwMode] = useState<'in' | 'up'>('in');
-  const [recoveryKey, setRecoveryKey] = useState('');
-  const [generatedKey, setGeneratedKey] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  // Mot de passe validé par le serveur à la connexion (en mémoire, le temps de la modale) : sert à
-  // re-wrapper le DEK après un déverrouillage d'urgence par clé de récupération.
+  // Mot de passe validé par le serveur à la connexion (mémoire, le temps de la modale) : ouvre
+  // l'archive chiffrée d'avant la spec 39 pour la convertir.
   const loginPasswordRef = useRef('');
-  // spec 28 : `unlock-recovery` en mode legacy (anciens blobs sans enveloppe) vs urgence.
-  const [legacyMode, setLegacyMode] = useState(false);
-  // spec 28 : `unlock-password` en mode 'unlock' (reload routine) ou 'reset' (legacy → repartir à zéro).
-  const [unlockMode, setUnlockMode] = useState<'unlock' | 'reset'>('unlock');
+  // Garde contre un double déclenchement de `finishSignIn` (la session peut se rafraîchir).
+  const finishingRef = useRef(false);
 
   // Callbacks localisés pour les flux e-mail (Better Auth appends le token à l'URL). (spec 26)
   const resetCallbackURL = `/${locale}/reinitialiser`;
   const accountCallbackURL = `/${locale}/account`;
 
-  // Initialisation à l'ouverture de la modale : positionne l'étape selon la session courante et
-  // l'état de déverrouillage de la master key.
+  // Initialisation à l'ouverture de la modale selon la session courante.
   useEffect(() => {
     if (!open) return;
     setError('');
-    const unlocked = useCryptoSession.getState().unlocked;
-    if (session.data?.user && unlocked) {
-      setStep('done');
-    } else if (session.data?.user && !unlocked) {
-      void advanceAfterAuth({ forceRecovery: openHint === 'recovery' });
-    } else {
-      setStep('email');
-    }
+    setStep(session.data?.user ? 'done' : 'email');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  // Quand la session passe à un utilisateur (login confirmé) pendant qu'on est sur une étape
-  // d'auth, on avance vers le chemin de déverrouillage / bootstrap.
+  // Session confirmée pendant l'étape mot de passe → on synchronise puis on termine.
   useEffect(() => {
     if (!open || session.isPending) return;
     if (session.data?.user && step === 'password') {
-      void advanceAfterAuth();
+      void finishSignIn(session.data.user.id);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session.data, session.isPending, open]);
@@ -126,116 +85,33 @@ export function AccountDialog({ open, openHint, onClose }: AccountDialogProps) {
   }, [session.data, session.isPending, open]);
 
   /**
-   * Route le post-auth selon la PRÉSENCE de l'enveloppe (gate premier-login vs retour) — spec 28.
-   *
-   * - Enveloppe présente + mot de passe en state (connexion fraîche) → `unlockWithPassword`
-   *   transparent → done.
-   * - Enveloppe présente + pas de mot de passe (reload, DEK device absent/expiré) → étape
-   *   `unlock-password` (routine).
-   * - Enveloppe absente + blobs legacy (`hasCloudData()=true`) → `unlock-recovery` legacy
-   *   (récupérer via ancienne clé OU repartir à zéro).
-   * - Enveloppe absente + compte vierge → `bootstrapEnvelope` (inscription) → `recovery-display`.
-   * - Enveloppe absente + mode local-only (`hasCloudData()=null`) → done (rien à synchroniser).
+   * Après connexion / inscription : conversion silencieuse de l'archive chiffrée avec le mot de
+   * passe (si elle existe et qu'il l'ouvre), puis rapprochement local ↔ cloud. Ne bloque jamais :
+   * en cas d'échec, la carte de récupération de `/account` prend le relais.
    */
-  async function advanceAfterAuth(opts?: { forceRecovery?: boolean }) {
+  async function finishSignIn(userId: string) {
+    if (finishingRef.current) return;
+    finishingRef.current = true;
     setBusy(true);
     setError('');
+    setSyncUser(userId);
+    const pw = loginPasswordRef.current;
+    loginPasswordRef.current = '';
+    setPassword('');
     try {
-      const envelope = await getEnvelope();
-      if (envelope) {
-        if (opts?.forceRecovery) {
-          // Lien « utiliser ma clé de récupération » de /account : on saute le mot de passe.
-          setLegacyMode(false);
-          setStep('unlock-recovery');
-          return;
-        }
-        if (password) {
-          // Connexion fraîche : le mot de passe est en state → déverrouillage transparent.
-          const r = await unlockWithPassword(password);
-          setPassword('');
-          if (r === 'ok') {
-            await maybeStoreDevice();
-            setStep('done');
-          } else if (r === 'wrong') {
-            // Le serveur vient d'accepter ce mot de passe mais il n'ouvre pas l'enveloppe → il a été
-            // réinitialisé. La clé de récupération (une seule fois) re-liera le nouveau mot de passe.
-            setLegacyMode(false);
-            setStep('unlock-recovery');
-            setError(
-              'Votre mot de passe a changé. Saisissez une dernière fois votre clé de récupération : elle reliera vos données au nouveau mot de passe.',
-            );
-          } else if (r === 'no-pw-wrap') {
-            // Compte sans wrap mot de passe (ex-magic-link) → clé de récupération une fois, puis rewrap.
-            setLegacyMode(false);
-            setStep('unlock-recovery');
-            setError(
-              'Saisissez une dernière fois votre clé de récupération : vos données seront ensuite déverrouillées par votre mot de passe.',
-            );
-          } else {
-            // no-envelope (race deux-appareils entre temps) → on bootstrappe.
-            await doBootstrap();
-          }
-        } else {
-          // Reload : pas de mot de passe en state → on le demande (routine).
-          setUnlockMode('unlock');
-          setStep('unlock-password');
-        }
-        return;
-      }
-
-      // Enveloppe absente : distingue local-only / legacy / compte vierge via hasCloudData().
-      setPassword('');
-      const has = await hasCloudData();
-      if (has === null) {
-        setStep('done'); // mode local-only : rien à synchroniser.
-      } else if (has) {
-        // Anciens blobs pré-spec-28 sans enveloppe → récupération (ancienne clé) ou reset.
-        setLegacyMode(true);
-        setUnlockMode('reset');
-        setStep('unlock-recovery');
-      } else {
-        // Compte vierge (inscription) → on crée l'enveloppe.
-        await doBootstrap();
-      }
+      if (pw) await convertLegacy({ password: pw });
+    } catch (err) {
+      console.warn('sync: conversion de l’archive à la connexion échouée', err);
+    }
+    try {
+      await migrate();
     } catch {
-      setError('Impossible de vérifier vos données synchronisées.');
-      setStep('done');
-    } finally {
-      setBusy(false);
+      // La file offline reprendra (réseau).
+      console.warn('sync: migration partielle');
     }
-  }
-
-  /** Mémorise le DEK sur l'appareil (30 j glissants) : plus de mot de passe à chaque reload. */
-  async function maybeStoreDevice() {
-    if (!session.data?.user) return;
-    const dek = useCryptoSession.getState().masterKey;
-    if (dek) await storeDeviceDek(session.data.user.id, dek);
-  }
-
-  /**
-   * Crée l'enveloppe DEK/KEK (inscription ou reset legacy) — spec 28. E-mail la clé de récupération
-   * (filet) puis affiche `recovery-display`. En cas de race perdue → `unlock-recovery` avec la clé
-   * e-mailée du gagnant.
-   */
-  async function doBootstrap() {
-    try {
-      const key = await bootstrapEnvelope({
-        password: password || loginPasswordRef.current || undefined,
-        emailKey: true,
-      });
-      setGeneratedKey(key);
-      await maybeStoreDevice();
-      setStep('recovery-display');
-    } catch (e) {
-      if (e instanceof BootstrapLostError) {
-        setLegacyMode(false);
-        setStep('unlock-recovery');
-        setError('Un autre appareil a déjà configuré la synchronisation. Saisissez la clé de récupération qui vous a été envoyée par e-mail.');
-      } else {
-        setError('Impossible de configurer la synchronisation.');
-        setStep('done');
-      }
-    }
+    setBusy(false);
+    setStep('done');
+    finishingRef.current = false;
   }
 
   async function submitPassword() {
@@ -268,103 +144,7 @@ export function AccountDialog({ open, openHint, onClose }: AccountDialogProps) {
       }
     }
     loginPasswordRef.current = password;
-    // Le succès déclenche l'avancée via l'effet sur `session.data`.
-  }
-
-  /**
-   * Soumet l'étape `unlock-password` — spec 28. En mode 'unlock' : déverrouillage routine au mot de
-   * passe. En mode 'reset' (legacy sans ancienne clé) : purge les blobs legacy + bootstrap d'une
-   * nouvelle enveloppe (mot de passe saisi, sinon celui de la connexion, pour le pwWrap).
-   */
-  async function submitUnlockPassword() {
-    setBusy(true);
-    setError('');
-    try {
-      if (unlockMode === 'reset') {
-        await purgeCloudData();
-        try {
-          await doBootstrap();
-        } catch {
-          setError('Réinitialisation échouée. Réessayez.');
-        }
-        return;
-      }
-      const r = await unlockWithPassword(password);
-      setPassword('');
-      if (r === 'ok') {
-        await maybeStoreDevice();
-        setStep('done');
-      } else if (r === 'wrong') {
-        setError(
-          'Mot de passe incorrect. Si vous l’avez réinitialisé, utilisez votre clé de récupération.',
-        );
-      } else if (r === 'no-pw-wrap') {
-        setLegacyMode(false);
-        setStep('unlock-recovery');
-      } else {
-        // no-envelope (race) → on bootstrappe.
-        await doBootstrap();
-      }
-    } catch {
-      setError('Déverrouillage échoué. Réessayez.');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  /**
-   * Soumet l'étape `unlock-recovery` — spec 28. En mode urgence : déverrouillage par clé de
-   * récupération. En mode legacy : migration des anciens blobs vers l'enveloppe (la nouvelle clé
-   * est e-mailée ; pwWrap absent → rewrap ultérieur depuis /account).
-   */
-  async function submitRecovery() {
-    if (!recoveryKey.trim()) return;
-    setBusy(true);
-    setError('');
-    try {
-      if (legacyMode) {
-        await upgradeLegacyToEnvelope(recoveryKey.trim(), loginPasswordRef.current || undefined);
-        await maybeStoreDevice();
-        setStep('done');
-        return;
-      }
-      const r = await unlockWithRecoveryKey(recoveryKey.trim());
-      if (r === 'ok') {
-        // Re-lie le mot de passe de connexion (validé par le serveur) : la clé de récupération ne
-        // sera plus demandée. Sans mot de passe connu (reload), l'appareil reste mémorisé.
-        if (loginPasswordRef.current) {
-          try {
-            await rewrapPassword(loginPasswordRef.current);
-          } catch {
-            console.warn('sync: rewrap du mot de passe échoué');
-          }
-        }
-        await maybeStoreDevice();
-        setStep('done');
-      } else if (r === 'no-envelope') {
-        await doBootstrap();
-      } else {
-        setError('Clé de récupération incorrecte.');
-      }
-    } catch {
-      // wrong-legacy-key (sync-engine) ou mauvaise clé de récupération → même message.
-      setError('Clé de récupération incorrecte.');
-    } finally {
-      setBusy(false);
-      setRecoveryKey('');
-    }
-  }
-
-  async function acknowledgeRecovery() {
-    setStep('migrating');
-    setError('');
-    try {
-      await migrate();
-    } catch {
-      // La migration peut échouer partiellement (réseau) ; la file offline reprendra.
-      console.warn('sync: migration partielle');
-    }
-    setStep('done');
+    // Le succès déclenche la suite via l'effet sur `session.data`.
   }
 
   // --- Flux e-mail (spec 26 : Better Auth raw + Resend) ---
@@ -387,22 +167,12 @@ export function AccountDialog({ open, openHint, onClose }: AccountDialogProps) {
   }
 
   async function signOut() {
-    const userId = session.data?.user?.id;
     await authClient.signOut();
-    if (userId) await clearDeviceDek(userId); // spec 28 : oublie le DEK de cet appareil.
-    useCryptoSession.getState().lock();
+    setSyncUser(null);
     setStep('email');
-    setRecoveryKey('');
-    setGeneratedKey('');
     setPassword('');
     loginPasswordRef.current = '';
-    setLegacyMode(false);
-    setUnlockMode('unlock');
     onClose();
-  }
-
-  function copyRecovery() {
-    void navigator.clipboard?.writeText(generatedKey);
   }
 
   if (!open) return null;
@@ -437,8 +207,8 @@ export function AccountDialog({ open, openHint, onClose }: AccountDialogProps) {
           {step === 'email' && (
             <div className="space-y-3">
               <p className="text-[13px] leading-snug text-muted-foreground">
-                Retrouvez vos favoris et votre position de lecture sur tous vos appareils.
-                Aucun score, aucune statistique. Vos données sont chiffrées bout-en-bout.
+                Retrouvez vos favoris, signets, notes et votre position de lecture sur tous vos
+                appareils. Aucun score, aucune statistique.
               </p>
               <input
                 type="email"
@@ -578,159 +348,9 @@ export function AccountDialog({ open, openHint, onClose }: AccountDialogProps) {
             </div>
           )}
 
-          {/* Étape : (re)saisie du mot de passe — routine (reload) ou reset legacy — spec 28. */}
-          {step === 'unlock-password' && (
-            <div className="space-y-3">
-              <p className="text-[13px] leading-snug text-muted-foreground">
-                {unlockMode === 'reset'
-                  ? 'Saisissez votre mot de passe actuel pour repartir à zéro : les anciennes données chiffrées seront supprimées et une nouvelle synchronisation sera créée.'
-                  : 'Saisissez votre mot de passe pour déverrouiller vos données sur cet appareil.'}
-              </p>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Mot de passe"
-                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-primary"
-              />
-              <button
-                type="button"
-                disabled={busy || (unlockMode === 'unlock' && !password)}
-                onClick={submitUnlockPassword}
-                className="w-full rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition-opacity disabled:opacity-50"
-              >
-                {busy ? '…' : unlockMode === 'reset' ? 'Repartir à zéro' : 'Déverrouiller'}
-              </button>
-              {unlockMode === 'unlock' ? (
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => {
-                    setError('');
-                    setLegacyMode(false);
-                    setRecoveryKey('');
-                    setStep('unlock-recovery');
-                  }}
-                  className="w-full text-center text-[12px] text-muted-foreground underline underline-offset-2 transition-colors hover:text-foreground disabled:opacity-50"
-                >
-                  Utiliser ma clé de récupération
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => {
-                    setError('');
-                    setPassword('');
-                    setLegacyMode(true);
-                    setStep('unlock-recovery');
-                  }}
-                  className="w-full text-center text-[12px] text-muted-foreground underline underline-offset-2 transition-colors hover:text-foreground disabled:opacity-50"
-                >
-                  Annuler — saisir mon ancienne clé
-                </button>
-              )}
-              {error && <p className="text-[12px] text-destructive">{error}</p>}
-            </div>
-          )}
-
-          {/* Étape : saisie de la clé de récupération — urgence (mot de passe réinitialisé) / legacy — spec 28. */}
-          {step === 'unlock-recovery' && (
-            <div className="space-y-3">
-              {legacyMode ? (
-                <p className="text-[13px] leading-snug text-muted-foreground">
-                  Des données existantes (antérieures à la synchronisation par mot de passe) ont été
-                  détectées. Saisissez votre <strong>ancienne clé de récupération</strong> pour les
-                  récupérer — une nouvelle clé vous sera envoyée par e-mail. Sans cette ancienne clé,
-                  repartez à zéro (définitif).
-                </p>
-              ) : (
-                <p className="text-[13px] leading-snug text-muted-foreground">
-                  Saisissez votre clé de récupération (reçue par e-mail à la création du compte) pour
-                  déverrouiller vos données. Elle ne quitte pas ce navigateur.
-                </p>
-              )}
-              <input
-                type="text"
-                value={recoveryKey}
-                onChange={(e) => setRecoveryKey(e.target.value)}
-                placeholder="Clé de récupération"
-                className="w-full rounded-lg border border-input bg-background px-3 py-2 font-mono text-[13px] outline-none focus:border-primary"
-              />
-              <button
-                type="button"
-                disabled={busy || !recoveryKey.trim()}
-                onClick={submitRecovery}
-                className="w-full rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition-opacity disabled:opacity-50"
-              >
-                {busy ? 'Déverrouillage…' : legacyMode ? 'Récupérer mes données' : 'Déverrouiller'}
-              </button>
-              {legacyMode && (
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => {
-                    setError('');
-                    setRecoveryKey('');
-                    setUnlockMode('reset');
-                    setStep('unlock-password');
-                  }}
-                  className="w-full text-center text-[12px] text-muted-foreground underline underline-offset-2 transition-colors hover:text-foreground disabled:opacity-50"
-                >
-                  Je n’ai plus ma clé — repartir à zéro
-                </button>
-              )}
-              {error && <p className="text-[12px] text-destructive">{error}</p>}
-            </div>
-          )}
-
-          {/* Étape : affichage unique de la clé de récupération (e-mailée en filet) — spec 28. */}
-          {step === 'recovery-display' && (
-            <div className="space-y-3">
-              <div className="flex items-start gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2">
-                <Icon icon="hugeicons:alert-diamond" className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
-                <p className="text-[12px] leading-snug text-foreground/90">
-                  Cette clé de récupération est votre <strong>secours d'urgence</strong> : elle permet
-                  de retrouver vos données si vous perdez votre mot de passe. Elle vous a aussi été
-                  envoyée par e-mail. Sans elle, vos données sont <strong>irrécupérables</strong> ;
-                  nous ne la stockons pas.
-                </p>
-              </div>
-              <code className="block break-all rounded-lg border border-input bg-muted px-3 py-3 font-mono text-[13px] tracking-wide text-foreground">
-                {generatedKey}
-              </code>
-              <button
-                type="button"
-                onClick={copyRecovery}
-                className="flex w-full items-center justify-center gap-2 rounded-lg border border-input px-3 py-2 text-sm transition-colors hover:bg-foreground/5"
-              >
-                <Icon icon="hugeicons:copy-02" className="h-4 w-4" />
-                Copier la clé
-              </button>
-              <button
-                type="button"
-                disabled={busy}
-                onClick={acknowledgeRecovery}
-                className="w-full rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition-opacity disabled:opacity-50"
-              >
-                J’ai noté ma clé, synchroniser
-              </button>
-            </div>
-          )}
-
-          {/* Étape : migration en cours. */}
-          {step === 'migrating' && (
-            <div className="space-y-3 py-4 text-center">
-              <Icon icon="hugeicons:cloud-upload" className="mx-auto h-8 w-8 animate-pulse text-primary" />
-              <p className="text-[13px] leading-snug text-muted-foreground">
-                Récupération de vos données sur le cloud chiffré…
-              </p>
-            </div>
-          )}
-
           {/* Étape : compte ouvert. La gestion des données (bascules de sync, export,
-              suppression) vit sur la page /account (spec 25) — la modale n'est plus que le
-              point d'entrée se connecter / déverrouiller. */}
+              suppression) vit sur la page /account (spec 25) — la modale n'est que le point
+              d'entrée pour se connecter. */}
           {step === 'done' && session.data?.user && (
             <div className="space-y-3">
               <div className="flex items-center gap-2 rounded-lg bg-foreground/[3%] px-3 py-2">

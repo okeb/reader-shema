@@ -1,5 +1,9 @@
 # Spec 22 — Compte, synchronisation multi-appareil & administration
 
+> ⚠️ **Chiffrement de bout en bout abandonné (spec 39)** : la synchronisation est désormais en clair
+> (table `user_sync`), active dès la connexion, sans clé de récupération. Les sections E2EE ci-dessous
+> (§4.4 notamment) sont historiques. Voir [spec 39](39-sync-sans-chiffrement.md).
+
 > **Statut** : Proposé (décisions posées) · **Priorité** : 🔴 Haute · **Effort** : L (backend) ·
 > **Dépendances** : **Doctrine spec 00** (grâce, pas performance — aucune métrique) · réutilise les
 > hooks de persistance locaux existants (favoris, signets, annotations, position, historique,

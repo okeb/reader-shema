@@ -21,11 +21,10 @@
 import { renderEmail } from '@/lib/email/render';
 import { VerificationEmail } from '@/lib/email/templates/verification';
 import { ResetPasswordEmail } from '@/lib/email/templates/reset-password';
-import { RecoveryKeyEmail } from '@/lib/email/templates/recovery-key';
 import { WelcomeEmail } from '@/lib/email/templates/welcome';
 
 // Composants React ré-exportés (prévisualisation / réutilisation).
-export { VerificationEmail, ResetPasswordEmail, RecoveryKeyEmail, WelcomeEmail };
+export { VerificationEmail, ResetPasswordEmail, WelcomeEmail };
 
 /** E-mail de vérification d'adresse (click → `/api/auth/verify-email?token=…`). */
 export async function verificationEmailHtml(url: string, unsubscribeUrl?: string): Promise<string> {
@@ -35,14 +34,6 @@ export async function verificationEmailHtml(url: string, unsubscribeUrl?: string
 /** E-mail de réinitialisation de mot de passe (click → `/api/auth/reset-password/:token?…`). */
 export async function resetPasswordEmailHtml(url: string, unsubscribeUrl?: string): Promise<string> {
   return renderEmail(<ResetPasswordEmail url={url} unsubscribeUrl={unsubscribeUrl} />);
-}
-
-/**
- * Clé de récupération de secours (spec 28) — e-mailée à l'inscription (et au re-keying legacy).
- * Bloc `<code>` monospace adaptatif, sans bouton (code à conserver, pas à cliquer).
- */
-export async function recoveryKeyEmailHtml(recoveryKey: string, unsubscribeUrl?: string): Promise<string> {
-  return renderEmail(<RecoveryKeyEmail recoveryKey={recoveryKey} unsubscribeUrl={unsubscribeUrl} />);
 }
 
 /** Mail de bienvenue post-inscription (nouveau, spec 32) — déclenché par le hook Better Auth. */

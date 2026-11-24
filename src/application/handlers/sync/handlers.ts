@@ -8,12 +8,18 @@ import type {
 } from '@/src/domain/use-cases/base.query.interface';
 import type { ISyncRepository } from '@/src/domain/repositories/sync.repository';
 import type {
-  EncryptedBlob,
+  LegacyBlobMap,
+  SyncBlob,
   SyncBlobMap,
 } from '@/src/domain/entities/sync.entity';
-import { PullAllSyncQuery, PullSyncQuery } from '@/src/application/queries/sync/queries';
+import {
+  PullAllSyncQuery,
+  PullLegacySyncQuery,
+  PullSyncQuery,
+} from '@/src/application/queries/sync/queries';
 import {
   DeleteAccountCommand,
+  DeleteLegacySyncCommand,
   PushSyncCommand,
 } from '@/src/application/commands/sync/commands';
 
@@ -28,11 +34,11 @@ export class PullAllSyncQueryHandler
 }
 
 export class PullSyncQueryHandler
-  implements IQueryHandler<PullSyncQuery, IQueryResult<EncryptedBlob | null>>
+  implements IQueryHandler<PullSyncQuery, IQueryResult<SyncBlob | null>>
 {
   readonly queryType = 'PullSync';
   constructor(private readonly repo: ISyncRepository) {}
-  handle(q: PullSyncQuery): Promise<IQueryResult<EncryptedBlob | null>> {
+  handle(q: PullSyncQuery): Promise<IQueryResult<SyncBlob | null>> {
     return this.repo.pullKind(q.kind).then((data) => ({ data }));
   }
 }
@@ -54,6 +60,27 @@ export class DeleteAccountCommandHandler
   constructor(private readonly repo: ISyncRepository) {}
   async handle(_c: DeleteAccountCommand): Promise<ICommandResult<void>> {
     await this.repo.deleteAccount();
+    return { data: undefined };
+  }
+}
+
+export class PullLegacySyncQueryHandler
+  implements IQueryHandler<PullLegacySyncQuery, IQueryResult<LegacyBlobMap>>
+{
+  readonly queryType = 'PullLegacySync';
+  constructor(private readonly repo: ISyncRepository) {}
+  handle(_q: PullLegacySyncQuery): Promise<IQueryResult<LegacyBlobMap>> {
+    return this.repo.pullLegacy().then((data) => ({ data }));
+  }
+}
+
+export class DeleteLegacySyncCommandHandler
+  implements ICommandHandler<DeleteLegacySyncCommand, void>
+{
+  readonly commandType = 'DeleteLegacySync';
+  constructor(private readonly repo: ISyncRepository) {}
+  async handle(_c: DeleteLegacySyncCommand): Promise<ICommandResult<void>> {
+    await this.repo.deleteLegacy();
     return { data: undefined };
   }
 }

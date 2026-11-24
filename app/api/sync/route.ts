@@ -1,15 +1,14 @@
 import { NextResponse } from 'next/server';
 import { requireUser } from '@/src/infrastructure/auth/auth-guard';
-import { getSql, bytesToBase64 } from '@/src/infrastructure/database/neon-client';
+import { getSql } from '@/src/infrastructure/database/neon-client';
 import type { SyncBlobMap } from '@/src/domain/entities/sync.entity';
 
 /**
  * GET /api/sync — pull-all : tire tous les kinds du compte en un round trip.
  *
- * Le serveur ne fait que lire ses blobs opaques et les renvoie tels quels
- * (ciphertext/nonce en base64 + updatedAt). Le déchiffrement est client (E2EE).
+ * Renvoie `{ [kind]: { payload, updatedAt } }` depuis `user_sync` (JSON en clair, spec 39).
  *
- * @see specs/22-compte-sync-admin.md §5
+ * @see specs/39-sync-sans-chiffrement.md §6.3
  */
 export const dynamic = 'force-dynamic';
 
@@ -19,16 +18,15 @@ export async function GET(): Promise<NextResponse> {
 
   const sql = getSql();
   const rows = await sql`
-    SELECT kind, ciphertext, nonce, updated_at
-    FROM user_data
+    SELECT kind, payload, updated_at
+    FROM user_sync
     WHERE user_id = ${guard.userId}
   `;
 
   const map: SyncBlobMap = {};
-  for (const r of rows as Array<{ kind: string; ciphertext: Uint8Array; nonce: Uint8Array; updated_at: string | number }>) {
+  for (const r of rows as Array<{ kind: string; payload: string; updated_at: string | number }>) {
     map[r.kind as keyof SyncBlobMap] = {
-      ciphertext: bytesToBase64(r.ciphertext),
-      nonce: bytesToBase64(r.nonce),
+      payload: r.payload,
       updatedAt: Number(r.updated_at),
     };
   }

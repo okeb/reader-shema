@@ -7,21 +7,21 @@ import { jsonStorage } from './multi-key-storage';
 const STORAGE_KEY = 'bym:account';
 
 /**
- * Préférences de compte/sync (spec 22) — persistées côté client.
+ * Préférences de compte/sync (spec 22, spec 39) — persistées côté client.
  *
- * `syncEnabled` : toggle maître « Synchroniser sur mes appareils » (n'active la sync
- * que si une session + une master key sont présentes). `settingsSyncOptIn` : opt-in
- * explicite pour synchroniser les réglages de lecture + l'accent (phase 2 ; par
- * défaut non — l'utilisateur garde ses réglages par appareil sauf choix contraire).
+ * `syncPaused` : l'utilisateur a mis la synchronisation en pause (bascule de `/account`). Par
+ * défaut `false` : dès qu'une session existe, la sync est active (spec 39 §4.1).
+ * `settingsSyncOptIn` : opt-in explicite pour synchroniser les réglages de lecture + l'accent
+ * (par défaut non — l'utilisateur garde ses réglages par appareil sauf choix contraire).
  *
- * L'état de session lui-même n'est PAS ici : il vient du cookie Neon via
+ * L'état de session lui-même n'est PAS ici : il vient du cookie Better Auth via
  * `authClient.useSession()` (non persisté côté app).
  */
 interface AccountState {
-  syncEnabled: boolean;
+  syncPaused: boolean;
   settingsSyncOptIn: boolean;
   hydrated: boolean;
-  setSyncEnabled: (v: boolean) => void;
+  setSyncPaused: (v: boolean) => void;
   setSettingsSyncOptIn: (v: boolean) => void;
   reset: () => void;
 }
@@ -29,18 +29,25 @@ interface AccountState {
 export const useAccount = create<AccountState>()(
   persist(
     (set) => ({
-      syncEnabled: false,
+      syncPaused: false,
       settingsSyncOptIn: false,
       hydrated: false,
-      setSyncEnabled: (v) => set({ syncEnabled: v }),
+      setSyncPaused: (v) => set({ syncPaused: v }),
       setSettingsSyncOptIn: (v) => set({ settingsSyncOptIn: v }),
-      reset: () => set({ syncEnabled: false, settingsSyncOptIn: false }),
+      reset: () => set({ syncPaused: false, settingsSyncOptIn: false }),
     }),
     {
       name: STORAGE_KEY,
+      // v1 (spec 39) : `syncEnabled` (v0) est abandonné. Il valait `false` sur tout appareil jamais
+      // déverrouillé ; on repart donc de `syncPaused: false` (connecté = synchronisé).
+      version: 1,
+      migrate: (persisted) => {
+        const old = (persisted ?? {}) as { settingsSyncOptIn?: boolean };
+        return { syncPaused: false, settingsSyncOptIn: old.settingsSyncOptIn ?? false } as AccountState;
+      },
       storage: createJSONStorage(() => jsonStorage),
       partialize: (s) => ({
-        syncEnabled: s.syncEnabled,
+        syncPaused: s.syncPaused,
         settingsSyncOptIn: s.settingsSyncOptIn,
       }),
       onRehydrateStorage: () => (state) => {

@@ -11,8 +11,8 @@ import { BODY_TEXT, MUTED_TEXT } from '@/lib/email/theme';
  * critique : un CTA « Reprendre la lecture → » pointant vers `${baseUrl}/fr/read` (locale par
  * défaut de l'app — le user n'a pas encore de locale connue à la création du compte).
  *
- * Rappelle de conserver la clé de récupération (e-mailée séparément) — signal de warmth sans
- * métrique (doctrine spec 00).
+ * Signal de warmth sans métrique (doctrine spec 00). Plus de clé de récupération depuis la spec 39 :
+ * un mot de passe oublié se réinitialise par e-mail, sans perte de données.
  */
 export function WelcomeEmail({ name, baseUrl, unsubscribeUrl }: { name: string; baseUrl: string; unsubscribeUrl?: string }) {
   const readUrl = `${baseUrl.replace(/\/$/, '')}/fr/read`;
@@ -33,7 +33,8 @@ export function WelcomeEmail({ name, baseUrl, unsubscribeUrl }: { name: string; 
         <EmailCta href={readUrl} label="Reprendre la lecture" />
       </Text>
       <Text className={MUTED_TEXT}>
-        En cas de besoin, conservez précieusement votre clé de récupération (e-mailée séparément).
+        Mot de passe oublié ? Un lien de réinitialisation vous sera envoyé par e-mail, sans perte de
+        données.
       </Text>
     </EmailShell>
   );

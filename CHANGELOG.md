@@ -13,8 +13,20 @@ divulguée. La cohérence est vérifiée par `pnpm changelog:check`.
 
 - **Sélecteur de passages** : on voit d'un coup d'œil ce que contient chaque chapitre. Les numéros des chapitres disposant de l'audio s'affichent en couleur, de petits points montrent les couleurs des versets surlignés, une icône signale les chapitres où tu as écrit une note, et un signet, à la couleur de son groupe, ceux où tu as placé des signets (dans la version active). Les livres contenant des surlignages, des notes ou des signets portent aussi ces repères dans la liste, et une légende rappelle leur signification. Valable dans le sélecteur du lecteur comme dans le lanceur de l'accueil.
 
+### Modifié
+
+- **Synchronisation** : être connecté suffit désormais pour que tes favoris, signets, surlignages, notes et ta position de lecture se synchronisent entre tes appareils. Plus besoin de ressaisir ton mot de passe ou un code pour la « déverrouiller » : elle ne se met plus en pause sans prévenir. La page Compte indique quand la dernière synchronisation a eu lieu, ou combien de modifications attendent une connexion. Tu peux toujours la mettre en pause depuis cette page.
+- **Mot de passe oublié** : un lien de réinitialisation reçu par e-mail suffit pour tout retrouver ; tes données synchronisées ne sont plus perdues.
+- **Anciennes données synchronisées** : elles sont transférées automatiquement à ta prochaine connexion. Si ce n'est pas possible sur un appareil, la page Compte propose de les récupérer avec ton mot de passe (ou ton ancienne clé de récupération).
+- **Confidentialité** : la page explique désormais que les données synchronisées sont enregistrées sur notre serveur, associées à ton compte, sans chiffrement de bout en bout, et que nous nous engageons à ne pas les consulter.
+
+### Retiré
+
+- **Clé de récupération** : elle n'est plus générée ni envoyée par e-mail, et n'est plus demandée. L'option « se souvenir de cet appareil » disparaît aussi, devenue inutile.
+
 ### Corrigé
 
+- **Connexion sur un appareil déjà utilisé** : les favoris, signets, notes et surlignages créés sur cet appareil avant de te connecter sont désormais conservés et ajoutés à ceux de ton compte, au lieu d'être remplacés.
 - **Surlignages, notes et signets** : sans compte connecté, ils sont désormais bien conservés après un rechargement de la page ; auparavant, ils disparaissaient à chaque visite.
 - **Quiz des chapitres** : après avoir validé, les choix restent affichés et la correction est explicite. Ta réponse est marquée « Ta réponse », en vert si elle est juste et en rouge sinon, et la bonne réponse est signalée. Pour les questions à plusieurs réponses, les bonnes réponses non cochées apparaissent comme « Oubliée ». Pour les questions d'ordre, chaque position est corrigée et l'ordre correct est rappelé. Un bandeau « Bonne réponse ! » ou « Raté » s'affiche aussitôt, et le choix sélectionné est plus visible avant de valider.
 - **Quiz de Matthieu 5** : l'explication de la question sur les béatitudes cite désormais les versets correspondant aux bonnes réponses (pauvres d'esprit, doux d'esprit, pacificateurs) et précise d'où vient « humble de cœur » (Matthieu 11:29).

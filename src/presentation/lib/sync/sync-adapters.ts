@@ -22,14 +22,14 @@ import { applyReaderPrefs, getReaderPrefs } from '@/src/presentation/stores/read
 /**
  * Adaptateurs de sync — spec 22 §4.
  *
- * Pont entre un store zustand local et le blob chiffré du kind correspondant.
+ * Pont entre un store zustand local et le blob synchronisé du kind correspondant.
  * Chaque adaptateur sait :
- *  - `serialize()` : sérialiser la slice locale en JSON string (payload à chiffrer) ;
- *  - `hydrate(parsed)` : recharger la slice depuis un payload JSON déchiffré ;
+ *  - `serialize()` : sérialiser la slice locale en JSON string (payload poussé tel quel) ;
+ *  - `hydrate(parsed)` : recharger la slice depuis un payload JSON distant ;
  *  - `hasLocal()` : dire s'il existe une donnée locale à pousser (migration 1er login).
  *
  * `optIn` : kind synchronisé uniquement si l'utilisateur a activé « synchroniser mes
- * réglages » (readerPrefs). Les kinds non opt-in sync toujours (quand syncEnabled).
+ * réglages » (readerPrefs). Les kinds non opt-in sync toujours (session présente, sync non en pause).
  *
  * Phase 2 : signets (groupes + versets), notes, surlignages + réglages opt-in.
  * `themeAccent` (thème clair/sombre géré par next-themes) reste non adapté pour

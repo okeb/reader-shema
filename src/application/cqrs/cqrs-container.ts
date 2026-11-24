@@ -14,6 +14,8 @@ import {
   PullSyncQueryHandler,
   PushSyncCommandHandler,
   DeleteAccountCommandHandler,
+  PullLegacySyncQueryHandler,
+  DeleteLegacySyncCommandHandler,
 } from '@/src/application/handlers/sync/handlers';
 
 /**
@@ -49,6 +51,8 @@ export function configureSync(repository: ISyncRepository): string[] {
     cqrsBus.registerQueryHandler('PullSync', new PullSyncQueryHandler(repository));
     cqrsBus.registerCommandHandler('PushSync', new PushSyncCommandHandler(repository));
     cqrsBus.registerCommandHandler('DeleteAccount', new DeleteAccountCommandHandler(repository));
+    cqrsBus.registerQueryHandler('PullLegacySync', new PullLegacySyncQueryHandler(repository));
+    cqrsBus.registerCommandHandler('DeleteLegacySync', new DeleteLegacySyncCommandHandler(repository));
   }
   return cqrsBus.getRegisteredCommands();
 }

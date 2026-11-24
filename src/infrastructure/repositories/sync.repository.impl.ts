@@ -1,5 +1,10 @@
 import type { ISyncRepository } from '@/src/domain/repositories/sync.repository';
-import type { EncryptedBlob, SyncBlobMap, SyncKind } from '@/src/domain/entities/sync.entity';
+import type {
+  LegacyBlobMap,
+  SyncBlob,
+  SyncBlobMap,
+  SyncKind,
+} from '@/src/domain/entities/sync.entity';
 
 /** Le compte n'est pas (encore) authentifié — la sync reste inactive sans perte. */
 export class NotAuthenticatedError extends Error {
@@ -35,13 +40,13 @@ export class SyncRepositoryImpl implements ISyncRepository {
     return data ?? {};
   }
 
-  async pullKind(kind: SyncKind): Promise<EncryptedBlob | null> {
+  async pullKind(kind: SyncKind): Promise<SyncBlob | null> {
     const res = await fetch(`/api/sync/${kind}`, { credentials: 'same-origin' });
     if (res.status === 404) return null;
-    return (await parseSync(res)) as EncryptedBlob;
+    return (await parseSync(res)) as SyncBlob;
   }
 
-  async pushKind(kind: SyncKind, blob: EncryptedBlob): Promise<{ updatedAt: number }> {
+  async pushKind(kind: SyncKind, blob: SyncBlob): Promise<{ updatedAt: number }> {
     const res = await fetch(`/api/sync/${kind}`, {
       method: 'PUT',
       credentials: 'same-origin',
@@ -60,6 +65,24 @@ export class SyncRepositoryImpl implements ISyncRepository {
       if (res.status === 401) throw new NotAuthenticatedError();
       if (res.status === 503) throw new AuthNotConfiguredError();
       throw new Error(`account: echec ${res.status}`);
+    }
+  }
+
+  async pullLegacy(): Promise<LegacyBlobMap> {
+    const res = await fetch('/api/sync/legacy', { credentials: 'same-origin' });
+    const data = (await parseSync(res)) as LegacyBlobMap;
+    return data ?? {};
+  }
+
+  async deleteLegacy(): Promise<void> {
+    const res = await fetch('/api/sync/legacy', {
+      method: 'DELETE',
+      credentials: 'same-origin',
+    });
+    if (!res.ok && res.status !== 204) {
+      if (res.status === 401) throw new NotAuthenticatedError();
+      if (res.status === 503) throw new AuthNotConfiguredError();
+      throw new Error(`sync legacy: echec ${res.status}`);
     }
   }
 }
