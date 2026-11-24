@@ -47,6 +47,7 @@ la doctrine gagne.
 | 34 | [Index des notes de la sélection (viewer avant l'éditeur)](34-index-notes-selection.md) | 🟠 Moyenne | S–M | Proposé | spec 10 (notes), spec 12 (dock), spec 24 (`NoteViewer`), spec 30 (icône note) |
 | 35 | [Texte original interlinéaire dans le panneau Strong](35-texte-original-interlineaire-strong.md) | 🟠 Moyenne | S–M | Proposé | spec 02 (concordance), spec 29 (détail Strong + `lemma` par token) |
 | 38 | [Recherche de verset par référence libre (`/search?p=`)](38-recherche-reference-url.md) | 🟠 Moyenne | S | ✅ Implémenté | — (réutilise `parseReference`, next-intl `redirect`) |
+| 39 | [Synchronisation sans chiffrement de bout en bout (connecté = synchronisé)](39-sync-sans-chiffrement.md) | 🔴 Haute | M | Proposé | spec 22 (sync), spec 26 (Better Auth), spec 25 (/account) ; **remplace la spec 28** |
 
 **Légende effort** : S = quelques heures · M = 1–2 jours · L = 3 jours et +.
 
